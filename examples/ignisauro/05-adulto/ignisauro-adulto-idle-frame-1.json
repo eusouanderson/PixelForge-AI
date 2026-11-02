@@ -1,0 +1,864 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Ignisauro — Adulto: Idle (Quadro 1)",
+  "description": "Ignisaurus Rex adulto em imponência titânica frontal, carapaça vulcânica, dois olhos dominantes e garras maciças",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "volcano_dark": "#270a04",
+    "volcano_shadow": "#431407",
+    "dino_shadow": "#7c2d12",
+    "dino_base": "#9a3412",
+    "dino_light": "#c2410c",
+    "dino_highlight": "#ea580c",
+    "dino_belly": "#fef08a",
+    "dino_crest": "#047857",
+    "dino_crest_light": "#059669",
+    "dino_eye": "#fde047",
+    "dino_pupil": "#0f172a",
+    "dino_claw": "#fef08a",
+    "dino_mouth": "#7f1d1d",
+    "magma_core": "#fef08a",
+    "magma_hot": "#f97316",
+    "outline": "#050d06",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Sombra no Solo Titânica",
+      "visible": true,
+      "opacity": 0.7,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 29,
+          "width": 24,
+          "height": 3,
+          "color": "outline"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              3,
+              29
+            ],
+            [
+              28,
+              29
+            ],
+            [
+              5,
+              31
+            ],
+            [
+              26,
+              31
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda Titânica e Espigões Vulcânicos",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 23,
+          "y": 16,
+          "width": 6,
+          "height": 8,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 26,
+          "y": 12,
+          "width": 5,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_crest",
+          "coordinates": [
+            [
+              27,
+              11
+            ],
+            [
+              29,
+              11
+            ],
+            [
+              30,
+              12
+            ],
+            [
+              25,
+              15
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              23,
+              24
+            ],
+            [
+              29,
+              24
+            ],
+            [
+              31,
+              18
+            ],
+            [
+              31,
+              12
+            ],
+            [
+              28,
+              10
+            ],
+            [
+              26,
+              10
+            ],
+            [
+              24,
+              14
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pilares Musculares e Garras de Combate",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 19,
+          "width": 7,
+          "height": 10,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 19,
+          "width": 7,
+          "height": 10,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 20,
+          "width": 5,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 20,
+          "width": 5,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 27,
+          "width": 9,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 27,
+          "width": 9,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_claw",
+          "coordinates": [
+            [
+              4,
+              29
+            ],
+            [
+              6,
+              29
+            ],
+            [
+              8,
+              29
+            ],
+            [
+              10,
+              29
+            ],
+            [
+              12,
+              29
+            ],
+            [
+              19,
+              29
+            ],
+            [
+              21,
+              29
+            ],
+            [
+              23,
+              29
+            ],
+            [
+              25,
+              29
+            ],
+            [
+              27,
+              29
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              3,
+              28
+            ],
+            [
+              3,
+              29
+            ],
+            [
+              13,
+              28
+            ],
+            [
+              13,
+              29
+            ],
+            [
+              18,
+              28
+            ],
+            [
+              18,
+              29
+            ],
+            [
+              28,
+              28
+            ],
+            [
+              28,
+              29
+            ],
+            [
+              5,
+              19
+            ],
+            [
+              12,
+              19
+            ],
+            [
+              19,
+              19
+            ],
+            [
+              27,
+              19
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Carapaça Vulcânica e Placas Dérmicas Frontais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 11,
+          "width": 20,
+          "height": 13,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 13,
+          "width": 22,
+          "height": 10,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 12,
+          "width": 18,
+          "height": 11,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 12,
+          "width": 10,
+          "height": 11,
+          "color": "dino_belly"
+        },
+        {
+          "type": "line",
+          "x0": 11,
+          "y0": 15,
+          "x1": 20,
+          "y1": 15,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "line",
+          "x0": 11,
+          "y0": 18,
+          "x1": 20,
+          "y1": 18,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "line",
+          "x0": 11,
+          "y0": 21,
+          "x1": 20,
+          "y1": 21,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "points",
+          "color": "magma_hot",
+          "coordinates": [
+            [
+              7,
+              14
+            ],
+            [
+              8,
+              17
+            ],
+            [
+              23,
+              14
+            ],
+            [
+              24,
+              17
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              6,
+              11
+            ],
+            [
+              25,
+              11
+            ],
+            [
+              4,
+              13
+            ],
+            [
+              27,
+              13
+            ],
+            [
+              4,
+              23
+            ],
+            [
+              27,
+              23
+            ],
+            [
+              8,
+              24
+            ],
+            [
+              23,
+              24
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Garras Titânicas Frontais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 3,
+          "y": 14,
+          "width": 5,
+          "height": 6,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": 14,
+          "width": 5,
+          "height": 6,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 15,
+          "width": 3,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 15,
+          "width": 3,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_claw",
+          "coordinates": [
+            [
+              3,
+              20
+            ],
+            [
+              4,
+              20
+            ],
+            [
+              5,
+              20
+            ],
+            [
+              26,
+              20
+            ],
+            [
+              27,
+              20
+            ],
+            [
+              28,
+              20
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              2,
+              14
+            ],
+            [
+              2,
+              19
+            ],
+            [
+              6,
+              20
+            ],
+            [
+              29,
+              14
+            ],
+            [
+              29,
+              19
+            ],
+            [
+              25,
+              20
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Crânio Titânico e Crista Esmeralda Energizada",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 4,
+          "width": 16,
+          "height": 9,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 6,
+          "width": 18,
+          "height": 7,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 4,
+          "width": 16,
+          "height": 2,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 1,
+          "width": 8,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 0,
+          "width": 6,
+          "height": 3,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "points",
+          "color": "dino_crest",
+          "coordinates": [
+            [
+              10,
+              3
+            ],
+            [
+              21,
+              3
+            ],
+            [
+              11,
+              2
+            ],
+            [
+              20,
+              2
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 9,
+          "width": 10,
+          "height": 5,
+          "color": "dino_light"
+        },
+        {
+          "type": "points",
+          "color": "dino_shadow",
+          "coordinates": [
+            [
+              12,
+              10
+            ],
+            [
+              19,
+              10
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 12,
+          "width": 6,
+          "height": 2,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": [
+            [
+              13,
+              12
+            ],
+            [
+              15,
+              12
+            ],
+            [
+              17,
+              12
+            ],
+            [
+              14,
+              13
+            ],
+            [
+              16,
+              13
+            ],
+            [
+              18,
+              13
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              13,
+              0
+            ],
+            [
+              18,
+              0
+            ],
+            [
+              11,
+              1
+            ],
+            [
+              20,
+              1
+            ],
+            [
+              7,
+              4
+            ],
+            [
+              24,
+              4
+            ],
+            [
+              6,
+              6
+            ],
+            [
+              25,
+              6
+            ],
+            [
+              6,
+              13
+            ],
+            [
+              25,
+              13
+            ],
+            [
+              8,
+              14
+            ],
+            [
+              23,
+              14
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Genética Ocular Frontal Dominante (Dois Olhos)",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 6,
+          "width": 4,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 6,
+          "width": 4,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "points",
+          "color": "dino_pupil",
+          "coordinates": [
+            [
+              10,
+              7
+            ],
+            [
+              10,
+              8
+            ],
+            [
+              11,
+              7
+            ],
+            [
+              19,
+              7
+            ],
+            [
+              20,
+              7
+            ],
+            [
+              20,
+              8
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": [
+            [
+              9,
+              6
+            ],
+            [
+              21,
+              6
+            ]
+          ]
+        },
+        {
+          "type": "line",
+          "x0": 8,
+          "y0": 5,
+          "x1": 12,
+          "y1": 5,
+          "color": "volcano_shadow"
+        },
+        {
+          "type": "line",
+          "x0": 19,
+          "y0": 5,
+          "x1": 23,
+          "y1": 5,
+          "color": "volcano_shadow"
+        }
+      ]
+    },
+    {
+      "id": "layer_magma_flames",
+      "name": "Vapores de Magma e Brasas Ápice",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 7,
+      "operations": [
+        {
+          "type": "points",
+          "color": "magma_hot",
+          "coordinates": [
+            [
+              3,
+              11
+            ],
+            [
+              4,
+              16
+            ],
+            [
+              27,
+              10
+            ],
+            [
+              28,
+              15
+            ],
+            [
+              12,
+              13
+            ],
+            [
+              19,
+              13
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": []
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Ignisauro",
+    "lifeStage": "adulto",
+    "animation": "idle",
+    "frame": 1,
+    "author": "PixelForge AI",
+    "tags": [
+      "ignisauro",
+      "dinosaur",
+      "adulto",
+      "idle",
+      "frontal",
+      "32x32"
+    ]
+  }
+}

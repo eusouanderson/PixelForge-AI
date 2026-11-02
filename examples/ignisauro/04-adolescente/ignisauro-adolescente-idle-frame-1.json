@@ -1,0 +1,820 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Ignisauro — Adolescente: Idle (Quadro 1)",
+  "description": "Ignisauro adolescente em postura atlética frontal com tórax alargado, dois olhos penetrantes e brasas nos flancos",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "dino_shadow": "#9a3412",
+    "dino_base": "#c2410c",
+    "dino_light": "#ea580c",
+    "dino_highlight": "#f97316",
+    "dino_belly": "#fef08a",
+    "dino_crest": "#059669",
+    "dino_crest_light": "#10b981",
+    "dino_eye": "#fde047",
+    "dino_pupil": "#0f172a",
+    "dino_claw": "#fef08a",
+    "dino_mouth": "#991b1b",
+    "ember_glow": "#ffedd5",
+    "ember_hot": "#f97316",
+    "outline": "#09150b",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Sombra no Solo",
+      "visible": true,
+      "opacity": 0.6,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 29,
+          "width": 20,
+          "height": 2,
+          "color": "outline"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              5,
+              29
+            ],
+            [
+              26,
+              29
+            ],
+            [
+              7,
+              30
+            ],
+            [
+              24,
+              30
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda Musculosa e Espinhos Dorsais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 17,
+          "width": 5,
+          "height": 6,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 14,
+          "width": 4,
+          "height": 5,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_crest",
+          "coordinates": [
+            [
+              26,
+              13
+            ],
+            [
+              28,
+              13
+            ],
+            [
+              29,
+              14
+            ],
+            [
+              24,
+              16
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              22,
+              23
+            ],
+            [
+              27,
+              23
+            ],
+            [
+              29,
+              19
+            ],
+            [
+              30,
+              14
+            ],
+            [
+              28,
+              12
+            ],
+            [
+              25,
+              12
+            ],
+            [
+              23,
+              15
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pernas Atléticas e Garras Potentes",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 20,
+          "width": 6,
+          "height": 8,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 20,
+          "width": 6,
+          "height": 8,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 21,
+          "width": 4,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 21,
+          "width": 4,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 27,
+          "width": 7,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 27,
+          "width": 7,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_claw",
+          "coordinates": [
+            [
+              6,
+              29
+            ],
+            [
+              8,
+              29
+            ],
+            [
+              10,
+              29
+            ],
+            [
+              12,
+              29
+            ],
+            [
+              19,
+              29
+            ],
+            [
+              21,
+              29
+            ],
+            [
+              23,
+              29
+            ],
+            [
+              25,
+              29
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              5,
+              28
+            ],
+            [
+              5,
+              29
+            ],
+            [
+              13,
+              28
+            ],
+            [
+              13,
+              29
+            ],
+            [
+              18,
+              28
+            ],
+            [
+              18,
+              29
+            ],
+            [
+              26,
+              28
+            ],
+            [
+              26,
+              29
+            ],
+            [
+              7,
+              20
+            ],
+            [
+              13,
+              20
+            ],
+            [
+              18,
+              20
+            ],
+            [
+              25,
+              20
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Tórax Atlético e Placas de Ventre",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 12,
+          "width": 16,
+          "height": 11,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 14,
+          "width": 18,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 15,
+          "width": 3,
+          "height": 7,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 15,
+          "width": 3,
+          "height": 7,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 13,
+          "width": 8,
+          "height": 10,
+          "color": "dino_belly"
+        },
+        {
+          "type": "line",
+          "x0": 12,
+          "y0": 16,
+          "x1": 19,
+          "y1": 16,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "line",
+          "x0": 12,
+          "y0": 19,
+          "x1": 19,
+          "y1": 19,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "line",
+          "x0": 12,
+          "y0": 22,
+          "x1": 19,
+          "y1": 22,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              8,
+              12
+            ],
+            [
+              23,
+              12
+            ],
+            [
+              6,
+              14
+            ],
+            [
+              25,
+              14
+            ],
+            [
+              6,
+              22
+            ],
+            [
+              25,
+              22
+            ],
+            [
+              9,
+              23
+            ],
+            [
+              22,
+              23
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Braços Musculosos e Garras Predatórias",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 15,
+          "width": 4,
+          "height": 5,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 23,
+          "y": 15,
+          "width": 4,
+          "height": 5,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_claw",
+          "coordinates": [
+            [
+              5,
+              20
+            ],
+            [
+              6,
+              20
+            ],
+            [
+              7,
+              20
+            ],
+            [
+              24,
+              20
+            ],
+            [
+              25,
+              20
+            ],
+            [
+              26,
+              20
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              4,
+              15
+            ],
+            [
+              4,
+              19
+            ],
+            [
+              8,
+              20
+            ],
+            [
+              27,
+              15
+            ],
+            [
+              27,
+              19
+            ],
+            [
+              23,
+              20
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Cabeça Predatória e Crista Incandescente",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 5,
+          "width": 14,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 7,
+          "width": 16,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 5,
+          "width": 14,
+          "height": 2,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 2,
+          "width": 6,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 1,
+          "width": 4,
+          "height": 3,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "points",
+          "color": "dino_crest",
+          "coordinates": [
+            [
+              12,
+              4
+            ],
+            [
+              19,
+              4
+            ],
+            [
+              13,
+              1
+            ],
+            [
+              18,
+              1
+            ]
+          ]
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 10,
+          "width": 8,
+          "height": 4,
+          "color": "dino_light"
+        },
+        {
+          "type": "points",
+          "color": "dino_shadow",
+          "coordinates": [
+            [
+              13,
+              11
+            ],
+            [
+              18,
+              11
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_mouth",
+          "coordinates": [
+            [
+              14,
+              13
+            ],
+            [
+              15,
+              13
+            ],
+            [
+              16,
+              13
+            ],
+            [
+              17,
+              13
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": [
+            [
+              14,
+              12
+            ],
+            [
+              17,
+              12
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              14,
+              0
+            ],
+            [
+              17,
+              0
+            ],
+            [
+              12,
+              1
+            ],
+            [
+              19,
+              1
+            ],
+            [
+              8,
+              5
+            ],
+            [
+              23,
+              5
+            ],
+            [
+              7,
+              7
+            ],
+            [
+              24,
+              7
+            ],
+            [
+              7,
+              13
+            ],
+            [
+              24,
+              13
+            ],
+            [
+              9,
+              14
+            ],
+            [
+              22,
+              14
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Genética Ocular Frontal (Dois Olhos)",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 7,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 7,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "points",
+          "color": "dino_pupil",
+          "coordinates": [
+            [
+              11,
+              8
+            ],
+            [
+              11,
+              9
+            ],
+            [
+              19,
+              8
+            ],
+            [
+              19,
+              9
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": [
+            [
+              10,
+              7
+            ],
+            [
+              20,
+              7
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_shadow",
+          "coordinates": [
+            [
+              10,
+              6
+            ],
+            [
+              11,
+              6
+            ],
+            [
+              12,
+              6
+            ],
+            [
+              19,
+              6
+            ],
+            [
+              20,
+              6
+            ],
+            [
+              21,
+              6
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_embers",
+      "name": "Brasas e Calor Incandescente",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 7,
+      "operations": [
+        {
+          "type": "points",
+          "color": "ember_hot",
+          "coordinates": [
+            [
+              4,
+              13
+            ],
+            [
+              5,
+              17
+            ],
+            [
+              26,
+              12
+            ],
+            [
+              27,
+              16
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": []
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Ignisauro",
+    "lifeStage": "adolescente",
+    "animation": "idle",
+    "frame": 1,
+    "author": "PixelForge AI",
+    "tags": [
+      "ignisauro",
+      "dinosaur",
+      "adolescente",
+      "idle",
+      "frontal",
+      "32x32"
+    ]
+  }
+}
