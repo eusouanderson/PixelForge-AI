@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { validatePixelArt } from './pixel-art-schema';
 
-describe('examples/ignisauro validation', () => {
+describe('examples validation', () => {
   function findJsonFiles(dir: string): string[] {
     const results: string[] = [];
     const entries = readdirSync(dir);
@@ -19,8 +19,8 @@ describe('examples/ignisauro validation', () => {
     return results;
   }
 
-  it('validates all JSON files in examples/ignisauro against DeclarativePixelArtSchema', () => {
-    const jsonFiles = findJsonFiles('examples/ignisauro');
+  it('validates all JSON files in examples against DeclarativePixelArtSchema', () => {
+    const jsonFiles = findJsonFiles('examples');
     expect(jsonFiles.length).toBeGreaterThanOrEqual(6);
 
     for (const filePath of jsonFiles) {
@@ -29,8 +29,8 @@ describe('examples/ignisauro validation', () => {
       const validated = validatePixelArt(rawData);
 
       expect(validated.name).toBeTruthy();
-      expect(validated.metadata?.creatureName).toBe('Ignisauro');
-      expect(['ovo', 'baby', 'pre-adolescente', 'adolescente', 'adulto']).toContain(
+      expect(typeof validated.metadata?.creatureName).toBe('string');
+      expect(['ovo', 'baby', 'crianca', 'pre-adolescente', 'adolescente', 'adulto']).toContain(
         validated.metadata?.lifeStage
       );
       expect(typeof validated.metadata?.frame).toBe('number');
@@ -40,4 +40,3 @@ describe('examples/ignisauro validation', () => {
     }
   });
 });
-
