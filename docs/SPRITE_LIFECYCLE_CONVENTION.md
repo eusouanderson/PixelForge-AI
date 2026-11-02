@@ -8,13 +8,22 @@ Esta convenção é a base oficial utilizada pelo motor e pela LLM para gerar co
 
 ---
 
-## 2. Identificação da Criatura
+## 2. Identificação das Criaturas Canônicas
 
-Cada espécie de criatura possui um identificador canônico em *kebab-case* e um nome formal exibido na interface:
+Cada espécie de criatura possui um identificador canônico em *kebab-case*, nome formal e arquétipo elemental:
 
-- **Identificador**: `ignisauro`
-- **Nome Formal**: `Ignisauro` (*Ignisaurus Rex*)
-- **Arquétipo**: Réptil pré-histórico de escamas alaranjadas, crista dorsal verde esmeralda e afinidade com energia vulcânica/dourada.
+1. **Ignisauro** (`ignisauro` — *Ignisaurus Rex*):
+   - Arquétipo: Réptil pré-histórico vulcânico de escamas alaranjadas, crista verde esmeralda e olhos dourados (`#fde047`).
+   - Casca do ovo: Verde reptiliano ancestral com ninho de galhos terrosos.
+2. **Glacissauro** (`glacissauro` — *Cryosaurus Glacius*):
+   - Arquétipo: Réptil glacial ancestral com escamas cerúleas de gelo, chifres cristalinos e olhos ciano-gelo penetrantes (`#38bdf8`).
+   - Casca do ovo: Azul celeste glacial com ninho de pedras árticas escuras.
+3. **Electrossauro** (`electrossauro` — *Fulgursaurus Rex*):
+   - Arquétipo: Réptil galvânico da tempestade com escamas douradas condutoras, carapaça azul-marinho e olhos elétricos brilhantes (`#06b6d4`).
+   - Casca do ovo: Âmbar/ouro reluzente com ninho de basalto vulcânico negro.
+4. **Toxissauro** (`toxissauro` — *Venomousaurus Titan*):
+   - Arquétipo: Titã pantanoso venenoso com escamas violeta-tóxicas, pústulas ácidas bioluminescentes e olhos verde-limão radioativos (`#84cc16`).
+   - Casca do ovo: Violeta abissal com manchas ácidas e ninho de musgo de turfa pantanosa.
 
 ---
 

@@ -59,9 +59,42 @@ function selectPreset(presetId: string): void {
   const found = PRESETS.find((p) => p.id === presetId);
   if (!found) return;
   selectedPresetId.value = presetId;
+  const creature = found.data.metadata?.creatureName;
+  if (creature && creature !== selectedCreature.value) {
+    selectedCreature.value = creature;
+  }
   currentArt.value = JSON.parse(JSON.stringify(found.data)) as DeclarativePixelArt;
   errorMessage.value = null;
   draw();
+}
+
+const availableCreatures = computed(() => {
+  const set = new Set<string>();
+  for (const preset of PRESETS) {
+    const creature = preset.data.metadata?.creatureName;
+    if (creature) set.add(creature);
+  }
+  return Array.from(set);
+});
+
+const selectedCreature = ref<string>(
+  PRESETS[0]?.data.metadata?.creatureName || 'Ignisauro'
+);
+
+const visiblePresets = computed(() => {
+  return PRESETS.filter(
+    (p) => p.data.metadata?.creatureName === selectedCreature.value
+  );
+});
+
+function selectCreature(creature: string): void {
+  selectedCreature.value = creature;
+  const firstForCreature = PRESETS.find(
+    (p) => p.data.metadata?.creatureName === creature
+  );
+  if (firstForCreature) {
+    selectPreset(firstForCreature.id);
+  }
 }
 
 function toggleGrid(): void {
@@ -80,6 +113,30 @@ function stopAnimation(): void {
     animInterval = null;
   }
   animationMode.value = 'none';
+}
+
+function getCurrentCreatureLifecycleFrames(): readonly PresetItem[] {
+  const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
+  const creature = currentItem?.data.metadata?.creatureName;
+  const creaturePresets = PRESETS.filter(
+    (p) => p.data.metadata?.creatureName === creature
+  );
+  if (creaturePresets.length > 0) return creaturePresets;
+  return PRESETS;
+}
+
+function getCurrentCreatureHatchFrames(): readonly PresetItem[] {
+  const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
+  const creature = currentItem?.data.metadata?.creatureName;
+  const hatchPresets = PRESETS.filter(
+    (p) =>
+      p.data.metadata?.creatureName === creature &&
+      p.data.metadata?.lifeStage === 'ovo' &&
+      p.data.metadata?.animation === 'eclosao'
+  ).sort((a, b) => (a.data.metadata?.frame ?? 0) - (b.data.metadata?.frame ?? 0));
+
+  if (hatchPresets.length > 0) return hatchPresets;
+  return PRESETS.slice(0, 4);
 }
 
 function getCurrentStageIdlePair(): readonly [PresetItem, PresetItem] {
@@ -123,15 +180,16 @@ function startAnimation(mode: AnimationMode): void {
   animationMode.value = mode;
 
   if (mode === 'lifecycle') {
-    currentFrameIndex = PRESETS.findIndex((p) => p.id === selectedPresetId.value);
+    const lifecycleFrames = getCurrentCreatureLifecycleFrames();
+    currentFrameIndex = lifecycleFrames.findIndex((p) => p.id === selectedPresetId.value);
     if (currentFrameIndex === -1) currentFrameIndex = 0;
 
     animInterval = setInterval(() => {
-      currentFrameIndex = (currentFrameIndex + 1) % PRESETS.length;
-      selectPreset(PRESETS[currentFrameIndex].id);
+      currentFrameIndex = (currentFrameIndex + 1) % lifecycleFrames.length;
+      selectPreset(lifecycleFrames[currentFrameIndex].id);
     }, animationSpeedMs.value);
   } else if (mode === 'hatching') {
-    const hatchPresets = [PRESETS[0], PRESETS[1], PRESETS[2], PRESETS[3]];
+    const hatchPresets = getCurrentCreatureHatchFrames();
     let hatchIndex = hatchPresets.findIndex((p) => p.id === selectedPresetId.value);
     if (hatchIndex === -1) hatchIndex = 0;
 
@@ -348,17 +406,32 @@ onUnmounted(() => {
     </header>
 
     <div class="bg-slate-900 border-b border-slate-800 px-6 py-2 overflow-x-auto flex-shrink-0">
-      <div class="flex items-center gap-1.5 min-w-max">
-        <span class="text-[11px] font-semibold text-slate-400 mr-2 uppercase tracking-wider">Passos:</span>
-        <button
-          v-for="preset in PRESETS"
-          :key="preset.id"
-          @click="stopAnimation(); selectPreset(preset.id)"
-          class="px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer border"
-          :class="selectedPresetId === preset.id ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300 font-semibold shadow-sm' : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700'"
-        >
-          {{ preset.label }}
-        </button>
+      <div class="flex items-center gap-3 min-w-max">
+        <div class="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+          <button
+            v-for="creature in availableCreatures"
+            :key="creature"
+            @click="stopAnimation(); selectCreature(creature)"
+            class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer"
+            :class="selectedCreature === creature ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+          >
+            {{ creature }}
+          </button>
+        </div>
+
+        <div class="h-4 w-[1px] bg-slate-800"></div>
+
+        <div class="flex items-center gap-1.5">
+          <button
+            v-for="preset in visiblePresets"
+            :key="preset.id"
+            @click="stopAnimation(); selectPreset(preset.id)"
+            class="px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer border"
+            :class="selectedPresetId === preset.id ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300 font-semibold shadow-sm' : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700'"
+          >
+            {{ preset.shortLabel }}
+          </button>
+        </div>
       </div>
     </div>
 

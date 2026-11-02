@@ -22,12 +22,13 @@ export const PRESETS: readonly PresetItem[] = sortedEntries.map(([path, data], i
   const stageNumber = index + 1;
   const stageName = data.metadata?.lifeStage ?? 'fase';
   const frameNum = data.metadata?.frame ?? 1;
-  const rawTitle = data.name.replace(/^Ignisauro\s*[—–-]\s*/, '');
+  const creature = data.metadata?.creatureName ?? 'Criatura';
+  const rawTitle = data.name.replace(new RegExp(`^${creature}\\s*[—–-]\\s*`), '');
 
   return {
     id: fileName,
     stageNumber,
-    label: `${stageNumber}. ${rawTitle}`,
+    label: `${creature} · ${rawTitle}`,
     shortLabel: `${stageName.charAt(0).toUpperCase() + stageName.slice(1)} ${frameNum}`,
     data
   };

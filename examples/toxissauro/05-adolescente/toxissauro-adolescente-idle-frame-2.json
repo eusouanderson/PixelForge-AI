@@ -1,0 +1,574 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Toxissauro — Adolescente: Idle (Quadro 2)",
+  "description": "Fase adolescente de Toxissauro (Venomousaurus Titan) predador atlético e temível com placas dérmicas, chifres pontiagudos e emanação de veneno",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "dino_shadow_dark": "#2e1065",
+    "dino_shadow": "#581c87",
+    "dino_base": "#7e22ce",
+    "dino_light": "#9333ea",
+    "dino_highlight": "#c084fc",
+    "dino_belly_shadow": "#4d7c0f",
+    "dino_belly": "#a3e635",
+    "dino_belly_light": "#d9f99d",
+    "dino_crest_deep": "#14532d",
+    "dino_crest_shadow": "#15803d",
+    "dino_crest": "#22c55e",
+    "dino_crest_light": "#86efac",
+    "dino_crest_glow": "#bbf7d0",
+    "dino_eye": "#84cc16",
+    "dino_pupil": "#14532d",
+    "dino_claw_shadow": "#365314",
+    "dino_claw": "#d9f99d",
+    "dino_claw_light": "#ffffff",
+    "dino_mouth_dark": "#1e0836",
+    "dino_mouth": "#3b0764",
+    "dino_blush": "#4ade80",
+    "aura_deep": "#3b0764",
+    "aura_mid": "#22c55e",
+    "aura_light": "#84cc16",
+    "outline": "#1e0836",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Sombra de Chão",
+      "visible": true,
+      "opacity": 0.7,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 28,
+          "width": 20,
+          "height": 3,
+          "color": "dino_shadow_dark"
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda com Lâminas e Cristas",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 23,
+          "y": 19,
+          "width": 4,
+          "height": 7,
+          "color": "dino_shadow_dark"
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": 17,
+          "width": 3,
+          "height": 5,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 25,
+          "y": 15,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "pixel",
+          "x": 26,
+          "y": 14,
+          "color": "dino_crest_glow"
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pernas Musculosas com Garras Triplas",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 19,
+          "width": 5,
+          "height": 8,
+          "color": "dino_shadow_dark"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 20,
+          "width": 3,
+          "height": 6,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 26,
+          "width": 6,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 6,
+          "y": 28,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 8,
+          "y": 28,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 28,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 19,
+          "width": 5,
+          "height": 8,
+          "color": "dino_shadow_dark"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 20,
+          "width": 3,
+          "height": 6,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 26,
+          "width": 6,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 20,
+          "y": 28,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 23,
+          "y": 28,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 25,
+          "y": 28,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Placas Dérmicas e Peitoral Frontal",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 14,
+          "width": 14,
+          "height": 9,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 14,
+          "width": 12,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 15,
+          "width": 10,
+          "height": 6,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 15,
+          "width": 8,
+          "height": 6,
+          "color": "dino_belly_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 15,
+          "width": 6,
+          "height": 5,
+          "color": "dino_belly"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 16,
+          "width": 4,
+          "height": 3,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 14,
+          "width": 3,
+          "height": 4,
+          "color": "dino_crest_deep"
+        },
+        {
+          "type": "pixel",
+          "x": 6,
+          "y": 13,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 14,
+          "width": 3,
+          "height": 4,
+          "color": "dino_crest_deep"
+        },
+        {
+          "type": "pixel",
+          "x": 25,
+          "y": 13,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Braços Predatórios e Garras Afiadas",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 16,
+          "width": 4,
+          "height": 5,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 19,
+          "width": 4,
+          "height": 2,
+          "color": "dino_claw_shadow"
+        },
+        {
+          "type": "pixel",
+          "x": 5,
+          "y": 20,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 7,
+          "y": 20,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 8,
+          "y": 20,
+          "color": "dino_claw_light"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 16,
+          "width": 4,
+          "height": 5,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 23,
+          "y": 19,
+          "width": 4,
+          "height": 2,
+          "color": "dino_claw_shadow"
+        },
+        {
+          "type": "pixel",
+          "x": 23,
+          "y": 20,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 25,
+          "y": 20,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 26,
+          "y": 20,
+          "color": "dino_claw_light"
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Cabeça Esculpida e Chifres Elementares",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 5,
+          "width": 16,
+          "height": 9,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 5,
+          "width": 14,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 6,
+          "width": 12,
+          "height": 7,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 11,
+          "width": 8,
+          "height": 3,
+          "color": "dino_highlight"
+        },
+        {
+          "type": "pixel",
+          "x": 13,
+          "y": 13,
+          "color": "dino_mouth_dark"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 13,
+          "color": "dino_mouth_dark"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 12,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 12,
+          "color": "specular"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 1,
+          "width": 3,
+          "height": 5,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 1,
+          "width": 3,
+          "height": 5,
+          "color": "dino_crest"
+        },
+        {
+          "type": "pixel",
+          "x": 7,
+          "y": 0,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "pixel",
+          "x": 24,
+          "y": 0,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "rect",
+          "x": 15,
+          "y": 2,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest_shadow"
+        },
+        {
+          "type": "pixel",
+          "x": 15,
+          "y": 1,
+          "color": "dino_crest_glow"
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Binoculares Dominantes",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "line",
+          "x0": 10,
+          "y0": 6,
+          "x1": 13,
+          "y1": 6,
+          "color": "dino_shadow_dark"
+        },
+        {
+          "type": "line",
+          "x0": 18,
+          "y0": 6,
+          "x1": 21,
+          "y1": 6,
+          "color": "dino_shadow_dark"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 7,
+          "width": 4,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 7,
+          "width": 4,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 8,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 8,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 10,
+          "y": 7,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 7,
+          "color": "specular"
+        }
+      ]
+    },
+    {
+      "id": "layer_elemental_aura",
+      "name": "Partículas e Aura Elementar",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 7,
+      "operations": [
+        {
+          "type": "pixel",
+          "x": 4,
+          "y": 7,
+          "color": "aura_light"
+        },
+        {
+          "type": "pixel",
+          "x": 27,
+          "y": 8,
+          "color": "aura_light"
+        },
+        {
+          "type": "pixel",
+          "x": 6,
+          "y": 21,
+          "color": "aura_mid"
+        },
+        {
+          "type": "pixel",
+          "x": 25,
+          "y": 22,
+          "color": "aura_mid"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Toxissauro",
+    "lifeStage": "adolescente",
+    "animation": "idle",
+    "frame": 2,
+    "author": "PixelForge AI",
+    "createdAt": "2026-11-02T22:25:45.354Z",
+    "tags": [
+      "toxissauro",
+      "dinosaur",
+      "veneno",
+      "adolescente",
+      "idle",
+      "frontal",
+      "32x32"
+    ]
+  }
+}
