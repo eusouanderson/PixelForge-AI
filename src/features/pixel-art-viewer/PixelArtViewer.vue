@@ -84,28 +84,38 @@ function stopAnimation(): void {
 
 function getCurrentStageIdlePair(): readonly [PresetItem, PresetItem] {
   const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
+  const creature = currentItem?.data.metadata?.creatureName;
   const lifeStage = currentItem?.data.metadata?.lifeStage;
+  const targetStage = lifeStage === 'ovo' ? 'baby' : lifeStage;
 
-  if (lifeStage === 'pre-adolescente') {
-    return [PRESETS[6], PRESETS[7]];
+  const stageIdlePresets = PRESETS.filter(
+    (p) =>
+      p.data.metadata?.creatureName === creature &&
+      p.data.metadata?.lifeStage === targetStage &&
+      p.data.metadata?.animation === 'idle'
+  );
+
+  if (stageIdlePresets.length >= 2) {
+    return [stageIdlePresets[0], stageIdlePresets[1]];
   }
-  if (lifeStage === 'adolescente') {
-    return [PRESETS[8], PRESETS[9]];
+
+  const anyIdlePresets = PRESETS.filter((p) => p.data.metadata?.animation === 'idle');
+  if (anyIdlePresets.length >= 2) {
+    return [anyIdlePresets[0], anyIdlePresets[1]];
   }
-  if (lifeStage === 'adulto') {
-    return [PRESETS[10], PRESETS[11]];
-  }
-  return [PRESETS[4], PRESETS[5]];
+
+  return [PRESETS[0], PRESETS[1] || PRESETS[0]];
 }
 
 const currentStageIdleLabel = computed(() => {
   const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
-  const lifeStage = currentItem?.data.metadata?.lifeStage;
-
-  if (lifeStage === 'pre-adolescente') return 'Idle Pré-Ado';
-  if (lifeStage === 'adolescente') return 'Idle Adolescente';
-  if (lifeStage === 'adulto') return 'Idle Adulto';
-  return 'Idle Filhote';
+  const stage = currentItem?.data.metadata?.lifeStage;
+  if (!stage || stage === 'ovo' || stage === 'baby') return 'Idle Filhote';
+  if (stage === 'crianca') return 'Idle Criança';
+  if (stage === 'pre-adolescente') return 'Idle Pré-Ado';
+  if (stage === 'adolescente') return 'Idle Adolescente';
+  if (stage === 'adulto') return 'Idle Adulto';
+  return `Idle ${stage}`;
 });
 
 function startAnimation(mode: AnimationMode): void {

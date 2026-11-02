@@ -20,16 +20,17 @@ Cada espécie de criatura possui um identificador canônico em *kebab-case* e um
 
 ## 3. Fases da Vida (Life Stages)
 
-O desenvolvimento de cada criatura é particionado em 5 fases cronológicas obrigatórias, representadas por pastas numeradas dentro do diretório da criatura:
+O desenvolvimento de cada criatura é particionado em 6 fases cronológicas obrigatórias, representadas por pastas numeradas dentro do diretório da criatura:
 
 ```text
 examples/
 └── <nome-da-criatura>/
     ├── 01-ovo/                 # Estágio embrionário e eclosão
-    ├── 02-baby/                # Filhote recém-nascido no ninho
-    ├── 03-pre-adolescente/     # Jovem ágil com postura bípede frontal
-    ├── 04-adolescente/         # Sub-adulto atlético frontal com crista e faíscas
-    └── 05-adulto/              # Forma majestosa madura titânica frontal
+    ├── 02-baby/                # Filhote recém-nascido na casca
+    ├── 03-crianca/             # Criança pequena bípede fofa com postura ereta
+    ├── 04-pre-adolescente/     # Jovem ágil com postura bípede e cauda desenvolvida
+    ├── 05-adolescente/         # Sub-adulto atlético hiperdetalhado com escamas e brasas
+    └── 06-adulto/              # Forma majestosa madura titânica frontal
 ```
 
 ### 3.1. Fase 1: `01-ovo`
@@ -38,25 +39,30 @@ examples/
   - `eclosao`: sequência de quebra da casca (intacto, rachando, quebrando, abrindo).
 
 ### 3.2. Fase 2: `02-baby`
-- **Descrição**: O filhote recém-saído da casca, com proporções infantis (cabeça proporcional, olhos expressivos frontais, crista jovem).
+- **Descrição**: O filhote recém-saído da casca no ninho, com proporções de bebê (dois grandes olhos dourados frontais, barriga amarela e crista inicial).
 - **Animações Típicas**:
   - `idle`: ciclo de respiração sutil, piscada e movimento de cauda.
 
-### 3.3. Fase 3: `03-pre-adolescente`
-- **Descrição**: Criatura jovem em postura bípede frontal, pernas ágeis, ventre claro central, dois olhos dourados visíveis e crista esmeralda em expansão.
+### 3.3. Fase 3: `03-crianca`
+- **Descrição**: A criatura fora do ninho em seus primeiros passos bípedes, corpo gordinho infantil, barriguinha arredondada, crista brotando no topo e cauda curta.
 - **Animações Típicas**:
-  - `idle`: postura ereta atenta frontal com ciclo de respiração.
+  - `idle`: postura ereta atenta infantil, curiosa com o ambiente.
+
+### 3.4. Fase 4: `04-pre-adolescente`
+- **Descrição**: Criatura jovem em postura bípede ágil frontal, pernas mais firmes, crista esmeralda em expansão e cauda de equilíbrio.
+- **Animações Típicas**:
+  - `idle`: postura atenta frontal com ciclo de respiração.
   - `walk`: passos curtos exploratórios frontais.
 
-### 3.4. Fase 4: `04-adolescente`
-- **Descrição**: Corpo atlético e musculoso frontal, tórax alargado, dois olhos dourados penetrantes, crista estendida e primeiras faíscas nos flancos.
+### 3.5. Fase 5: `05-adolescente`
+- **Descrição**: Corpo atlético e musculoso frontal com alta densidade de detalhes: escamas dérmicas, tórax alargado com placas ventrais esculpidas, dois olhos dourados penetrantes, crista estendida e primeiras faíscas nos flancos.
 - **Animações Típicas**:
   - `idle`: postura agressiva frontal com respiração e brasas.
   - `run`: corrida frontal.
   - `ember-bite`: investida com calor vulcânico.
 
-### 3.5. Fase 5: `05-adulto`
-- **Descrição**: Porte titânico imponente frontal, placas vulcânicas robustas em ambos os flancos, dois olhos dourados dominantes, cauda pesada e garras maciças.
+### 3.6. Fase 6: `06-adulto`
+- **Descrição**: Porte titânico imponente frontal de ápice: carapaça vulcânica chanfrada, chifres dérmicos, placas dorsais profundas com fendas de magma, dois olhos dourados dominantes, mandíbula potente e garras maciças.
 - **Animações Típicas**:
   - `idle`: respiração pesada dominante frontal com magma.
   - `roar`: rugido sísmico frontal.
