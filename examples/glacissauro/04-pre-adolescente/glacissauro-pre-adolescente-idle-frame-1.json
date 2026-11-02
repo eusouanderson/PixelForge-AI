@@ -1,0 +1,423 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Glacissauro — Pré-Adolescente: Idle (Quadro 1)",
+  "description": "Fase pré-adolescente de Glacissauro (Cryosaurus Glacius) caçador ágil com musculatura esbelta e chifres frontais definidos",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "dino_shadow_dark": "#0c4a6e",
+    "dino_shadow": "#0369a1",
+    "dino_base": "#0284c7",
+    "dino_light": "#38bdf8",
+    "dino_highlight": "#7dd3fc",
+    "dino_belly_shadow": "#93c5fd",
+    "dino_belly": "#e0f2fe",
+    "dino_belly_light": "#f0f9ff",
+    "dino_crest_deep": "#0369a1",
+    "dino_crest_shadow": "#0284c7",
+    "dino_crest": "#38bdf8",
+    "dino_crest_light": "#bae6fd",
+    "dino_crest_glow": "#e0f2fe",
+    "dino_eye": "#38bdf8",
+    "dino_pupil": "#082f49",
+    "dino_claw_shadow": "#0284c7",
+    "dino_claw": "#bae6fd",
+    "dino_claw_light": "#ffffff",
+    "dino_mouth_dark": "#082f49",
+    "dino_mouth": "#0c4a6e",
+    "dino_blush": "#67e8f9",
+    "aura_deep": "#0369a1",
+    "aura_mid": "#38bdf8",
+    "aura_light": "#e0f2fe",
+    "outline": "#082f49",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Sombra de Chão",
+      "visible": true,
+      "opacity": 0.6,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 28,
+          "width": 16,
+          "height": 2,
+          "color": "dino_shadow_dark"
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda com Espinhos",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 21,
+          "width": 3,
+          "height": 5,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 19,
+          "width": 2,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 6,
+          "y": 18,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pernas Fortes e Garras",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 21,
+          "width": 4,
+          "height": 6,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 26,
+          "width": 5,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 8,
+          "y": 27,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 10,
+          "y": 27,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 27,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 21,
+          "width": 4,
+          "height": 6,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 26,
+          "width": 5,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 27,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 21,
+          "y": 27,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 23,
+          "y": 27,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Torso Atlético e Placas Peitorais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 14,
+          "width": 12,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 14,
+          "width": 10,
+          "height": 7,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 15,
+          "width": 8,
+          "height": 6,
+          "color": "dino_belly"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 15,
+          "width": 6,
+          "height": 5,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 16,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 16,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Braços com Garras",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 15,
+          "width": 3,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 7,
+          "y": 18,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 8,
+          "y": 18,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 15,
+          "width": 3,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 23,
+          "y": 18,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 24,
+          "y": 18,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Cabeça Pré-Adulta e Chifres Frontais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 6,
+          "width": 14,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 6,
+          "width": 12,
+          "height": 7,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 11,
+          "width": 6,
+          "height": 3,
+          "color": "dino_highlight"
+        },
+        {
+          "type": "pixel",
+          "x": 14,
+          "y": 13,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "pixel",
+          "x": 17,
+          "y": 13,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "pixel",
+          "x": 13,
+          "y": 12,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 12,
+          "color": "specular"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 3,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 3,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "pixel",
+          "x": 9,
+          "y": 2,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "pixel",
+          "x": 22,
+          "y": 2,
+          "color": "dino_crest_glow"
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Binoculares Frontais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 8,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 8,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 9,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 9,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 8,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 8,
+          "color": "specular"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Glacissauro",
+    "lifeStage": "pre-adolescente",
+    "animation": "idle",
+    "frame": 1,
+    "author": "PixelForge AI",
+    "createdAt": "2026-11-02T22:25:45.336Z",
+    "tags": [
+      "glacissauro",
+      "dinosaur",
+      "gelo",
+      "pre-adolescente",
+      "idle",
+      "frontal",
+      "32x32"
+    ]
+  }
+}

@@ -1,0 +1,396 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Toxissauro — Filhote (Baby): Idle (Quadro 1)",
+  "description": "Filhote recém-nascido de Toxissauro (Venomousaurus Titan) descansando na casca em postura frontal com grandes olhos binoculares",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "nest_dark": "#142308",
+    "nest_base": "#1e3a0f",
+    "nest_light": "#365314",
+    "shell_shadow": "#3b0764",
+    "shell_base": "#6b21a8",
+    "shell_mid": "#9333ea",
+    "shell_light": "#a855f7",
+    "shell_inner": "#2e1065",
+    "dino_shadow": "#581c87",
+    "dino_base": "#7e22ce",
+    "dino_light": "#9333ea",
+    "dino_highlight": "#c084fc",
+    "dino_belly": "#a3e635",
+    "dino_crest": "#22c55e",
+    "dino_eye": "#84cc16",
+    "dino_pupil": "#14532d",
+    "dino_claw": "#d9f99d",
+    "dino_mouth": "#3b0764",
+    "dino_blush": "#4ade80",
+    "outline": "#1e0836",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_nest",
+      "name": "Ninho Base",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 26,
+          "width": 20,
+          "height": 4,
+          "color": "nest_dark"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 27,
+          "width": 16,
+          "height": 3,
+          "color": "nest_base"
+        },
+        {
+          "type": "line",
+          "x0": 5,
+          "y0": 27,
+          "x1": 9,
+          "y1": 29,
+          "color": "nest_light"
+        },
+        {
+          "type": "line",
+          "x0": 23,
+          "y0": 28,
+          "x1": 27,
+          "y1": 26,
+          "color": "nest_light"
+        }
+      ]
+    },
+    {
+      "id": "layer_bottom_shell",
+      "name": "Casca Inferior",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 19,
+          "width": 16,
+          "height": 8,
+          "color": "shell_base"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 20,
+          "width": 14,
+          "height": 6,
+          "color": "shell_mid"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 24,
+          "width": 12,
+          "height": 3,
+          "color": "shell_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 19,
+          "width": 12,
+          "height": 2,
+          "color": "shell_inner"
+        },
+        {
+          "type": "points",
+          "color": "shell_light",
+          "coordinates": [
+            [
+              9,
+              21
+            ],
+            [
+              10,
+              21
+            ],
+            [
+              21,
+              21
+            ],
+            [
+              22,
+              21
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_dino_body",
+      "name": "Corpo Frontal do Filhote",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 14,
+          "width": 10,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 14,
+          "width": 8,
+          "height": 5,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 15,
+          "width": 6,
+          "height": 4,
+          "color": "dino_belly"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 15,
+          "width": 3,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 15,
+          "width": 3,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_claw",
+          "coordinates": [
+            [
+              9,
+              15
+            ],
+            [
+              22,
+              15
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_dino_head",
+      "name": "Cabeça Frontal e Crista",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 9,
+          "width": 12,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 8,
+          "width": 10,
+          "height": 7,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 15,
+          "y": 6,
+          "width": 2,
+          "height": 3,
+          "color": "dino_crest"
+        },
+        {
+          "type": "pixel",
+          "x": 15,
+          "y": 6,
+          "color": "specular"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 13,
+          "width": 4,
+          "height": 2,
+          "color": "dino_light"
+        },
+        {
+          "type": "pixel",
+          "x": 15,
+          "y": 14,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "pixel",
+          "x": 16,
+          "y": 14,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 13,
+          "color": "dino_blush"
+        },
+        {
+          "type": "pixel",
+          "x": 20,
+          "y": 13,
+          "color": "dino_blush"
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Binoculares Frontais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 10,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": 10,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 13,
+          "y": 11,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 11,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 10,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 17,
+          "y": 10,
+          "color": "specular"
+        }
+      ]
+    },
+    {
+      "id": "layer_outline",
+      "name": "Contorno Suave",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              11,
+              8
+            ],
+            [
+              14,
+              6
+            ],
+            [
+              17,
+              6
+            ],
+            [
+              20,
+              8
+            ],
+            [
+              9,
+              9
+            ],
+            [
+              22,
+              9
+            ],
+            [
+              8,
+              19
+            ],
+            [
+              23,
+              19
+            ],
+            [
+              7,
+              26
+            ],
+            [
+              24,
+              26
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Toxissauro",
+    "lifeStage": "baby",
+    "animation": "idle",
+    "frame": 1,
+    "author": "PixelForge AI",
+    "createdAt": "2026-11-02T22:25:45.352Z",
+    "tags": [
+      "toxissauro",
+      "dinosaur",
+      "veneno",
+      "baby",
+      "filhote",
+      "idle",
+      "frontal",
+      "32x32"
+    ]
+  }
+}
