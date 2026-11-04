@@ -24,6 +24,18 @@ Cada espécie de criatura possui um identificador canônico em *kebab-case*, nom
 4. **Toxissauro** (`toxissauro` — *Venomousaurus Titan*):
    - Arquétipo: Titã pantanoso venenoso com escamas violeta-tóxicas, pústulas ácidas bioluminescentes e olhos verde-limão radioativos (`#84cc16`).
    - Casca do ovo: Violeta abissal com manchas ácidas e ninho de musgo de turfa pantanosa.
+5. **Terrassauro** (`terrassauro` — *Geosaurus Titan*):
+   - Arquétipo: Paquicefalossauro/Estegossauro de terra ancestral com domo craniano monolítico arredondado, placas dorsais esmeralda pentagonais, manoplas esmagadoras de golem, cauda Thagomizer e olhos âmbar-citrino (`#f59e0b`).
+   - Casca do ovo: Terracota rochosa com fissuras de musgo esmeralda em ninho de basalto.
+6. **Aerossauro** (`aerossauro` — *Zephyrusaurus Rex*):
+   - Arquétipo: Pteranodon/Archaeopteryx celeste com crista real de três plumas altas, bico dourado aerodinâmico, asas emplumadas abertas, gola nívea e olhos ametista-celeste (`#c084fc`).
+   - Casca do ovo: Azul-celeste perolado com marcas de vento em ninho de plumas brancas.
+7. **Umbrassauro** (`umbrassauro` — *Nyxosaurus Rex*):
+   - Arquétipo: Carnotauro ceifador abissal com chifres taurinos horizontais largos, elmo craniano de osso pálido, costelas ósseas aparentes sobre núcleo carmesim, cauda em foice óssea e olhos rubi-sangue (`#ef4444`).
+   - Casca do ovo: Obsidiana sombria com suturas ósseas e brilho carmesim em ninho de cinzas.
+8. **Solassauro** (`solassauro` — *Heliosaurus Imperator*):
+   - Arquétipo: Imperador solar com juba radiante de 360 graus em forma de coroa de raios solares, armadura branco-platina e ouro imperial com brasão do sol, cauda maça-solar e olhos safira-celestial (`#38bdf8`).
+   - Casca do ovo: Marfim-platina com raios de ouro solar em ninho de fios dourados.
 
 ---
 
