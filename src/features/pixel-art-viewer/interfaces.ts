@@ -1,6 +1,14 @@
 import type { DeclarativePixelArt } from '@/core/domain/pixel-art/interfaces';
 
-export type AnimationMode = 'none' | 'lifecycle' | 'idle' | 'hatching';
+export type AnimationMode =
+  | 'none'
+  | 'lifecycle'
+  | 'idle'
+  | 'hatching'
+  | 'comendo'
+  | 'amando'
+  | 'doente'
+  | 'morte';
 
 export interface ViewerState {
   currentArt: DeclarativePixelArt;

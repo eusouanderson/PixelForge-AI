@@ -12,7 +12,11 @@ import {
   Sparkles as SparklesIcon,
   Activity as ActivityIcon,
   Film as FilmIcon,
-  Play as PlayIcon
+  Play as PlayIcon,
+  Utensils as UtensilsIcon,
+  Heart as HeartIcon,
+  Thermometer as ThermometerIcon,
+  Skull as SkullIcon
 } from 'lucide-vue-next';
 import { APP_CONFIG } from '@/shared/constants/app-config';
 import { PRESETS, type PresetItem } from '@/shared/constants/presets';
@@ -119,7 +123,9 @@ function getCurrentCreatureLifecycleFrames(): readonly PresetItem[] {
   const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
   const creature = currentItem?.data.metadata?.creatureName;
   const creaturePresets = PRESETS.filter(
-    (p) => p.data.metadata?.creatureName === creature
+    (p) =>
+      p.data.metadata?.creatureName === creature &&
+      (p.data.metadata?.animation === 'eclosao' || p.data.metadata?.animation === 'idle')
   );
   if (creaturePresets.length > 0) return creaturePresets;
   return PRESETS;
@@ -139,41 +145,49 @@ function getCurrentCreatureHatchFrames(): readonly PresetItem[] {
   return PRESETS.slice(0, 4);
 }
 
-function getCurrentStageIdlePair(): readonly [PresetItem, PresetItem] {
+function getCurrentStageAnimationPair(
+  targetAnimation: 'idle' | 'comendo' | 'amando' | 'doente' | 'morte'
+): readonly [PresetItem, PresetItem] {
   const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
-  const creature = currentItem?.data.metadata?.creatureName;
+  const creature = currentItem?.data.metadata?.creatureName ?? selectedCreature.value;
   const lifeStage = currentItem?.data.metadata?.lifeStage;
-  const targetStage = lifeStage === 'ovo' ? 'baby' : lifeStage;
+  const targetStage = !lifeStage || lifeStage === 'ovo' ? 'baby' : lifeStage;
 
-  const stageIdlePresets = PRESETS.filter(
+  const stageAnimPresets = PRESETS.filter(
     (p) =>
       p.data.metadata?.creatureName === creature &&
       p.data.metadata?.lifeStage === targetStage &&
-      p.data.metadata?.animation === 'idle'
-  );
+      p.data.metadata?.animation === targetAnimation
+  ).sort((a, b) => (a.data.metadata?.frame ?? 0) - (b.data.metadata?.frame ?? 0));
 
-  if (stageIdlePresets.length >= 2) {
-    return [stageIdlePresets[0], stageIdlePresets[1]];
+  if (stageAnimPresets.length >= 2) {
+    return [stageAnimPresets[0], stageAnimPresets[1]];
   }
 
-  const anyIdlePresets = PRESETS.filter((p) => p.data.metadata?.animation === 'idle');
-  if (anyIdlePresets.length >= 2) {
-    return [anyIdlePresets[0], anyIdlePresets[1]];
+  const anyAnimPresets = PRESETS.filter(
+    (p) =>
+      p.data.metadata?.creatureName === creature &&
+      p.data.metadata?.animation === targetAnimation
+  );
+  if (anyAnimPresets.length >= 2) {
+    return [anyAnimPresets[0], anyAnimPresets[1]];
   }
 
   return [PRESETS[0], PRESETS[1] || PRESETS[0]];
 }
 
-const currentStageIdleLabel = computed(() => {
+const currentStageShortName = computed(() => {
   const currentItem = PRESETS.find((p) => p.id === selectedPresetId.value);
   const stage = currentItem?.data.metadata?.lifeStage;
-  if (!stage || stage === 'ovo' || stage === 'baby') return 'Idle Filhote';
-  if (stage === 'crianca') return 'Idle Criança';
-  if (stage === 'pre-adolescente') return 'Idle Pré-Ado';
-  if (stage === 'adolescente') return 'Idle Adolescente';
-  if (stage === 'adulto') return 'Idle Adulto';
-  return `Idle ${stage}`;
+  if (!stage || stage === 'ovo' || stage === 'baby') return 'Filhote';
+  if (stage === 'crianca') return 'Criança';
+  if (stage === 'pre-adolescente') return 'Pré-Ado';
+  if (stage === 'adolescente') return 'Adolescente';
+  if (stage === 'adulto') return 'Adulto';
+  return stage;
 });
+
+const currentStageIdleLabel = computed(() => `Idle ${currentStageShortName.value}`);
 
 function startAnimation(mode: AnimationMode): void {
   stopAnimation();
@@ -197,13 +211,20 @@ function startAnimation(mode: AnimationMode): void {
       hatchIndex = (hatchIndex + 1) % hatchPresets.length;
       selectPreset(hatchPresets[hatchIndex].id);
     }, animationSpeedMs.value);
-  } else if (mode === 'idle') {
-    const idlePresets = getCurrentStageIdlePair();
-    let idleIndex = selectedPresetId.value === idlePresets[1].id ? 1 : 0;
+  } else if (
+    mode === 'idle' ||
+    mode === 'comendo' ||
+    mode === 'amando' ||
+    mode === 'doente' ||
+    mode === 'morte'
+  ) {
+    const pairPresets = getCurrentStageAnimationPair(mode);
+    let pairIndex = selectedPresetId.value === pairPresets[1].id ? 1 : 0;
+    selectPreset(pairPresets[pairIndex].id);
 
     animInterval = setInterval(() => {
-      idleIndex = (idleIndex + 1) % idlePresets.length;
-      selectPreset(idlePresets[idleIndex].id);
+      pairIndex = (pairIndex + 1) % pairPresets.length;
+      selectPreset(pairPresets[pairIndex].id);
     }, Math.max(250, Math.round(animationSpeedMs.value * 0.75)));
   }
 }
@@ -354,6 +375,50 @@ onUnmounted(() => {
             <pause-icon v-if="animationMode === 'idle'" class="w-3.5 h-3.5" />
             <activity-icon v-else class="w-3.5 h-3.5" />
             <span>{{ animationMode === 'idle' ? 'Pausar Idle' : currentStageIdleLabel }}</span>
+          </button>
+
+          <button
+            @click="animationMode === 'comendo' ? stopAnimation() : startAnimation('comendo')"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
+            :class="animationMode === 'comendo' ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
+            :title="`Animar ${currentStageShortName} comendo (2 quadros)`"
+          >
+            <pause-icon v-if="animationMode === 'comendo'" class="w-3.5 h-3.5" />
+            <utensils-icon v-else class="w-3.5 h-3.5" />
+            <span>{{ animationMode === 'comendo' ? 'Pausar Comendo' : `Comendo (${currentStageShortName})` }}</span>
+          </button>
+
+          <button
+            @click="animationMode === 'amando' ? stopAnimation() : startAnimation('amando')"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
+            :class="animationMode === 'amando' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
+            :title="`Animar ${currentStageShortName} amando (2 quadros)`"
+          >
+            <pause-icon v-if="animationMode === 'amando'" class="w-3.5 h-3.5" />
+            <heart-icon v-else class="w-3.5 h-3.5" />
+            <span>{{ animationMode === 'amando' ? 'Pausar Amando' : `Amando (${currentStageShortName})` }}</span>
+          </button>
+
+          <button
+            @click="animationMode === 'doente' ? stopAnimation() : startAnimation('doente')"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
+            :class="animationMode === 'doente' ? 'bg-lime-700 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
+            :title="`Animar ${currentStageShortName} doente (2 quadros)`"
+          >
+            <pause-icon v-if="animationMode === 'doente'" class="w-3.5 h-3.5" />
+            <thermometer-icon v-else class="w-3.5 h-3.5" />
+            <span>{{ animationMode === 'doente' ? 'Pausar Doente' : `Doente (${currentStageShortName})` }}</span>
+          </button>
+
+          <button
+            @click="animationMode === 'morte' ? stopAnimation() : startAnimation('morte')"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
+            :class="animationMode === 'morte' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
+            title="Animar memorial de morte com cruz de pedra e espírito ascendente (2 quadros)"
+          >
+            <pause-icon v-if="animationMode === 'morte'" class="w-3.5 h-3.5" />
+            <skull-icon v-else class="w-3.5 h-3.5" />
+            <span>{{ animationMode === 'morte' ? 'Pausar Morte' : 'Morte' }}</span>
           </button>
         </div>
 
