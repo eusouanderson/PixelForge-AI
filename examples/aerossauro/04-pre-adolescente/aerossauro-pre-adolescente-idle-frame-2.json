@@ -1,0 +1,2745 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Aerossauro — Pré-Adolescente: Idle (Quadro 2)",
+  "description": "Zephyrusaurus Rex (pre-adolescente) dinossauro alado celeste com grandes asas emplumadas abertas, bico dourado e cauda em leque de Archaeopteryx",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "nest_dark": "#0f766e",
+    "nest_base": "#14b8a6",
+    "nest_light": "#99f6e4",
+    "shell_shadow": "#0d9488",
+    "shell_base": "#2dd4bf",
+    "shell_mid": "#99f6e4",
+    "shell_light": "#ccfbf1",
+    "shell_highlight": "#f0fdfa",
+    "shell_inner": "#ffffff",
+    "spot_dark": "#0f766e",
+    "spot_mid": "#14b8a6",
+    "cavity_dark": "#042f2e",
+    "crack_glow": "#fde047",
+    "crack_glow_core": "#ffffff",
+    "dino_shadow_dark": "#115e59",
+    "dino_shadow": "#0d9488",
+    "dino_base": "#14b8a6",
+    "dino_light": "#2dd4bf",
+    "dino_highlight": "#99f6e4",
+    "dino_belly_shadow": "#cbd5e1",
+    "dino_belly": "#f1f5f9",
+    "dino_belly_light": "#ffffff",
+    "dino_crest_deep": "#0369a1",
+    "dino_crest_shadow": "#0ea5e9",
+    "dino_crest": "#38bdf8",
+    "dino_crest_light": "#bae6fd",
+    "dino_crest_glow": "#ffffff",
+    "dino_eye": "#fde047",
+    "dino_pupil": "#042f2e",
+    "dino_claw_shadow": "#b45309",
+    "dino_claw": "#f59e0b",
+    "dino_claw_light": "#fde047",
+    "dino_mouth_dark": "#b45309",
+    "dino_mouth": "#f59e0b",
+    "dino_blush": "#f472b6",
+    "aura_deep": "#2dd4bf",
+    "aura_mid": "#99f6e4",
+    "aura_light": "#ffffff",
+    "outline": "#042f2e",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Redemoinho de Vento no Solo",
+      "visible": true,
+      "opacity": 0.6,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 29,
+          "width": 3,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 29,
+          "width": 10,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 29,
+          "width": 3,
+          "height": 2,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda em Leque Simétrico de Plumas (Archaeopteryx)",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 15,
+          "y": 19,
+          "width": 2,
+          "height": 6,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 21,
+          "width": 2,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": 21,
+          "width": 2,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 23,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 23,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 25,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 25,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 15,
+          "y": 25,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 25,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 25,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              15,
+              17
+            ],
+            [
+              16,
+              17
+            ],
+            [
+              14,
+              18
+            ],
+            [
+              17,
+              18
+            ],
+            [
+              13,
+              19
+            ],
+            [
+              18,
+              19
+            ],
+            [
+              12,
+              20
+            ],
+            [
+              19,
+              20
+            ],
+            [
+              11,
+              21
+            ],
+            [
+              20,
+              21
+            ],
+            [
+              10,
+              22
+            ],
+            [
+              21,
+              22
+            ],
+            [
+              9,
+              23
+            ],
+            [
+              22,
+              23
+            ],
+            [
+              8,
+              24
+            ],
+            [
+              23,
+              24
+            ],
+            [
+              7,
+              25
+            ],
+            [
+              24,
+              25
+            ],
+            [
+              8,
+              26
+            ],
+            [
+              23,
+              26
+            ],
+            [
+              9,
+              27
+            ],
+            [
+              22,
+              27
+            ],
+            [
+              10,
+              28
+            ],
+            [
+              11,
+              28
+            ],
+            [
+              12,
+              28
+            ],
+            [
+              13,
+              28
+            ],
+            [
+              14,
+              28
+            ],
+            [
+              15,
+              28
+            ],
+            [
+              16,
+              28
+            ],
+            [
+              17,
+              28
+            ],
+            [
+              18,
+              28
+            ],
+            [
+              19,
+              28
+            ],
+            [
+              20,
+              28
+            ],
+            [
+              21,
+              28
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_shadow",
+          "coordinates": [
+            [
+              15,
+              18
+            ],
+            [
+              16,
+              18
+            ],
+            [
+              14,
+              19
+            ],
+            [
+              17,
+              19
+            ],
+            [
+              13,
+              20
+            ],
+            [
+              18,
+              20
+            ],
+            [
+              12,
+              21
+            ],
+            [
+              19,
+              21
+            ],
+            [
+              11,
+              22
+            ],
+            [
+              20,
+              22
+            ],
+            [
+              10,
+              23
+            ],
+            [
+              21,
+              23
+            ],
+            [
+              9,
+              24
+            ],
+            [
+              22,
+              24
+            ],
+            [
+              8,
+              25
+            ],
+            [
+              23,
+              25
+            ],
+            [
+              11,
+              26
+            ],
+            [
+              14,
+              26
+            ],
+            [
+              17,
+              26
+            ],
+            [
+              20,
+              26
+            ],
+            [
+              10,
+              27
+            ],
+            [
+              11,
+              27
+            ],
+            [
+              12,
+              27
+            ],
+            [
+              13,
+              27
+            ],
+            [
+              14,
+              27
+            ],
+            [
+              15,
+              27
+            ],
+            [
+              16,
+              27
+            ],
+            [
+              17,
+              27
+            ],
+            [
+              18,
+              27
+            ],
+            [
+              19,
+              27
+            ],
+            [
+              20,
+              27
+            ],
+            [
+              21,
+              27
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_base",
+          "coordinates": [
+            [
+              14,
+              20
+            ],
+            [
+              17,
+              20
+            ],
+            [
+              12,
+              22
+            ],
+            [
+              19,
+              22
+            ],
+            [
+              10,
+              24
+            ],
+            [
+              21,
+              24
+            ],
+            [
+              11,
+              25
+            ],
+            [
+              14,
+              25
+            ],
+            [
+              17,
+              25
+            ],
+            [
+              20,
+              25
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pernas de Ave de Rapina e Garras Douradas",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 19,
+          "width": 3,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 19,
+          "width": 3,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 23,
+          "width": 3,
+          "height": 3,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 23,
+          "width": 3,
+          "height": 3,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 26,
+          "width": 3,
+          "height": 2,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 26,
+          "width": 3,
+          "height": 2,
+          "color": "dino_claw"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              10,
+              18
+            ],
+            [
+              11,
+              18
+            ],
+            [
+              12,
+              18
+            ],
+            [
+              19,
+              18
+            ],
+            [
+              20,
+              18
+            ],
+            [
+              21,
+              18
+            ],
+            [
+              9,
+              19
+            ],
+            [
+              13,
+              19
+            ],
+            [
+              18,
+              19
+            ],
+            [
+              22,
+              19
+            ],
+            [
+              9,
+              20
+            ],
+            [
+              13,
+              20
+            ],
+            [
+              18,
+              20
+            ],
+            [
+              22,
+              20
+            ],
+            [
+              9,
+              21
+            ],
+            [
+              13,
+              21
+            ],
+            [
+              18,
+              21
+            ],
+            [
+              22,
+              21
+            ],
+            [
+              9,
+              22
+            ],
+            [
+              13,
+              22
+            ],
+            [
+              18,
+              22
+            ],
+            [
+              22,
+              22
+            ],
+            [
+              9,
+              23
+            ],
+            [
+              13,
+              23
+            ],
+            [
+              18,
+              23
+            ],
+            [
+              22,
+              23
+            ],
+            [
+              9,
+              24
+            ],
+            [
+              13,
+              24
+            ],
+            [
+              18,
+              24
+            ],
+            [
+              22,
+              24
+            ],
+            [
+              9,
+              25
+            ],
+            [
+              13,
+              25
+            ],
+            [
+              18,
+              25
+            ],
+            [
+              22,
+              25
+            ],
+            [
+              8,
+              26
+            ],
+            [
+              12,
+              26
+            ],
+            [
+              19,
+              26
+            ],
+            [
+              23,
+              26
+            ],
+            [
+              8,
+              27
+            ],
+            [
+              12,
+              27
+            ],
+            [
+              19,
+              27
+            ],
+            [
+              23,
+              27
+            ],
+            [
+              7,
+              28
+            ],
+            [
+              13,
+              28
+            ],
+            [
+              18,
+              28
+            ],
+            [
+              24,
+              28
+            ],
+            [
+              8,
+              29
+            ],
+            [
+              9,
+              29
+            ],
+            [
+              11,
+              29
+            ],
+            [
+              12,
+              29
+            ],
+            [
+              19,
+              29
+            ],
+            [
+              20,
+              29
+            ],
+            [
+              22,
+              29
+            ],
+            [
+              23,
+              29
+            ],
+            [
+              10,
+              30
+            ],
+            [
+              21,
+              30
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_base",
+          "coordinates": [
+            [
+              10,
+              22
+            ],
+            [
+              12,
+              22
+            ],
+            [
+              19,
+              22
+            ],
+            [
+              21,
+              22
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_claw",
+          "coordinates": [
+            [
+              11,
+              22
+            ],
+            [
+              20,
+              22
+            ],
+            [
+              10,
+              29
+            ],
+            [
+              21,
+              29
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_claw_light",
+          "coordinates": [
+            [
+              8,
+              28
+            ],
+            [
+              9,
+              28
+            ],
+            [
+              10,
+              28
+            ],
+            [
+              11,
+              28
+            ],
+            [
+              12,
+              28
+            ],
+            [
+              19,
+              28
+            ],
+            [
+              20,
+              28
+            ],
+            [
+              21,
+              28
+            ],
+            [
+              22,
+              28
+            ],
+            [
+              23,
+              28
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Tórax Emplumado com Colar de Penas Brancas",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 12,
+          "width": 7,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 14,
+          "width": 6,
+          "height": 2,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 16,
+          "width": 4,
+          "height": 3,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 17,
+          "width": 2,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 18,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 19,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly"
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": 19,
+          "width": 2,
+          "height": 2,
+          "color": "dino_belly"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              14,
+              10
+            ],
+            [
+              15,
+              10
+            ],
+            [
+              16,
+              10
+            ],
+            [
+              17,
+              10
+            ],
+            [
+              11,
+              11
+            ],
+            [
+              12,
+              11
+            ],
+            [
+              13,
+              11
+            ],
+            [
+              18,
+              11
+            ],
+            [
+              19,
+              11
+            ],
+            [
+              10,
+              12
+            ],
+            [
+              20,
+              12
+            ],
+            [
+              10,
+              13
+            ],
+            [
+              20,
+              13
+            ],
+            [
+              10,
+              14
+            ],
+            [
+              21,
+              14
+            ],
+            [
+              10,
+              15
+            ],
+            [
+              21,
+              15
+            ],
+            [
+              10,
+              16
+            ],
+            [
+              21,
+              16
+            ],
+            [
+              10,
+              17
+            ],
+            [
+              21,
+              17
+            ],
+            [
+              10,
+              18
+            ],
+            [
+              21,
+              18
+            ],
+            [
+              10,
+              19
+            ],
+            [
+              21,
+              19
+            ],
+            [
+              11,
+              20
+            ],
+            [
+              20,
+              20
+            ],
+            [
+              12,
+              21
+            ],
+            [
+              19,
+              21
+            ],
+            [
+              13,
+              22
+            ],
+            [
+              18,
+              22
+            ],
+            [
+              14,
+              23
+            ],
+            [
+              15,
+              23
+            ],
+            [
+              16,
+              23
+            ],
+            [
+              17,
+              23
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_base",
+          "coordinates": [
+            [
+              14,
+              11
+            ],
+            [
+              15,
+              11
+            ],
+            [
+              16,
+              11
+            ],
+            [
+              17,
+              11
+            ],
+            [
+              11,
+              14
+            ],
+            [
+              20,
+              14
+            ],
+            [
+              11,
+              15
+            ],
+            [
+              20,
+              15
+            ],
+            [
+              11,
+              16
+            ],
+            [
+              20,
+              16
+            ],
+            [
+              11,
+              17
+            ],
+            [
+              12,
+              20
+            ],
+            [
+              19,
+              20
+            ],
+            [
+              13,
+              21
+            ],
+            [
+              18,
+              21
+            ],
+            [
+              14,
+              22
+            ],
+            [
+              16,
+              22
+            ],
+            [
+              17,
+              22
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_belly",
+          "coordinates": [
+            [
+              11,
+              12
+            ],
+            [
+              19,
+              12
+            ],
+            [
+              11,
+              13
+            ],
+            [
+              19,
+              13
+            ],
+            [
+              12,
+              14
+            ],
+            [
+              19,
+              14
+            ],
+            [
+              12,
+              15
+            ],
+            [
+              19,
+              15
+            ],
+            [
+              12,
+              16
+            ],
+            [
+              18,
+              16
+            ],
+            [
+              19,
+              16
+            ],
+            [
+              12,
+              17
+            ],
+            [
+              13,
+              17
+            ],
+            [
+              18,
+              17
+            ],
+            [
+              13,
+              18
+            ],
+            [
+              18,
+              18
+            ],
+            [
+              16,
+              20
+            ],
+            [
+              14,
+              21
+            ],
+            [
+              15,
+              21
+            ],
+            [
+              16,
+              21
+            ],
+            [
+              17,
+              21
+            ],
+            [
+              15,
+              22
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_belly_light",
+          "coordinates": [
+            [
+              13,
+              16
+            ],
+            [
+              15,
+              19
+            ],
+            [
+              16,
+              19
+            ],
+            [
+              15,
+              20
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Grandes Asas Emplumadas Abertas",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 2,
+          "y": 7,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 28,
+          "y": 7,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 8,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 26,
+          "y": 8,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 9,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 24,
+          "y": 9,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 10,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 10,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 11,
+          "width": 4,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 11,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 11,
+          "width": 2,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 12,
+          "width": 2,
+          "height": 5,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 13,
+          "width": 2,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 13,
+          "width": 5,
+          "height": 4,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 14,
+          "width": 2,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 26,
+          "y": 14,
+          "width": 2,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              2,
+              6
+            ],
+            [
+              3,
+              6
+            ],
+            [
+              28,
+              6
+            ],
+            [
+              29,
+              6
+            ],
+            [
+              1,
+              7
+            ],
+            [
+              4,
+              7
+            ],
+            [
+              5,
+              7
+            ],
+            [
+              26,
+              7
+            ],
+            [
+              27,
+              7
+            ],
+            [
+              30,
+              7
+            ],
+            [
+              1,
+              8
+            ],
+            [
+              6,
+              8
+            ],
+            [
+              7,
+              8
+            ],
+            [
+              24,
+              8
+            ],
+            [
+              25,
+              8
+            ],
+            [
+              30,
+              8
+            ],
+            [
+              1,
+              9
+            ],
+            [
+              8,
+              9
+            ],
+            [
+              9,
+              9
+            ],
+            [
+              22,
+              9
+            ],
+            [
+              23,
+              9
+            ],
+            [
+              30,
+              9
+            ],
+            [
+              1,
+              10
+            ],
+            [
+              10,
+              10
+            ],
+            [
+              11,
+              10
+            ],
+            [
+              20,
+              10
+            ],
+            [
+              21,
+              10
+            ],
+            [
+              30,
+              10
+            ],
+            [
+              1,
+              11
+            ],
+            [
+              12,
+              11
+            ],
+            [
+              19,
+              11
+            ],
+            [
+              30,
+              11
+            ],
+            [
+              1,
+              12
+            ],
+            [
+              12,
+              12
+            ],
+            [
+              19,
+              12
+            ],
+            [
+              30,
+              12
+            ],
+            [
+              1,
+              13
+            ],
+            [
+              12,
+              13
+            ],
+            [
+              19,
+              13
+            ],
+            [
+              30,
+              13
+            ],
+            [
+              2,
+              14
+            ],
+            [
+              12,
+              14
+            ],
+            [
+              19,
+              14
+            ],
+            [
+              29,
+              14
+            ],
+            [
+              1,
+              15
+            ],
+            [
+              11,
+              15
+            ],
+            [
+              20,
+              15
+            ],
+            [
+              30,
+              15
+            ],
+            [
+              2,
+              16
+            ],
+            [
+              3,
+              16
+            ],
+            [
+              11,
+              16
+            ],
+            [
+              20,
+              16
+            ],
+            [
+              28,
+              16
+            ],
+            [
+              29,
+              16
+            ],
+            [
+              4,
+              17
+            ],
+            [
+              5,
+              17
+            ],
+            [
+              11,
+              17
+            ],
+            [
+              20,
+              17
+            ],
+            [
+              26,
+              17
+            ],
+            [
+              27,
+              17
+            ],
+            [
+              6,
+              18
+            ],
+            [
+              7,
+              18
+            ],
+            [
+              8,
+              18
+            ],
+            [
+              11,
+              18
+            ],
+            [
+              20,
+              18
+            ],
+            [
+              23,
+              18
+            ],
+            [
+              24,
+              18
+            ],
+            [
+              25,
+              18
+            ],
+            [
+              9,
+              19
+            ],
+            [
+              10,
+              19
+            ],
+            [
+              21,
+              19
+            ],
+            [
+              22,
+              19
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_belly_light",
+          "coordinates": [
+            [
+              2,
+              9
+            ],
+            [
+              3,
+              9
+            ],
+            [
+              28,
+              9
+            ],
+            [
+              29,
+              9
+            ],
+            [
+              4,
+              10
+            ],
+            [
+              5,
+              10
+            ],
+            [
+              26,
+              10
+            ],
+            [
+              27,
+              10
+            ],
+            [
+              2,
+              12
+            ],
+            [
+              3,
+              12
+            ],
+            [
+              28,
+              12
+            ],
+            [
+              29,
+              12
+            ],
+            [
+              4,
+              13
+            ],
+            [
+              5,
+              13
+            ],
+            [
+              26,
+              13
+            ],
+            [
+              27,
+              13
+            ],
+            [
+              2,
+              15
+            ],
+            [
+              3,
+              15
+            ],
+            [
+              28,
+              15
+            ],
+            [
+              29,
+              15
+            ],
+            [
+              4,
+              16
+            ],
+            [
+              5,
+              16
+            ],
+            [
+              26,
+              16
+            ],
+            [
+              27,
+              16
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_base",
+          "coordinates": [
+            [
+              2,
+              10
+            ],
+            [
+              29,
+              10
+            ],
+            [
+              2,
+              11
+            ],
+            [
+              29,
+              11
+            ],
+            [
+              2,
+              13
+            ],
+            [
+              3,
+              13
+            ],
+            [
+              11,
+              13
+            ],
+            [
+              20,
+              13
+            ],
+            [
+              28,
+              13
+            ],
+            [
+              29,
+              13
+            ],
+            [
+              3,
+              14
+            ],
+            [
+              11,
+              14
+            ],
+            [
+              20,
+              14
+            ],
+            [
+              28,
+              14
+            ],
+            [
+              6,
+              17
+            ],
+            [
+              7,
+              17
+            ],
+            [
+              8,
+              17
+            ],
+            [
+              23,
+              17
+            ],
+            [
+              24,
+              17
+            ],
+            [
+              25,
+              17
+            ],
+            [
+              9,
+              18
+            ],
+            [
+              10,
+              18
+            ],
+            [
+              21,
+              18
+            ],
+            [
+              22,
+              18
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_crest",
+          "coordinates": [
+            [
+              3,
+              10
+            ],
+            [
+              28,
+              10
+            ],
+            [
+              3,
+              11
+            ],
+            [
+              24,
+              11
+            ],
+            [
+              25,
+              11
+            ],
+            [
+              26,
+              11
+            ],
+            [
+              27,
+              11
+            ],
+            [
+              28,
+              11
+            ],
+            [
+              22,
+              12
+            ],
+            [
+              23,
+              12
+            ],
+            [
+              24,
+              12
+            ],
+            [
+              25,
+              12
+            ],
+            [
+              26,
+              12
+            ],
+            [
+              27,
+              12
+            ],
+            [
+              10,
+              13
+            ],
+            [
+              10,
+              14
+            ],
+            [
+              10,
+              15
+            ],
+            [
+              10,
+              16
+            ],
+            [
+              9,
+              17
+            ],
+            [
+              10,
+              17
+            ],
+            [
+              21,
+              17
+            ],
+            [
+              22,
+              17
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Crânio Aerodinâmico, Crista de Plumas e Bico Dourado",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 16,
+          "y": 2,
+          "width": 2,
+          "height": 3,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 4,
+          "width": 2,
+          "height": 3,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 5,
+          "width": 4,
+          "height": 4,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 5,
+          "width": 3,
+          "height": 2,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 6,
+          "width": 2,
+          "height": 3,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 6,
+          "width": 2,
+          "height": 3,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 16,
+          "y": 9,
+          "width": 3,
+          "height": 2,
+          "color": "dino_claw_light"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 10,
+          "width": 2,
+          "height": 2,
+          "color": "dino_light"
+        },
+        {
+          "type": "points",
+          "color": "outline",
+          "coordinates": [
+            [
+              14,
+              1
+            ],
+            [
+              15,
+              1
+            ],
+            [
+              16,
+              1
+            ],
+            [
+              17,
+              1
+            ],
+            [
+              8,
+              2
+            ],
+            [
+              13,
+              2
+            ],
+            [
+              18,
+              2
+            ],
+            [
+              23,
+              2
+            ],
+            [
+              7,
+              3
+            ],
+            [
+              9,
+              3
+            ],
+            [
+              10,
+              3
+            ],
+            [
+              13,
+              3
+            ],
+            [
+              18,
+              3
+            ],
+            [
+              21,
+              3
+            ],
+            [
+              22,
+              3
+            ],
+            [
+              24,
+              3
+            ],
+            [
+              7,
+              4
+            ],
+            [
+              11,
+              4
+            ],
+            [
+              13,
+              4
+            ],
+            [
+              18,
+              4
+            ],
+            [
+              20,
+              4
+            ],
+            [
+              24,
+              4
+            ],
+            [
+              8,
+              5
+            ],
+            [
+              12,
+              5
+            ],
+            [
+              19,
+              5
+            ],
+            [
+              23,
+              5
+            ],
+            [
+              8,
+              6
+            ],
+            [
+              23,
+              6
+            ],
+            [
+              9,
+              7
+            ],
+            [
+              22,
+              7
+            ],
+            [
+              8,
+              8
+            ],
+            [
+              9,
+              8
+            ],
+            [
+              10,
+              8
+            ],
+            [
+              21,
+              8
+            ],
+            [
+              22,
+              8
+            ],
+            [
+              23,
+              8
+            ],
+            [
+              7,
+              9
+            ],
+            [
+              24,
+              9
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              9,
+              10
+            ],
+            [
+              10,
+              10
+            ],
+            [
+              21,
+              10
+            ],
+            [
+              22,
+              10
+            ],
+            [
+              23,
+              10
+            ],
+            [
+              11,
+              11
+            ],
+            [
+              20,
+              11
+            ],
+            [
+              12,
+              12
+            ],
+            [
+              13,
+              12
+            ],
+            [
+              18,
+              12
+            ],
+            [
+              19,
+              12
+            ],
+            [
+              14,
+              13
+            ],
+            [
+              17,
+              13
+            ],
+            [
+              15,
+              14
+            ],
+            [
+              16,
+              14
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_belly_light",
+          "coordinates": [
+            [
+              14,
+              2
+            ],
+            [
+              14,
+              3
+            ],
+            [
+              14,
+              4
+            ],
+            [
+              13,
+              5
+            ],
+            [
+              18,
+              5
+            ],
+            [
+              8,
+              9
+            ],
+            [
+              9,
+              9
+            ],
+            [
+              10,
+              9
+            ],
+            [
+              11,
+              9
+            ],
+            [
+              20,
+              9
+            ],
+            [
+              21,
+              9
+            ],
+            [
+              22,
+              9
+            ],
+            [
+              23,
+              9
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_claw_light",
+          "coordinates": [
+            [
+              15,
+              2
+            ],
+            [
+              15,
+              3
+            ],
+            [
+              15,
+              4
+            ],
+            [
+              13,
+              9
+            ],
+            [
+              14,
+              9
+            ],
+            [
+              14,
+              10
+            ],
+            [
+              15,
+              10
+            ],
+            [
+              15,
+              12
+            ],
+            [
+              16,
+              12
+            ],
+            [
+              17,
+              12
+            ],
+            [
+              15,
+              13
+            ],
+            [
+              16,
+              13
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_crest_light",
+          "coordinates": [
+            [
+              8,
+              3
+            ],
+            [
+              23,
+              3
+            ],
+            [
+              8,
+              4
+            ],
+            [
+              21,
+              4
+            ],
+            [
+              22,
+              4
+            ],
+            [
+              23,
+              4
+            ],
+            [
+              11,
+              5
+            ],
+            [
+              11,
+              6
+            ],
+            [
+              10,
+              7
+            ],
+            [
+              21,
+              7
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_light",
+          "coordinates": [
+            [
+              11,
+              7
+            ],
+            [
+              20,
+              7
+            ],
+            [
+              11,
+              8
+            ],
+            [
+              20,
+              8
+            ],
+            [
+              12,
+              9
+            ],
+            [
+              19,
+              9
+            ],
+            [
+              11,
+              10
+            ],
+            [
+              19,
+              10
+            ],
+            [
+              20,
+              10
+            ],
+            [
+              18,
+              11
+            ],
+            [
+              19,
+              11
+            ],
+            [
+              14,
+              12
+            ]
+          ]
+        },
+        {
+          "type": "pixel",
+          "x": 15,
+          "y": 9,
+          "color": "specular"
+        },
+        {
+          "type": "points",
+          "color": "dino_mouth_dark",
+          "coordinates": [
+            [
+              14,
+              11
+            ],
+            [
+              15,
+              11
+            ],
+            [
+              16,
+              11
+            ],
+            [
+              17,
+              11
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Dourados Binoculares de Águia",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "points",
+          "color": "dino_belly_light",
+          "coordinates": [
+            [
+              9,
+              6
+            ],
+            [
+              10,
+              6
+            ],
+            [
+              11,
+              6
+            ],
+            [
+              20,
+              6
+            ],
+            [
+              21,
+              6
+            ],
+            [
+              22,
+              6
+            ],
+            [
+              12,
+              7
+            ],
+            [
+              13,
+              7
+            ],
+            [
+              18,
+              7
+            ],
+            [
+              19,
+              7
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "specular",
+          "coordinates": [
+            [
+              10,
+              7
+            ],
+            [
+              21,
+              7
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_eye",
+          "coordinates": [
+            [
+              11,
+              7
+            ],
+            [
+              20,
+              7
+            ],
+            [
+              10,
+              8
+            ],
+            [
+              12,
+              8
+            ],
+            [
+              19,
+              8
+            ],
+            [
+              21,
+              8
+            ],
+            [
+              10,
+              9
+            ],
+            [
+              12,
+              9
+            ],
+            [
+              19,
+              9
+            ],
+            [
+              21,
+              9
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_pupil",
+          "coordinates": [
+            [
+              11,
+              8
+            ],
+            [
+              20,
+              8
+            ],
+            [
+              11,
+              9
+            ],
+            [
+              20,
+              9
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_wind_aura",
+      "name": "Correntes de Vento e Plumas Flutuantes",
+      "visible": true,
+      "opacity": 1.0,
+      "zIndex": 7,
+      "operations": [
+        {
+          "type": "points",
+          "color": "dino_belly_light",
+          "coordinates": [
+            [
+              30,
+              3
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              29,
+              4
+            ],
+            [
+              2,
+              5
+            ],
+            [
+              4,
+              23
+            ],
+            [
+              3,
+              24
+            ],
+            [
+              29,
+              24
+            ],
+            [
+              28,
+              25
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Aerossauro",
+    "lifeStage": "pre-adolescente",
+    "animation": "idle",
+    "frame": 2,
+    "author": "PixelForge AI",
+    "tags": [
+      "aerossauro",
+      "dinosaur",
+      "pre-adolescente",
+      "idle",
+      "frontal",
+      "32x32",
+      "frame-2"
+    ]
+  }
+}
