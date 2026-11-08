@@ -19,9 +19,9 @@ import {
 import { CharacterSpriteRepository } from '../infrastructure/character-sprite-repository';
 
 describe('characters domain registry, state engine, and sprite repository', () => {
-  it('registers all 8 real canonical dinosaur species with distinct traits, diets, particles, and environments', () => {
+  it('registers all 11 real canonical dinosaur species with distinct traits, diets, particles, and environments', () => {
     const all = listAllCharacterSpecies();
-    expect(all.length).toBe(8);
+    expect(all.length).toBe(11);
 
     const ids = all.map((c) => c.id);
     expect(ids).toEqual([
@@ -32,13 +32,16 @@ describe('characters domain registry, state engine, and sprite repository', () =
       'terrassauro',
       'aerossauro',
       'umbrassauro',
-      'solassauro'
+      'solassauro',
+      'rosassauro',
+      'cristalissauro',
+      'astrassauro'
     ]);
 
     const environments = new Set(all.map((c) => c.environmentId));
     const particles = new Set(all.map((c) => c.particlePresetId));
-    expect(environments.size).toBe(8);
-    expect(particles.size).toBe(8);
+    expect(environments.size).toBe(11);
+    expect(particles.size).toBe(11);
 
     for (const species of all) {
       expect(getCharacterSpeciesById(species.id)).toEqual(species);
@@ -50,9 +53,12 @@ describe('characters domain registry, state engine, and sprite repository', () =
 
     expect(CHARACTER_SPECIES_REGISTRY.ignisauro.element).toBe('fire');
     expect(CHARACTER_SPECIES_REGISTRY.solassauro.element).toBe('light');
+    expect(CHARACTER_SPECIES_REGISTRY.rosassauro.element).toBe('fairy');
+    expect(CHARACTER_SPECIES_REGISTRY.cristalissauro.element).toBe('crystal');
+    expect(CHARACTER_SPECIES_REGISTRY.astrassauro.element).toBe('cosmic');
 
     expect(pickRandomCharacterId(0)).toBe('ignisauro');
-    expect(pickRandomCharacterId(0.99)).toBe('solassauro');
+    expect(pickRandomCharacterId(0.99)).toBe('astrassauro');
     expect(ids).toContain(pickRandomCharacterId());
   });
 

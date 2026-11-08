@@ -449,6 +449,156 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
       elementalAffinity: 20
     },
     evolutionRules: STANDARD_EVOLUTION_RULES
+  },
+  rosassauro: {
+    id: 'rosassauro',
+    name: 'Rosassauro',
+    displayName: 'Rosassauro',
+    scientificName: 'Rosadominus amabilis',
+    species: 'Dinossauro Afetivo Pigmeu',
+    description:
+      'Dinossauro adorável e bípede com escamas rosa-algodão, crista sutil em lilás místico, bochechas coradas e olhar reluzente e acolhedor.',
+    lore: 'Originário dos Vales Floridos do Afeto, o Rosassauro espalha serenidade e alegria por onde passa. Quando bem cuidado, pequenos corações mágicos e pétalas de jasmim flutuam suavemente ao seu redor.',
+    element: 'fairy',
+    elementLabel: 'Fada / Afeto Encantado',
+    personality: {
+      archetype: 'Guardião Carinhoso dos Vales Floridos',
+      traits: ['Afetuoso', 'Alegre', 'Dócil'],
+      favoriteActivityId: 'solar-bask',
+      dislikedActivityId: 'lava-sprint',
+      temper: 'gentle'
+    },
+    visualTraits: {
+      silhouetteDescription:
+        'Corpo arredondado fofo cor-de-rosa, crista dorsal em pequenas protuberâncias lilás, bochechas proeminentes coradas e cauda com pomo macio em forma de flor.',
+      orientation: 'frontal_binocular',
+      logicalDimensions: { width: 32, height: 32 },
+      ocularGenetics: {
+        eyeColor: '#a855f7',
+        pupilColor: '#1e1b4b',
+        specularColor: '#ffffff'
+      },
+      primaryColors: {
+        base: '#db2777',
+        belly: '#fdf2f8',
+        crest: '#8b5cf6',
+        highlight: '#f472b6'
+      }
+    },
+    environmentId: 'flowering-meadow',
+    particlePresetId: 'rosassauro-fairy-petals',
+    favoriteFoodIds: ['serotonin-aura-nectar', 'golden-starburst-sunpeach'],
+    acceptedFoodIds: ['sky-winged-cloudberry', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    forbiddenFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom'],
+    baseAttributes: {
+      strength: 10,
+      defense: 14,
+      agility: 14,
+      intelligence: 16,
+      endurance: 16,
+      elementalAffinity: 20
+    },
+    evolutionRules: STANDARD_EVOLUTION_RULES
+  },
+  cristalissauro: {
+    id: 'cristalissauro',
+    name: 'Cristalissauro',
+    displayName: 'Cristalissauro',
+    scientificName: 'Crystallodraco nobilis',
+    species: 'Anquilossauro de Geodo Lapidado',
+    description:
+      'Anquilossauro blindado de carapaça geométrica azul-safira, placas de quartzo facetado e cauda com maça de diamante refratário.',
+    lore: 'Habitante das Cavernas Geológicas Prismáticas. Seu corpo foi naturalmente forjado sob intensa pressão tectônica e minerais puros, tornando sua armadura quase impenetrável.',
+    element: 'crystal',
+    elementLabel: 'Cristais e Gemas Prismáticas',
+    personality: {
+      archetype: 'Guardião Resiliente das Grutas Preciosas',
+      traits: ['Resiliente', 'Leal', 'Protetor'],
+      favoriteActivityId: 'monolith-guard',
+      dislikedActivityId: 'sky-glide',
+      temper: 'stoic'
+    },
+    visualTraits: {
+      silhouetteDescription:
+        'Carapaça de placas hexagonais azul-celeste e safira, dois chifres pontiagudos de quartzo e cauda com maça em forma de geodo lapidado.',
+      orientation: 'frontal_binocular',
+      logicalDimensions: { width: 32, height: 32 },
+      ocularGenetics: {
+        eyeColor: '#38bdf8',
+        pupilColor: '#082f49',
+        specularColor: '#ffffff'
+      },
+      primaryColors: {
+        base: '#0284c7',
+        belly: '#e0f2fe',
+        crest: '#0ea5e9',
+        highlight: '#7dd3fc'
+      }
+    },
+    environmentId: 'crystal-cavern',
+    particlePresetId: 'cristalissauro-prism-shards',
+    favoriteFoodIds: ['emerald-crystal-geode', 'thermal-spring-water'],
+    acceptedFoodIds: ['frosted-crystal-berry', 'golden-starburst-sunpeach', 'vitality-herbal-elixir'],
+    forbiddenFoodIds: ['glowing-swamp-mushroom', 'crimson-shadow-soulfruit'],
+    baseAttributes: {
+      strength: 16,
+      defense: 22,
+      agility: 8,
+      intelligence: 12,
+      endurance: 20,
+      elementalAffinity: 14
+    },
+    evolutionRules: STANDARD_EVOLUTION_RULES
+  },
+  astrassauro: {
+    id: 'astrassauro',
+    name: 'Astrassauro',
+    displayName: 'Astrassauro',
+    scientificName: 'Astrasaurus celestialis',
+    species: 'Pterossauro Cósmico Astral',
+    description:
+      'Pterossauro esbelto de escamas anil-noturno, crista dourada que irradia poeira estelar e asas translúcidas que espelham constelações.',
+    lore: 'Descendeu das profundezas do cosmos na cauda de um cometa ancestral. Canaliza as forças gravitacionais e a energia estelar para harmonizar o fluxo do tempo.',
+    element: 'cosmic',
+    elementLabel: 'Cosmos e Gravitação Astral',
+    personality: {
+      archetype: 'Navegador Astral dos Confins Cósmicos',
+      traits: ['Místico', 'Sábio', 'Curioso'],
+      favoriteActivityId: 'sky-glide',
+      dislikedActivityId: 'spore-exploration',
+      temper: 'mysterious'
+    },
+    visualTraits: {
+      silhouetteDescription:
+        'Envergadura aerodinâmica com membranas de nebulosa estelar, crista alongada dourada em forma de cometa e cauda fina terminando em estrela quádrupla.',
+      orientation: 'frontal_binocular',
+      logicalDimensions: { width: 32, height: 32 },
+      ocularGenetics: {
+        eyeColor: '#fbbf24',
+        pupilColor: '#0f0e26',
+        specularColor: '#ffffff'
+      },
+      primaryColors: {
+        base: '#312e81',
+        belly: '#4f46e5',
+        crest: '#f59e0b',
+        highlight: '#818cf8'
+      }
+    },
+    environmentId: 'cosmic-observatory',
+    particlePresetId: 'astrassauro-cosmic-starlight',
+    favoriteFoodIds: ['plasma-thunder-fruit', 'sky-winged-cloudberry'],
+    acceptedFoodIds: ['golden-starburst-sunpeach', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    forbiddenFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom'],
+    baseAttributes: {
+      strength: 12,
+      defense: 12,
+      agility: 18,
+      intelligence: 18,
+      endurance: 12,
+      elementalAffinity: 22
+    },
+    evolutionRules: STANDARD_EVOLUTION_RULES
   }
 };
 

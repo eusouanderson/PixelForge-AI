@@ -55,7 +55,7 @@ describe('Babylon PixelTextureAdapter', () => {
     }
   });
 
-  it('rasterizes elemental pedestals with runes for all 8 elements', () => {
+  it('rasterizes elemental pedestals with runes for all 11 elements', () => {
     const elements: ElementAffinity[] = [
       'fire',
       'ice',
@@ -64,7 +64,10 @@ describe('Babylon PixelTextureAdapter', () => {
       'earth',
       'air',
       'shadow',
-      'light'
+      'light',
+      'fairy',
+      'crystal',
+      'cosmic'
     ];
 
     for (const element of elements) {

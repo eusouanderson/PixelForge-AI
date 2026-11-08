@@ -252,8 +252,31 @@ export function rasterizePedestalToRgbaBytes(
         const inAir = element === 'air' && (Math.abs(dy - Math.sin(dx * 0.5) * 2) <= 1.5 && Math.abs(dx) <= 8);
         const inShadow = element === 'shadow' && (dist <= 6 && (dx < 0 || dist > 3));
         const inLight = element === 'light' && (dist <= 4 || (Math.abs(dx) <= 1 && Math.abs(dy) <= 8) || (Math.abs(dy) <= 1 && Math.abs(dx) <= 8));
+        const inFairy =
+          element === 'fairy' &&
+          ((Math.abs(dx) <= 6 && dy >= -4 && dy <= 2) ||
+            (Math.abs(dx) <= 6 - (dy - 2) && dy > 2 && dy <= 6) ||
+            (Math.abs(dx) <= 2 && dy >= -6 && dy <= -4));
+        const inCrystal =
+          element === 'crystal' &&
+          (Math.abs(dx) + Math.abs(dy) <= 7 && (Math.abs(dx) <= 2 || Math.abs(dy) <= 2 || Math.abs(dx) === Math.abs(dy)));
+        const inCosmic =
+          element === 'cosmic' &&
+          (dist <= 3 || (Math.abs(dx) <= 1 && Math.abs(dy) <= 8) || (Math.abs(dy) <= 1 && Math.abs(dx) <= 8) || (Math.abs(dx) === Math.abs(dy) && dist <= 6));
 
-        if (inFlame || inIce || inElectric || inPoison || inEarth || inAir || inShadow || inLight) {
+        if (
+          inFlame ||
+          inIce ||
+          inElectric ||
+          inPoison ||
+          inEarth ||
+          inAir ||
+          inShadow ||
+          inLight ||
+          inFairy ||
+          inCrystal ||
+          inCosmic
+        ) {
           color = accentColor;
         }
       }

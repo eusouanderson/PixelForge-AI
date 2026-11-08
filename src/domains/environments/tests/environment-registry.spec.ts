@@ -48,8 +48,8 @@ describe('environments domain registry', () => {
       envIds.add(env.id);
     }
 
-    expect(envIds.size).toBe(8);
-    expect(Object.keys(ENVIRONMENT_REGISTRY).length).toBe(8);
+    expect(envIds.size).toBe(11);
+    expect(Object.keys(ENVIRONMENT_REGISTRY).length).toBe(11);
   });
 });
 

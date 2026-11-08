@@ -633,6 +633,249 @@ export const ENVIRONMENT_REGISTRY: Readonly<Record<CharacterId, CharacterEnviron
         depthLayer: 'foreground'
       }
     ]
+  },
+  rosassauro: {
+    id: 'flowering-meadow',
+    characterId: 'rosassauro',
+    name: 'Jardim Encantado de Florescência',
+    description:
+      'Vale sereno com grama orvalhada, flores místicas, cristais de quartzo rosa e pétalas cintilantes flutuando suavemente.',
+    element: 'fairy',
+    lighting: {
+      clearColorHex: '#1f0d24',
+      ambientColorHex: '#4a1d4a',
+      groundColorHex: '#2d0f30',
+      mainLightColorHex: '#fdf2f8',
+      mainLightIntensity: 0.95,
+      rimLightColorHex: '#f472b6',
+      rimLightIntensity: 0.7,
+      pointLightColorHex: '#ec4899',
+      pointLightIntensity: 0.75,
+      pointLightRange: 6.5,
+      pointLightPosition: { x: 0, y: 0.6, z: -0.3 },
+      fogColorHex: '#1f0d24',
+      fogDensity: 0.02
+    },
+    pedestalColorHex: '#4a1d4a',
+    pedestalAccentHex: '#ec4899',
+    groundColorHex: '#3b1836',
+    backdrop: {
+      skyTopColorHex: '#2d1537',
+      skyBottomColorHex: '#702459',
+      horizonColorHex: '#f472b6',
+      mountainColorHex: '#4a1d4a',
+      mountainHighlightHex: '#9333ea',
+      celestialKind: 'aurora',
+      celestialColorHex: '#f472b6'
+    },
+    props: [
+      {
+        id: 'rosa-quartz-left',
+        shape: 'crystal-pillar',
+        position: { x: -1.75, y: 0.45, z: 1.6 },
+        scale: { x: 0.5, y: 1.6, z: 0.5 },
+        primaryColorHex: '#f472b6',
+        emissiveColorHex: '#ec4899',
+        floatAmplitude: 0.05,
+        rotationSpeed: 0.003,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'rosa-mushroom-right',
+        shape: 'mushroom',
+        position: { x: 1.75, y: 0.35, z: 1.5 },
+        scale: { x: 0.55, y: 1.3, z: 0.55 },
+        primaryColorHex: '#db2777',
+        emissiveColorHex: '#f472b6',
+        floatAmplitude: 0.04,
+        rotationSpeed: -0.002,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'rosa-fairy-ring-fore-left',
+        shape: 'floating-ring',
+        position: { x: -2.1, y: -0.65, z: -0.3 },
+        scale: { x: 0.55, y: 0.55, z: 0.2 },
+        primaryColorHex: '#a855f7',
+        emissiveColorHex: '#c084fc',
+        floatAmplitude: 0.04,
+        rotationSpeed: 0.006,
+        depthLayer: 'foreground'
+      },
+      {
+        id: 'rosa-blossom-spire-fore-right',
+        shape: 'crystal-pillar',
+        position: { x: 2.1, y: -0.68, z: -0.3 },
+        scale: { x: 0.35, y: 0.6, z: 0.35 },
+        primaryColorHex: '#f43f5e',
+        emissiveColorHex: '#fb7185',
+        floatAmplitude: 0.02,
+        rotationSpeed: -0.003,
+        depthLayer: 'foreground'
+      }
+    ]
+  },
+  cristalissauro: {
+    id: 'crystal-cavern',
+    characterId: 'cristalissauro',
+    name: 'Caverna dos Geodos Prismáticos',
+    description:
+      'Gruta subterrânea forrada por estalactites de quartzo, geodos de safira pura e iluminação refratada em tons de azul e turquesa.',
+    element: 'crystal',
+    lighting: {
+      clearColorHex: '#041d30',
+      ambientColorHex: '#0c4a6e',
+      groundColorHex: '#082f49',
+      mainLightColorHex: '#e0f2fe',
+      mainLightIntensity: 0.9,
+      rimLightColorHex: '#38bdf8',
+      rimLightIntensity: 0.75,
+      pointLightColorHex: '#0284c7',
+      pointLightIntensity: 0.8,
+      pointLightRange: 6.5,
+      pointLightPosition: { x: 0, y: 0.55, z: -0.4 },
+      fogColorHex: '#041d30',
+      fogDensity: 0.022
+    },
+    pedestalColorHex: '#0c4a6e',
+    pedestalAccentHex: '#38bdf8',
+    groundColorHex: '#082f49',
+    backdrop: {
+      skyTopColorHex: '#021e33',
+      skyBottomColorHex: '#075985',
+      horizonColorHex: '#38bdf8',
+      mountainColorHex: '#0c4a6e',
+      mountainHighlightHex: '#7dd3fc',
+      celestialKind: 'aurora',
+      celestialColorHex: '#38bdf8'
+    },
+    props: [
+      {
+        id: 'cristal-pillar-left',
+        shape: 'crystal-pillar',
+        position: { x: -1.8, y: 0.5, z: 1.6 },
+        scale: { x: 0.5, y: 1.7, z: 0.5 },
+        primaryColorHex: '#0284c7',
+        emissiveColorHex: '#38bdf8',
+        floatAmplitude: 0.03,
+        rotationSpeed: 0.004,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'cristal-monolith-right',
+        shape: 'monolith',
+        position: { x: 1.8, y: 0.45, z: 1.5 },
+        scale: { x: 0.6, y: 1.6, z: 0.6 },
+        primaryColorHex: '#0369a1',
+        emissiveColorHex: '#7dd3fc',
+        floatAmplitude: 0.02,
+        rotationSpeed: -0.002,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'cristal-ring-fore-left',
+        shape: 'floating-ring',
+        position: { x: -2.1, y: -0.68, z: -0.3 },
+        scale: { x: 0.55, y: 0.55, z: 0.2 },
+        primaryColorHex: '#38bdf8',
+        emissiveColorHex: '#bae6fd',
+        floatAmplitude: 0.03,
+        rotationSpeed: 0.005,
+        depthLayer: 'foreground'
+      },
+      {
+        id: 'cristal-shard-fore-right',
+        shape: 'crystal-pillar',
+        position: { x: 2.1, y: -0.7, z: -0.3 },
+        scale: { x: 0.35, y: 0.55, z: 0.35 },
+        primaryColorHex: '#0ea5e9',
+        emissiveColorHex: '#7dd3fc',
+        floatAmplitude: 0.02,
+        rotationSpeed: -0.003,
+        depthLayer: 'foreground'
+      }
+    ]
+  },
+  astrassauro: {
+    id: 'cosmic-observatory',
+    characterId: 'astrassauro',
+    name: 'Observatório do Véu Estelar',
+    description:
+      'Platô astral suspenso na borda do cosmos, cercado por poeira de nebulosa, cometas orbitais e monólitos com inscrições celestiais.',
+    element: 'cosmic',
+    lighting: {
+      clearColorHex: '#0a0a1f',
+      ambientColorHex: '#1e1b4b',
+      groundColorHex: '#171738',
+      mainLightColorHex: '#fef08a',
+      mainLightIntensity: 0.9,
+      rimLightColorHex: '#818cf8',
+      rimLightIntensity: 0.8,
+      pointLightColorHex: '#fbbf24',
+      pointLightIntensity: 0.85,
+      pointLightRange: 7.0,
+      pointLightPosition: { x: 0, y: 0.7, z: -0.3 },
+      fogColorHex: '#0a0a1f',
+      fogDensity: 0.018
+    },
+    pedestalColorHex: '#1e1b4b',
+    pedestalAccentHex: '#fbbf24',
+    groundColorHex: '#171738',
+    backdrop: {
+      skyTopColorHex: '#08081a',
+      skyBottomColorHex: '#1e1b4b',
+      horizonColorHex: '#818cf8',
+      mountainColorHex: '#181838',
+      mountainHighlightHex: '#fbbf24',
+      celestialKind: 'nebula',
+      celestialColorHex: '#fbbf24'
+    },
+    props: [
+      {
+        id: 'astra-obelisk-left',
+        shape: 'solar-obelisk',
+        position: { x: -1.8, y: 0.55, z: 1.6 },
+        scale: { x: 0.45, y: 1.8, z: 0.45 },
+        primaryColorHex: '#312e81',
+        emissiveColorHex: '#fbbf24',
+        floatAmplitude: 0.06,
+        rotationSpeed: 0.005,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'astra-ring-right',
+        shape: 'floating-ring',
+        position: { x: 1.8, y: 0.5, z: 1.5 },
+        scale: { x: 0.65, y: 0.65, z: 0.22 },
+        primaryColorHex: '#4f46e5',
+        emissiveColorHex: '#818cf8',
+        floatAmplitude: 0.07,
+        rotationSpeed: -0.007,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'astra-star-fore-left',
+        shape: 'crystal-pillar',
+        position: { x: -2.1, y: -0.68, z: -0.3 },
+        scale: { x: 0.35, y: 0.55, z: 0.35 },
+        primaryColorHex: '#fbbf24',
+        emissiveColorHex: '#fef08a',
+        floatAmplitude: 0.03,
+        rotationSpeed: 0.004,
+        depthLayer: 'foreground'
+      },
+      {
+        id: 'astra-pillar-fore-right',
+        shape: 'solar-obelisk',
+        position: { x: 2.1, y: -0.7, z: -0.3 },
+        scale: { x: 0.35, y: 0.55, z: 0.35 },
+        primaryColorHex: '#4338ca',
+        emissiveColorHex: '#818cf8',
+        floatAmplitude: 0.02,
+        rotationSpeed: -0.003,
+        depthLayer: 'foreground'
+      }
+    ]
   }
 };
 
