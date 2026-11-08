@@ -14,7 +14,8 @@ const REQUIRED_DOMAINS = [
   'progression',
   'economy',
   'persistence',
-  'settings'
+  'settings',
+  'updater'
 ] as const;
 
 function collectTypeScriptFiles(dir: string): string[] {

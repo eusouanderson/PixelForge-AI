@@ -8,8 +8,11 @@ import {
   Sparkles as SparklesIcon,
   Coins as CoinsIcon,
   Clock as ClockIcon,
-  RotateCcw as RotateCcwIcon
+  RotateCcw as RotateCcwIcon,
+  RefreshCw as RefreshCwIcon
 } from 'lucide-vue-next';
+import { UpdateManagerService } from '@/domains/updater/application/update-manager-service';
+import type { UpdaterState } from '@/domains/updater/types';
 import { Canvas2dRenderer } from '@/infrastructure/renderer/canvas-2d-renderer';
 import { BabylonCreatureSceneController } from '@/game-engine/babylon/scene-controller';
 import type {
@@ -69,6 +72,11 @@ const manualAnimOverride = ref<CharacterAnimationName | null>(null);
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
 let realTimeDecayTimer: ReturnType<typeof setInterval> | null = null;
 let animResetTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const updaterService = new UpdateManagerService();
+const updaterState = ref<UpdaterState>(updaterService.getState());
+const isChangelogOpen = ref<boolean>(false);
+let unsubscribeUpdater: (() => void) | null = null;
 
 const allFoods = listAllFoods();
 const allActivities = listAllActivities();
@@ -252,11 +260,34 @@ async function handleResetSave(): Promise<void> {
   await persistCurrentState();
 }
 
+async function handleManualCheckForUpdates(): Promise<void> {
+  await updaterService.checkForUpdates(true);
+}
+
+function handleApplyWebReload(): void {
+  updaterService.reloadApp();
+}
+
+async function handleInstallApk(): Promise<void> {
+  await updaterService.downloadAndInstallApk();
+}
+
+async function handleResetToBundledVersion(): Promise<void> {
+  await updaterService.resetToBundledVersion();
+  updaterService.reloadApp();
+}
+
 watch([currentSpriteArt, () => saveState.value.settings.showPixelGrid], () => {
   renderCurrentSpriteToOverlay();
 });
 
 onMounted(async () => {
+  unsubscribeUpdater = updaterService.subscribe((state) => {
+    updaterState.value = state;
+  });
+  await updaterService.initialize();
+  void updaterService.checkForUpdates(false);
+
   const loaded = await saveRepo.loadSave();
   if (loaded) {
     saveState.value = simulateOfflineProgressOnSnapshot(loaded, Date.now());
@@ -293,6 +324,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  if (unsubscribeUpdater) unsubscribeUpdater();
   if (spriteTimer) clearInterval(spriteTimer);
   if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
@@ -341,7 +373,28 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5">
+            <!-- App Version Badge Pill (Prominently visible in Header HUD) -->
+            <button
+              type="button"
+              data-testid="app-version-badge"
+              class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-800/90 border border-slate-700 hover:border-slate-500 text-[10px] font-mono font-semibold text-slate-300 transition"
+              :title="`PixelForge AI v${updaterState.installedInfo.version} (build ${updaterState.installedInfo.build})`"
+              @click="activeMobileTab = 'settings'"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full"
+                :class="{
+                  'bg-emerald-400': updaterState.status === 'up_to_date',
+                  'bg-amber-400 animate-pulse': updaterState.status === 'checking' || updaterState.status === 'downloading_web' || updaterState.status === 'downloading_apk',
+                  'bg-emerald-300 animate-ping': updaterState.status === 'ready_to_reload' || updaterState.status === 'ready_to_install_apk',
+                  'bg-rose-400': updaterState.status === 'error',
+                  'bg-slate-500': updaterState.status === 'idle'
+                }"
+              />
+              <span>v{{ updaterState.installedInfo.version }}</span>
+            </button>
+
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm"
@@ -410,6 +463,45 @@ onUnmounted(() => {
           </span>
         </div>
       </section>
+
+      <!-- Discreet Update Notification Banners -->
+      <div
+        v-if="updaterState.status === 'ready_to_reload'"
+        data-testid="web-update-ready-banner"
+        class="px-3.5 py-2 bg-emerald-950/90 border-b border-emerald-700 text-xs text-emerald-200 flex items-center justify-between gap-2 shadow-sm"
+      >
+        <div class="flex items-center gap-1.5 truncate">
+          <sparkles-icon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span class="truncate">Atualização {{ updaterState.availableManifest?.version }} pronta para aplicar!</span>
+        </div>
+        <button
+          type="button"
+          data-testid="reload-to-apply-btn"
+          class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
+          @click="handleApplyWebReload"
+        >
+          Reiniciar
+        </button>
+      </div>
+
+      <div
+        v-else-if="updaterState.status === 'ready_to_install_apk' || updaterState.status === 'native_update_required'"
+        data-testid="apk-update-banner"
+        class="px-3.5 py-2 bg-amber-950/90 border-b border-amber-700 text-xs text-amber-200 flex items-center justify-between gap-2 shadow-sm"
+      >
+        <div class="flex items-center gap-1.5 truncate">
+          <sparkles-icon class="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span class="truncate">APK Android {{ updaterState.availableManifest?.version }} disponível!</span>
+        </div>
+        <button
+          type="button"
+          data-testid="install-apk-btn"
+          class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
+          @click="handleInstallApk"
+        >
+          Instalar
+        </button>
+      </div>
 
       <!-- Feedback Banner & Emergency Actions -->
       <div
@@ -679,6 +771,12 @@ onUnmounted(() => {
                   Nv. {{ activeRecord.progression.level }} ({{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }})
                 </strong>
               </div>
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <span class="text-slate-400 block text-[10px] uppercase">Versão do App</span>
+                <strong data-testid="sheet-version-info" class="font-mono text-emerald-400">
+                  v{{ updaterState.installedInfo.version }} (b{{ updaterState.installedInfo.build }})
+                </strong>
+              </div>
             </div>
           </div>
 
@@ -723,6 +821,137 @@ onUnmounted(() => {
           data-testid="tab-content-settings"
           class="space-y-3"
         >
+          <!-- Atualizador Automático & Controle de Versão -->
+          <div
+            data-testid="updater-settings-card"
+            class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5"
+          >
+            <div class="flex items-center justify-between">
+              <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                <sparkles-icon class="w-3.5 h-3.5 text-emerald-400" />
+                Atualização Automática (OTA)
+              </h2>
+              <span
+                data-testid="updater-status-badge"
+                class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border"
+                :class="{
+                  'bg-emerald-950 text-emerald-300 border-emerald-700': updaterState.status === 'up_to_date' || updaterState.status === 'ready_to_reload',
+                  'bg-amber-950 text-amber-300 border-amber-700': updaterState.status === 'checking' || updaterState.status === 'downloading_web' || updaterState.status === 'downloading_apk',
+                  'bg-rose-950 text-rose-300 border-rose-700': updaterState.status === 'error',
+                  'bg-slate-950 text-slate-400 border-slate-800': updaterState.status === 'idle'
+                }"
+              >
+                {{ updaterState.status }}
+              </span>
+            </div>
+
+            <div class="p-2 rounded-lg bg-slate-950 border border-slate-800 space-y-1 text-xs">
+              <div class="flex items-center justify-between text-slate-300">
+                <span>Versão Instalada:</span>
+                <strong data-testid="installed-version-label" class="font-mono text-emerald-400">
+                  v{{ updaterState.installedInfo.version }} (build {{ updaterState.installedInfo.build }})
+                </strong>
+              </div>
+              <div class="flex items-center justify-between text-slate-400 text-[11px]">
+                <span>Plataforma:</span>
+                <span class="font-mono uppercase">{{ updaterState.installedInfo.platform }}</span>
+              </div>
+              <div v-if="updaterState.message" class="text-[11px] text-slate-400 pt-0.5">
+                {{ updaterState.message }}
+              </div>
+              <div v-if="updaterState.errorMessage" class="text-[11px] text-rose-400 pt-0.5">
+                ⚠ {{ updaterState.errorMessage }}
+              </div>
+            </div>
+
+            <!-- Progress bar if downloading -->
+            <div
+              v-if="updaterState.status === 'downloading_web' || updaterState.status === 'downloading_apk'"
+              class="space-y-1"
+            >
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>Progresso do Download</span>
+                <span>{{ updaterState.progress }}%</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  class="h-full bg-emerald-500 transition-all duration-200"
+                  :style="{ width: `${updaterState.progress}%` }"
+                />
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1 flex-wrap">
+              <button
+                type="button"
+                data-testid="check-updates-btn"
+                :disabled="updaterState.status === 'checking' || updaterState.status === 'downloading_web' || updaterState.status === 'downloading_apk'"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-50 text-xs font-bold text-slate-200 flex items-center gap-1 transition"
+                @click="handleManualCheckForUpdates"
+              >
+                <refresh-cw-icon class="w-3.5 h-3.5" :class="{ 'animate-spin': updaterState.status === 'checking' }" />
+                <span>Verificar Agora</span>
+              </button>
+
+              <button
+                v-if="updaterState.status === 'ready_to_reload'"
+                type="button"
+                data-testid="apply-update-btn"
+                class="px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition"
+                @click="handleApplyWebReload"
+              >
+                Aplicar & Reiniciar
+              </button>
+
+              <button
+                v-if="updaterState.status === 'ready_to_install_apk' || updaterState.status === 'native_update_required'"
+                type="button"
+                data-testid="download-apk-btn"
+                class="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white transition"
+                @click="handleInstallApk"
+              >
+                Instalar APK
+              </button>
+
+              <button
+                v-if="updaterState.availableManifest"
+                type="button"
+                data-testid="view-changelog-btn"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition"
+                @click="isChangelogOpen = !isChangelogOpen"
+              >
+                Notas da Versão
+              </button>
+            </div>
+
+            <!-- Changelog Modal -->
+            <div
+              v-if="isChangelogOpen && updaterState.availableManifest"
+              data-testid="changelog-box"
+              class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5 text-xs"
+            >
+              <div class="font-bold text-emerald-400">
+                Novidades da v{{ updaterState.availableManifest.version }}:
+              </div>
+              <ul class="list-disc list-inside space-y-0.5 text-slate-300 text-[11px]">
+                <li v-for="(note, idx) in updaterState.availableManifest.changelog" :key="idx">
+                  {{ note }}
+                </li>
+              </ul>
+            </div>
+
+            <!-- Safe Recovery: Reset to Bundled Files -->
+            <div v-if="updaterState.installedInfo.serverBasePath" class="pt-1">
+              <button
+                type="button"
+                data-testid="reset-bundle-btn"
+                class="text-[11px] text-slate-400 hover:text-amber-300 underline"
+                @click="handleResetToBundledVersion"
+              >
+                Restaurar arquivos de fábrica originais do APK
+              </button>
+            </div>
+          </div>
           <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
             <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
               <clock-icon class="w-3.5 h-3.5 text-emerald-400" />
