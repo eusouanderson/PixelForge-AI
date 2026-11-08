@@ -4,6 +4,7 @@ const config: CapacitorConfig = {
   appId: 'ai.pixelforge.virtualcreatures',
   appName: 'PixelForge Virtual Creatures',
   webDir: 'dist',
+  backgroundColor: '#020617',
   server: {
     androidScheme: 'https'
   }
