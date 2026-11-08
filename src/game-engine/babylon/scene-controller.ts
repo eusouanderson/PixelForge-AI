@@ -3,6 +3,7 @@ import { Engine } from '@babylonjs/core/Engines/engine.js';
 import { NullEngine } from '@babylonjs/core/Engines/nullEngine.js';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight.js';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight.js';
+import { PointLight } from '@babylonjs/core/Lights/pointLight.js';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial.js';
 import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture.js';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture.js';
@@ -27,7 +28,9 @@ import { scaleParticleConfigForQuality } from '@/domains/particles/domain/partic
 import type { GraphicsQualityPreset } from '@/domains/settings/types';
 import type { BabylonEngineConfig, CreatureSceneControllerPort } from './types';
 import {
+  rasterizeBackdropToRgbaBytes,
   rasterizeParticlePatternToRgbaBytes,
+  rasterizePedestalToRgbaBytes,
   rasterizeSpriteToRgbaBytes
 } from './pixel-texture-adapter';
 
@@ -46,6 +49,12 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
   private creaturePlane: Mesh | null = null;
   private creatureMaterial: StandardMaterial | null = null;
   private creatureTexture: RawTexture | null = null;
+  private backdropPlane: Mesh | null = null;
+  private backdropMaterial: StandardMaterial | null = null;
+  private backdropTexture: RawTexture | null = null;
+  private pedestalTexture: RawTexture | null = null;
+  private accentPointLight: PointLight | null = null;
+  private basePointLightIntensity: number = 0;
   private ambientParticles: ParticleSystem | null = null;
   private particleTexture: RawTexture | null = null;
   private currentParticleConfig: CharacterParticleConfig | null = null;
@@ -131,6 +140,57 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     rimLight.diffuse = hexToColor3(lighting.rimLightColorHex);
     rimLight.intensity = lighting.rimLightIntensity;
 
+    // Localized accent point light if configured
+    if (lighting.pointLightColorHex) {
+      const pLight = new PointLight(
+        'accentPointLight',
+        new Vector3(
+          lighting.pointLightPosition?.x ?? 0,
+          lighting.pointLightPosition?.y ?? 0.5,
+          lighting.pointLightPosition?.z ?? -0.5
+        ),
+        this.scene
+      );
+      pLight.diffuse = hexToColor3(lighting.pointLightColorHex);
+      pLight.intensity = lighting.pointLightIntensity ?? 0.6;
+      pLight.range = lighting.pointLightRange ?? 6.0;
+      this.accentPointLight = pLight;
+      this.basePointLightIntensity = pLight.intensity;
+    }
+
+    // Distant 2.5D Pixel Art Backdrop Plane
+    if (environmentConfig.backdrop) {
+      const backdropBytes = rasterizeBackdropToRgbaBytes(environmentConfig.backdrop, 128, 64);
+      this.backdropTexture = RawTexture.CreateRGBATexture(
+        backdropBytes.data,
+        backdropBytes.width,
+        backdropBytes.height,
+        this.scene,
+        false,
+        false,
+        Texture.NEAREST_SAMPLINGMODE
+      );
+
+      const backdropPlane = MeshBuilder.CreatePlane(
+        'environmentBackdropPlane',
+        { width: 10.5, height: 7.2 },
+        this.scene
+      );
+      backdropPlane.position = new Vector3(0, 0.6, 3.8);
+
+      const backdropMat = new StandardMaterial('environmentBackdropMat', this.scene);
+      backdropMat.specularColor = Color3.Black();
+      backdropMat.emissiveColor = Color3.White();
+      backdropMat.disableLighting = true;
+      backdropMat.diffuseTexture = this.backdropTexture;
+      backdropMat.emissiveTexture = this.backdropTexture;
+      backdropPlane.material = backdropMat;
+
+      this.backdropPlane = backdropPlane;
+      this.backdropMaterial = backdropMat;
+      this.environmentMeshes.push(backdropPlane);
+    }
+
     // Ground sanctuary disc
     const ground = MeshBuilder.CreateCylinder(
       'sanctuaryGround',
@@ -144,39 +204,116 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     ground.material = groundMat;
     this.environmentMeshes.push(ground);
 
-    // Elemental Pedestal
+    // Elemental Pedestal with carved runic texture
     const pedestal = MeshBuilder.CreateCylinder(
       'creaturePedestal',
-      { diameterTop: 2.1, diameterBottom: 2.5, height: 0.32, tessellation: 16 },
+      { diameterTop: 2.1, diameterBottom: 2.5, height: 0.32, tessellation: 24 },
       this.scene
     );
     pedestal.position = new Vector3(0, -0.82, 0);
     const pedMat = new StandardMaterial('pedestalMat', this.scene);
-    pedMat.diffuseColor = hexToColor3(environmentConfig.pedestalColorHex);
-    pedMat.emissiveColor = hexToColor3(environmentConfig.pedestalAccentHex).scale(0.28);
+    const pedBytes = rasterizePedestalToRgbaBytes(
+      environmentConfig.pedestalColorHex,
+      environmentConfig.pedestalAccentHex,
+      environmentConfig.element,
+      64
+    );
+    this.pedestalTexture = RawTexture.CreateRGBATexture(
+      pedBytes.data,
+      pedBytes.width,
+      pedBytes.height,
+      this.scene,
+      false,
+      false,
+      Texture.NEAREST_SAMPLINGMODE
+    );
+    pedMat.diffuseTexture = this.pedestalTexture;
+    pedMat.emissiveTexture = this.pedestalTexture;
+    pedMat.emissiveColor = hexToColor3(environmentConfig.pedestalAccentHex).scale(0.35);
+    pedMat.specularColor = Color3.Black();
     pedestal.material = pedMat;
     this.environmentMeshes.push(pedestal);
 
-    // Elemental Props
+    // Elemental Props (Midground and Foreground)
     for (const prop of environmentConfig.props) {
-      const mesh = MeshBuilder.CreateBox(
-        prop.id,
-        {
-          width: prop.scale.x,
-          height: prop.scale.y,
-          depth: prop.scale.z
-        },
-        this.scene
-      );
+      let mesh: Mesh;
+      if (prop.shape === 'crystal-pillar') {
+        mesh = MeshBuilder.CreateCylinder(
+          prop.id,
+          {
+            height: prop.scale.y,
+            diameterTop: prop.scale.x * 0.45,
+            diameterBottom: prop.scale.x,
+            tessellation: 6
+          },
+          this.scene
+        );
+      } else if (prop.shape === 'floating-ring') {
+        mesh = MeshBuilder.CreateTorus(
+          prop.id,
+          {
+            diameter: prop.scale.x,
+            thickness: Math.max(0.08, prop.scale.z * 0.4),
+            tessellation: 16
+          },
+          this.scene
+        );
+        mesh.rotation.x = Math.PI / 3;
+      } else if (prop.shape === 'lava-pool') {
+        mesh = MeshBuilder.CreateCylinder(
+          prop.id,
+          {
+            height: prop.scale.y,
+            diameter: prop.scale.x,
+            tessellation: 16
+          },
+          this.scene
+        );
+      } else if (prop.shape === 'mushroom') {
+        mesh = MeshBuilder.CreateCylinder(
+          prop.id,
+          {
+            height: prop.scale.y,
+            diameterTop: prop.scale.x * 0.6,
+            diameterBottom: prop.scale.x * 0.9,
+            tessellation: 10
+          },
+          this.scene
+        );
+      } else if (prop.shape === 'solar-obelisk') {
+        mesh = MeshBuilder.CreateCylinder(
+          prop.id,
+          {
+            height: prop.scale.y,
+            diameterTop: prop.scale.x * 0.35,
+            diameterBottom: prop.scale.x,
+            tessellation: 4
+          },
+          this.scene
+        );
+      } else {
+        mesh = MeshBuilder.CreateBox(
+          prop.id,
+          {
+            width: prop.scale.x,
+            height: prop.scale.y,
+            depth: prop.scale.z
+          },
+          this.scene
+        );
+      }
+
       mesh.position = new Vector3(prop.position.x, prop.position.y, prop.position.z);
       mesh.metadata = {
         baseY: prop.position.y,
         floatAmplitude: prop.floatAmplitude,
-        rotationSpeed: prop.rotationSpeed
+        rotationSpeed: prop.rotationSpeed,
+        depthLayer: prop.depthLayer
       };
       const propMat = new StandardMaterial(`${prop.id}_mat`, this.scene);
       propMat.diffuseColor = hexToColor3(prop.primaryColorHex);
       propMat.emissiveColor = hexToColor3(prop.emissiveColorHex).scale(0.5);
+      propMat.specularColor = Color3.Black();
       mesh.material = propMat;
       this.environmentMeshes.push(mesh);
     }
@@ -304,6 +441,13 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
   /* v8 ignore start */
   private animateEnvironmentProps(): void {
     this.tickAngle += 0.03;
+    if (this.backdropPlane) {
+      this.backdropPlane.position.x = Math.sin(this.tickAngle * 0.4) * 0.05;
+    }
+    if (this.accentPointLight) {
+      this.accentPointLight.intensity =
+        this.basePointLightIntensity + Math.sin(this.tickAngle * 1.5) * 0.08;
+    }
     for (const mesh of this.environmentMeshes) {
       const meta = mesh.metadata as
         | { baseY?: number; floatAmplitude?: number; rotationSpeed?: number }
@@ -333,6 +477,23 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     if (this.creatureMaterial) {
       this.creatureMaterial.dispose();
       this.creatureMaterial = null;
+    }
+    if (this.backdropTexture) {
+      this.backdropTexture.dispose();
+      this.backdropTexture = null;
+    }
+    if (this.backdropMaterial) {
+      this.backdropMaterial.dispose();
+      this.backdropMaterial = null;
+    }
+    this.backdropPlane = null;
+    if (this.pedestalTexture) {
+      this.pedestalTexture.dispose();
+      this.pedestalTexture = null;
+    }
+    if (this.accentPointLight) {
+      this.accentPointLight.dispose();
+      this.accentPointLight = null;
     }
     for (const mesh of this.environmentMeshes) {
       mesh.material?.dispose();
@@ -379,7 +540,11 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     return {
       activeMeshes: this.environmentMeshes.length,
       activeParticleSystems: this.ambientParticles ? 1 : 0,
-      activeTextures: (this.creatureTexture ? 1 : 0) + (this.particleTexture ? 1 : 0),
+      activeTextures:
+        (this.creatureTexture ? 1 : 0) +
+        (this.particleTexture ? 1 : 0) +
+        (this.backdropTexture ? 1 : 0) +
+        (this.pedestalTexture ? 1 : 0),
       isDisposed: this.isDisposedState
     };
   }
