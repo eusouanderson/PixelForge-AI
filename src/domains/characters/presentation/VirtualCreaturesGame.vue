@@ -373,28 +373,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex items-center gap-1.5">
-            <!-- App Version Badge Pill (Prominently visible in Header HUD) -->
-            <button
-              type="button"
-              data-testid="app-version-badge"
-              class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-800/90 border border-slate-700 hover:border-slate-500 text-[10px] font-mono font-semibold text-slate-300 transition"
-              :title="`PixelForge AI v${updaterState.installedInfo.version} (build ${updaterState.installedInfo.build})`"
-              @click="activeMobileTab = 'settings'"
-            >
-              <span
-                class="w-1.5 h-1.5 rounded-full"
-                :class="{
-                  'bg-emerald-400': updaterState.status === 'up_to_date',
-                  'bg-amber-400 animate-pulse': updaterState.status === 'checking' || updaterState.status === 'downloading_web' || updaterState.status === 'downloading_apk',
-                  'bg-emerald-300 animate-ping': updaterState.status === 'ready_to_reload' || updaterState.status === 'ready_to_install_apk',
-                  'bg-rose-400': updaterState.status === 'error',
-                  'bg-slate-500': updaterState.status === 'idle'
-                }"
-              />
-              <span>v{{ updaterState.installedInfo.version }}</span>
-            </button>
-
+          <div class="flex items-center gap-2">
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm"
