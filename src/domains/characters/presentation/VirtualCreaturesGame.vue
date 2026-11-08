@@ -499,6 +499,13 @@ onUnmounted(() => {
             </span>
           </div>
 
+          <div
+            v-if="displayedStage === 'ovo'"
+            class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-2"
+          >
+            <span>🥚 O ovo ancestral está incubando no santuário! Ecloda-o para alimentar o filhote.</span>
+          </div>
+
           <div class="space-y-2">
             <div
               v-for="food in allFoods"
@@ -561,7 +568,9 @@ onUnmounted(() => {
                 <button
                   type="button"
                   :data-testid="`feed-btn-${food.id}`"
-                  class="px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-sm transition"
+                  :disabled="displayedStage === 'ovo'"
+                  class="px-2.5 py-1.5 rounded-md text-xs font-bold uppercase shadow-sm transition"
+                  :class="displayedStage === 'ovo' ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
                   @click="handleFeedCharacter(food.id)"
                 >
                   Dar
@@ -589,6 +598,13 @@ onUnmounted(() => {
             Atividades, Treinos e Higiene
           </h2>
 
+          <div
+            v-if="displayedStage === 'ovo'"
+            class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-2"
+          >
+            <span>🥚 O ovo ancestral está em repouso no ninho! Ecloda-o para iniciar treinos e atividades.</span>
+          </div>
+
           <div class="space-y-2">
             <div
               v-for="act in allActivities"
@@ -608,14 +624,16 @@ onUnmounted(() => {
                 </div>
                 <p class="text-[11px] text-slate-400">{{ act.description }}</p>
                 <p class="text-[10px] text-emerald-400 mt-0.5">
-                  Energia mín: {{ act.minEnergyRequired }} · Recompensa: +{{ act.experienceReward }} XP / +{{ act.coinReward }} Moedas
+                  Energia mín: {{ act.minEnergyRequired }} · Recompensa: +{{ act.experienceReward }} XP{{ act.coinReward > 0 ? ` / +${act.coinReward} Moedas` : ' (sem moedas)' }}
                 </p>
               </div>
 
               <button
                 type="button"
                 :data-testid="`activity-btn-${act.id}`"
-                class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shrink-0 shadow-sm transition"
+                :disabled="displayedStage === 'ovo'"
+                class="px-3 py-2 rounded-md text-xs font-bold uppercase shrink-0 shadow-sm transition"
+                :class="displayedStage === 'ovo' ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
                 @click="handleExecuteActivity(act.id)"
               >
                 Iniciar

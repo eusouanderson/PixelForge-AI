@@ -43,18 +43,45 @@ describe('feeding domain catalog and dietary rules', () => {
     expect(favReaction.experienceGained).toBe(10);
 
     // Accepted food grants standard nutrition without bonus multiplier and 5 XP
-    const accReaction = feedCharacter(igni, 'thermal-spring-water', 2000, 50);
+    const accReaction = feedCharacter(igni, 'thermal-spring-water', 2000, 50, 60);
     expect(accReaction.accepted).toBe(true);
     expect(accReaction.preference).toBe('accepted');
     expect(accReaction.satisfactionLevel).toBe('satisfied');
     expect(accReaction.appliedNeedsDelta.thirst).toBeGreaterThan(20);
     expect(accReaction.experienceGained).toBe(5);
 
-    // Medicine item returns curedDiseaseId and 5 XP
-    const medReaction = feedCharacter(igni, 'nutri-vital-serum', 2500, 50);
+    // Over-hydration: drinking water when currentThirst >= 95 causes bloating, refusal and 0 XP
+    const overHydrate = feedCharacter(igni, 'thermal-spring-water', 2100, 50, 96);
+    expect(overHydrate.accepted).toBe(false);
+    expect(overHydrate.experienceGained).toBe(0);
+    expect(overHydrate.message).toContain('empanturramento');
+
+    // Unneeded medicine on healthy character is rejected with 0 XP and penalty
+    const unneededMed = feedCharacter(igni, 'nutri-vital-serum', 2400, 50, 50, []);
+    expect(unneededMed.accepted).toBe(false);
+    expect(unneededMed.experienceGained).toBe(0);
+    expect(unneededMed.appliedNeedsDelta.health).toBeLessThan(0);
+    expect(unneededMed.message).toContain('não possui a enfermidade');
+
+    // Medicine item administered to sick character returns curedDiseaseId and 8 XP
+    const diseases = [
+      {
+        id: 'malnutrition' as const,
+        name: 'Desnutrição Aguda',
+        description: 'Falta severa de calorias',
+        remedyFoodId: 'nutri-vital-serum',
+        contractedAtMs: 2000
+      }
+    ];
+    const medReaction = feedCharacter(igni, 'nutri-vital-serum', 2500, 50, 50, diseases);
     expect(medReaction.accepted).toBe(true);
     expect(medReaction.curedDiseaseId).toBe('malnutrition');
-    expect(medReaction.experienceGained).toBe(5);
+    expect(medReaction.experienceGained).toBe(8);
+
+    // Panacea (vitality-herbal-elixir) cures 'all' when character has any disease
+    const panaceaReaction = feedCharacter(igni, 'vitality-herbal-elixir', 2550, 50, 50, diseases);
+    expect(panaceaReaction.accepted).toBe(true);
+    expect(panaceaReaction.curedDiseaseId).toBe('all');
 
     // Overeating solid food when currentHunger >= 95 causes overeating_indigestion
     const overeatReaction = feedCharacter(igni, 'volcanic-roast-meat', 2800, 96);

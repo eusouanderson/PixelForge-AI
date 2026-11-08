@@ -159,18 +159,18 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
     name: 'Banho Termal Purificador',
     description: 'Remove impurezas, restaura a higiene ao máximo e previne doenças.',
     kind: 'bath',
-    minEnergyRequired: 0,
+    minEnergyRequired: 10,
     needsDelta: {
-      hunger: 0,
-      thirst: 8,
-      energy: 4,
+      hunger: -2,
+      thirst: 4,
+      energy: -8,
       happiness: 12,
       hygiene: 45,
       health: 8
     },
     attributeGains: {},
     experienceReward: 6,
-    coinReward: 10
+    coinReward: 8
   },
   'deep-slumber': {
     id: 'deep-slumber',
@@ -179,16 +179,16 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
     kind: 'sleep',
     minEnergyRequired: 0,
     needsDelta: {
-      hunger: -5,
-      thirst: -5,
+      hunger: -12,
+      thirst: -14,
       energy: 48,
-      happiness: 10,
+      happiness: 8,
       hygiene: 0,
       health: 12
     },
     attributeGains: { endurance: 1 },
     experienceReward: 6,
-    coinReward: 10
+    coinReward: 0
   }
 };
 
@@ -203,15 +203,50 @@ export function getActivityById(activityId: string): ActivityDefinition {
 export function executeCharacterActivity(
   species: CharacterSpeciesDefinition,
   activityId: string,
-  currentEnergy: number
+  currentEnergy: number,
+  currentNeeds?: {
+    readonly hunger: number;
+    readonly thirst: number;
+    readonly energy: number;
+    readonly happiness: number;
+    readonly hygiene: number;
+    readonly health: number;
+  }
 ): ActivityExecutionResult {
   const activity = getActivityById(activityId);
 
+  // 1. Check energy requirement
   if (currentEnergy < activity.minEnergyRequired) {
     return {
       success: false,
       activityId,
-      message: `${species.displayName} está sem energia suficiente para ${activity.name}. Coloque-o para descansar primeiro!`,
+      message: `${species.displayName} está sem energia suficiente (${currentEnergy}/${activity.minEnergyRequired}) para ${activity.name}. Coloque-o para descansar primeiro!`,
+      needsDelta: { hunger: 0, thirst: 0, energy: 0, happiness: 0, hygiene: 0, health: 0 },
+      attributeGains: {},
+      experienceGained: 0,
+      coinsGained: 0
+    };
+  }
+
+  // 2. Anti-farming check for purifying-bath: cannot bathe if already clean (hygiene >= 95)
+  if (activityId === 'purifying-bath' && currentNeeds && currentNeeds.hygiene >= 95) {
+    return {
+      success: false,
+      activityId,
+      message: `${species.displayName} já está impecavelmente limpo (${currentNeeds.hygiene}%)! Um novo banho agora é desnecessário.`,
+      needsDelta: { hunger: 0, thirst: 0, energy: 0, happiness: 0, hygiene: 0, health: 0 },
+      attributeGains: {},
+      experienceGained: 0,
+      coinsGained: 0
+    };
+  }
+
+  // 3. Anti-farming check for deep-slumber: cannot sleep if wide awake (energy >= 85)
+  if (activityId === 'deep-slumber' && currentEnergy >= 85) {
+    return {
+      success: false,
+      activityId,
+      message: `${species.displayName} está totalmente desperto e cheio de energia (${currentEnergy}%)! O repouso só é necessário quando a energia estiver abaixo de 85%.`,
       needsDelta: { hunger: 0, thirst: 0, energy: 0, happiness: 0, hygiene: 0, health: 0 },
       attributeGains: {},
       experienceGained: 0,
@@ -224,6 +259,12 @@ export function executeCharacterActivity(
 
   const happinessMultiplier = isFavorite ? 1.4 : isDisliked ? 0.5 : 1.0;
   const xpMultiplier = isFavorite ? 1.3 : 1.0;
+
+  // For deep-slumber: rest grants XP only when actually recuperating from fatigue (< 70 energy)
+  let baseExperience = activity.experienceReward;
+  if (activityId === 'deep-slumber') {
+    baseExperience = currentEnergy < 50 ? 6 : 2;
+  }
 
   return {
     success: true,
@@ -238,7 +279,7 @@ export function executeCharacterActivity(
       happiness: Math.round(activity.needsDelta.happiness * happinessMultiplier)
     },
     attributeGains: activity.attributeGains,
-    experienceGained: Math.round(activity.experienceReward * xpMultiplier),
+    experienceGained: Math.round(baseExperience * xpMultiplier),
     coinsGained: activity.coinReward
   };
 }
