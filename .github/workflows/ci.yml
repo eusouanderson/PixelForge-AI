@@ -79,7 +79,7 @@ jobs:
           cache: 'gradle'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -91,7 +91,7 @@ jobs:
           path: dist/
 
       - name: Sync Capacitor Android Project
-        run: npx cap sync android
+        run: pnpm exec cap sync android
 
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
