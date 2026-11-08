@@ -4,6 +4,8 @@ import type {
   CharacterSpeciesDefinition
 } from '../types';
 
+export const MAX_NATURAL_LIFESPAN_HOURS = 720; // 30 real days (1 month)
+
 const STANDARD_EVOLUTION_RULES: readonly CharacterEvolutionRule[] = [
   {
     fromStage: 'ovo',
@@ -16,33 +18,33 @@ const STANDARD_EVOLUTION_RULES: readonly CharacterEvolutionRule[] = [
   {
     fromStage: 'baby',
     toStage: 'crianca',
-    requiredLevel: 2,
-    requiredAgeHours: 1,
-    minHealth: 60,
+    requiredLevel: 3,
+    requiredAgeHours: 24,
+    minHealth: 65,
     minHappiness: 60
   },
   {
     fromStage: 'crianca',
     toStage: 'pre-adolescente',
-    requiredLevel: 4,
-    requiredAgeHours: 3,
-    minHealth: 65,
+    requiredLevel: 6,
+    requiredAgeHours: 96,
+    minHealth: 70,
     minHappiness: 65
   },
   {
     fromStage: 'pre-adolescente',
     toStage: 'adolescente',
-    requiredLevel: 6,
-    requiredAgeHours: 6,
-    minHealth: 70,
+    requiredLevel: 10,
+    requiredAgeHours: 240,
+    minHealth: 75,
     minHappiness: 70
   },
   {
     fromStage: 'adolescente',
     toStage: 'adulto',
-    requiredLevel: 9,
-    requiredAgeHours: 12,
-    minHealth: 75,
+    requiredLevel: 15,
+    requiredAgeHours: 432,
+    minHealth: 80,
     minHappiness: 75
   }
 ];

@@ -13,6 +13,13 @@ export function createStarterInventory(): InventoryState {
       'crimson-shadow-soulfruit': 3,
       'golden-starburst-sunpeach': 3,
       'thermal-spring-water': 6,
+      'nutri-vital-serum': 2,
+      'isotonic-hydra-elixir': 2,
+      'enzymatic-digest-tonic': 2,
+      'antitoxin-charcoal-extract': 2,
+      'antiseptic-spore-salve': 2,
+      'adrenal-stamina-ampoule': 2,
+      'serotonin-aura-nectar': 2,
       'vitality-herbal-elixir': 4
     }
   };

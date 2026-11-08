@@ -1,12 +1,14 @@
 import type { CharacterId } from '@/domains/characters/types';
 import {
   CHARACTER_SPECIES_REGISTRY,
+  MAX_NATURAL_LIFESPAN_HOURS,
   listAllCharacterSpecies,
   pickRandomCharacterId
 } from '@/domains/characters/domain/character-registry';
 import {
   createInitialCharacterRuntime,
   deriveEmotionalAndHealthState,
+  diagnoseNeedsTriggeredDiseases,
   resolveCharacterAnimation
 } from '@/domains/characters/domain/character-state-engine';
 import {
@@ -90,24 +92,47 @@ export function simulateOfflineProgressOnSnapshot(
     const prevRecord = snapshot.characters[species.id];
     const sim = simulateNeedsOverTime(prevRecord.needs, elapsedMinutes);
     const nextAgeHours = Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10;
-    const evolvedStage = resolveEligibleEvolutionStage(
-      prevRecord.progression,
-      nextAgeHours,
-      sim.currentNeeds.health,
-      sim.currentNeeds.happiness,
-      species.evolutionRules
+    const nextDiseases = diagnoseNeedsTriggeredDiseases(
+      sim.currentNeeds,
+      prevRecord.runtime.activeDiseases,
+      nowMs
     );
+    const reachedOldAge = nextAgeHours >= MAX_NATURAL_LIFESPAN_HOURS;
+    const evolvedStage =
+      nextDiseases.length === 0 && !reachedOldAge
+        ? resolveEligibleEvolutionStage(
+            prevRecord.progression,
+            nextAgeHours,
+            sim.currentNeeds.health,
+            sim.currentNeeds.happiness,
+            species.evolutionRules
+          )
+        : null;
     const nextStage = evolvedStage ?? prevRecord.runtime.currentStage;
-    const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(sim.currentNeeds);
+    const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(
+      sim.currentNeeds,
+      nextDiseases.length,
+      nextAgeHours
+    );
     const nextAnimation = resolveCharacterAnimation(
       nextStage,
       healthCondition,
       emotionalState
     );
 
+    const finalNeeds = reachedOldAge
+      ? { ...sim.currentNeeds, health: 0 }
+      : sim.currentNeeds;
+    const causeOfDeath =
+      healthCondition === 'deceased'
+        ? reachedOldAge
+          ? ('old_age' as const)
+          : ('neglect_or_disease' as const)
+        : undefined;
+
     updatedCharacters[species.id] = {
       ...prevRecord,
-      needs: sim.currentNeeds,
+      needs: finalNeeds,
       progression: {
         ...prevRecord.progression,
         currentStage: nextStage
@@ -119,6 +144,8 @@ export function simulateOfflineProgressOnSnapshot(
         emotionalState,
         healthCondition,
         currentAnimation: nextAnimation,
+        activeDiseases: nextDiseases,
+        causeOfDeath,
         lastUpdatedAtMs: nowMs
       }
     };

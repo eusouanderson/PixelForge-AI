@@ -17,11 +17,15 @@ import type {
   CharacterId,
   CharacterLifeStage
 } from '@/domains/characters/types';
-import { getCharacterSpeciesById } from '@/domains/characters/domain/character-registry';
+import {
+  MAX_NATURAL_LIFESPAN_HOURS,
+  getCharacterSpeciesById
+} from '@/domains/characters/domain/character-registry';
 import { CharacterSpriteRepository } from '@/domains/characters/infrastructure/character-sprite-repository';
 import { computeTotalPowerRating } from '@/domains/attributes/domain/attributes-engine';
 import {
   evaluateDietaryPreference,
+  getFoodById,
   listAllFoods
 } from '@/domains/feeding/domain/feeding-engine';
 import { getItemQuantity } from '@/domains/inventory/domain/inventory-engine';
@@ -63,6 +67,7 @@ const frameToggle = ref<1 | 2 | 3 | 4>(1);
 const manualAnimOverride = ref<CharacterAnimationName | null>(null);
 
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
+let realTimeDecayTimer: ReturnType<typeof setInterval> | null = null;
 let animResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const allFoods = listAllFoods();
@@ -278,10 +283,18 @@ onMounted(async () => {
     frameToggle.value = frameToggle.value === 4 ? 1 : ((frameToggle.value + 1) as 1 | 2 | 3 | 4);
     /* v8 ignore stop */
   }, 650);
+
+  realTimeDecayTimer = setInterval(() => {
+    /* v8 ignore start */
+    saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, Date.now());
+    void persistCurrentState();
+    /* v8 ignore stop */
+  }, 60000);
 });
 
 onUnmounted(() => {
   if (spriteTimer) clearInterval(spriteTimer);
+  if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
   sceneController.dispose();
 });
@@ -379,7 +392,11 @@ onUnmounted(() => {
           class="absolute bottom-2 inset-x-2.5 z-20 flex items-center justify-between gap-2 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-700 px-2.5 py-1 text-[10px] text-slate-300 shadow-sm"
         >
           <span>
-            Idade: <strong class="text-emerald-400">{{ activeRecord.runtime.ageHours }}h</strong> · XP:
+            Idade:
+            <strong class="text-emerald-400">
+              {{ activeRecord.runtime.ageHours }}h / {{ MAX_NATURAL_LIFESPAN_HOURS }}h (30d)
+            </strong>
+            · XP:
             <strong class="text-amber-300">
               {{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }}
             </strong>
@@ -418,6 +435,28 @@ onUnmounted(() => {
         >
           Eclodir Ovo
         </button>
+      </div>
+
+      <!-- Clinical Alert Box for Active Diseases -->
+      <div
+        v-if="activeRecord.runtime.activeDiseases.length > 0"
+        data-testid="active-diseases-alert"
+        class="px-3.5 py-2 bg-rose-950/90 border-b border-rose-800 text-xs text-rose-200 space-y-1"
+      >
+        <div class="font-bold uppercase text-rose-300 text-[11px]">
+          ⚠ Enfermidades Diagnosticadas — Tratamento Necessário:
+        </div>
+        <div
+          v-for="disease in activeRecord.runtime.activeDiseases"
+          :key="disease.id"
+          class="text-[11px] flex flex-col bg-slate-950/60 p-1.5 rounded border border-rose-800/70"
+        >
+          <span class="font-bold text-rose-300">{{ disease.name }}</span>
+          <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
+          <span class="text-amber-300 font-semibold text-[10px] mt-0.5">
+            Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
+          </span>
+        </div>
       </div>
 
       <!-- 6 Normalized Need Bars (0 to 100) -->
@@ -483,7 +522,13 @@ onUnmounted(() => {
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="text-xs font-bold text-slate-100">{{ food.name }}</span>
                     <span
-                      v-if="evaluateDietaryPreference(activeSpecies, food.id) === 'favorite'"
+                      v-if="food.category === 'medicine'"
+                      class="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-500/20 border border-teal-500/50 text-teal-300"
+                    >
+                      ✚ Remédio
+                    </span>
+                    <span
+                      v-else-if="evaluateDietaryPreference(activeSpecies, food.id) === 'favorite'"
                       class="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 border border-amber-500/50 text-amber-300"
                     >
                       ★ Favorito

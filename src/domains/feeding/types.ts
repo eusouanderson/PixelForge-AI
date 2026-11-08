@@ -1,4 +1,4 @@
-import type { CharacterId, ElementAffinity } from '@/domains/characters/types';
+import type { CharacterId, DiseaseId, ElementAffinity } from '@/domains/characters/types';
 import type { AttributeKind } from '@/domains/attributes/types';
 
 export type FoodCategory =
@@ -21,6 +21,7 @@ export interface FoodItemDefinition {
   readonly category: FoodCategory;
   readonly rarity: FoodRarity;
   readonly elementAffinity?: ElementAffinity;
+  readonly curesDiseaseId?: DiseaseId | 'all';
   readonly priceCoins: number;
   readonly nutrition: {
     readonly hungerRestore: number;
@@ -44,6 +45,8 @@ export interface FeedingReaction {
   readonly preference: DietaryPreference;
   readonly accepted: boolean;
   readonly satisfactionLevel: 'ecstatic' | 'satisfied' | 'disgusted' | 'poisoned';
+  readonly contractedDiseaseId?: DiseaseId;
+  readonly curedDiseaseId?: DiseaseId | 'all';
   readonly appliedNeedsDelta: {
     readonly hunger: number;
     readonly thirst: number;

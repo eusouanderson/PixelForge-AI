@@ -49,6 +49,23 @@ export type EmotionalState =
 
 export type HealthCondition = 'healthy' | 'weakened' | 'sick' | 'critical' | 'deceased';
 
+export type DiseaseId =
+  | 'malnutrition'
+  | 'severe_dehydration'
+  | 'overeating_indigestion'
+  | 'food_poisoning'
+  | 'parasitic_infection'
+  | 'chronic_exhaustion'
+  | 'elemental_melancholy';
+
+export interface ActiveDisease {
+  readonly id: DiseaseId;
+  readonly name: string;
+  readonly description: string;
+  readonly remedyFoodId: string;
+  readonly contractedAtMs: number;
+}
+
 export interface OcularGenetics {
   readonly eyeColor: string;
   readonly pupilColor: string;
@@ -131,6 +148,8 @@ export interface CharacterRuntimeState {
   readonly ageHours: number;
   readonly emotionalState: EmotionalState;
   readonly healthCondition: HealthCondition;
+  readonly activeDiseases: readonly ActiveDisease[];
+  readonly causeOfDeath?: 'neglect_or_disease' | 'old_age';
   readonly careHistory: readonly CharacterCareLogEntry[];
   readonly createdAtMs: number;
   readonly lastUpdatedAtMs: number;

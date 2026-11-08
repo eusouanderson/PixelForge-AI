@@ -48,22 +48,51 @@ describe('persistence domain engine, offline simulation, and save repository', (
     const stillBaby = simulateOfflineProgressOnSnapshot(after3Hours, 100000 + 14_400_000);
     expect(stillBaby.characters.ignisauro.runtime.currentStage).toBe('baby');
 
-    // Character at level 2 evolving from baby -> crianca when offline time advances
+    // Character at level 3 and 24+ hours evolving from baby -> crianca when offline time advances
     const readyToEvolve: typeof snapshot = {
       ...after3Hours,
       characters: {
         ...after3Hours.characters,
         ignisauro: {
           ...after3Hours.characters.ignisauro,
+          runtime: {
+            ...after3Hours.characters.ignisauro.runtime,
+            ageHours: 23.5
+          },
           progression: {
             ...after3Hours.characters.ignisauro.progression,
-            level: 2
+            level: 3
           }
         }
       }
     };
     const evolvedOffline = simulateOfflineProgressOnSnapshot(readyToEvolve, 100000 + 14_400_000);
     expect(evolvedOffline.characters.ignisauro.runtime.currentStage).toBe('crianca');
+
+    // Simulating neglect (many hours offline) triggers diseases and eventually death by neglect/disease
+    const neglected = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 48 * 3600 * 1000);
+    expect(neglected.characters.ignisauro.runtime.activeDiseases?.length).toBeGreaterThan(0);
+    expect(neglected.characters.ignisauro.runtime.causeOfDeath).toBe('neglect_or_disease');
+
+    // Simulating reaching 720 hours (30 days = 1 real-life month) causes natural death by old age
+    const elderlySnap: typeof snapshot = {
+      ...snapshot,
+      characters: {
+        ...snapshot.characters,
+        ignisauro: {
+          ...snapshot.characters.ignisauro,
+          runtime: {
+            ...snapshot.characters.ignisauro.runtime,
+            currentStage: 'adulto',
+            ageHours: 719.5
+          }
+        }
+      }
+    };
+    const oldAgeSnap = simulateOfflineProgressOnSnapshot(elderlySnap, 100000 + 3600 * 1000);
+    expect(oldAgeSnap.characters.ignisauro.runtime.healthCondition).toBe('deceased');
+    expect(oldAgeSnap.characters.ignisauro.runtime.causeOfDeath).toBe('old_age');
+    expect(oldAgeSnap.characters.ignisauro.needs.health).toBe(0);
   });
 
   it('validates and migrates legacy or corrupted save snapshots safely', () => {

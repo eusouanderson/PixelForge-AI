@@ -2,8 +2,8 @@ import type { EconomyTransactionResult, WalletState } from '../types';
 
 export function createInitialWallet(): WalletState {
   return {
-    amberCoins: 250,
-    totalEarned: 250,
+    amberCoins: 1500,
+    totalEarned: 1500,
     totalSpent: 0
   };
 }

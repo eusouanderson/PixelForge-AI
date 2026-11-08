@@ -1,11 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
   CHARACTER_SPECIES_REGISTRY,
+  MAX_NATURAL_LIFESPAN_HOURS,
   listAllCharacterSpecies,
   getCharacterSpeciesById,
   pickRandomCharacterId
 } from '../domain/character-registry';
 import {
+  DISEASE_REGISTRY,
+  contractDisease,
+  diagnoseNeedsTriggeredDiseases,
+  cureDiseasesWithRemedy,
   createInitialCharacterRuntime,
   deriveEmotionalAndHealthState,
   resolveCharacterAnimation,
@@ -150,6 +155,75 @@ describe('characters domain registry, state engine, and sprite repository', () =
         health: 0
       })
     ).toEqual({ emotionalState: 'deceased', healthCondition: 'deceased' });
+
+    // Active diseases force 'sick' emotionalState and healthCondition even when health > 40
+    expect(
+      deriveEmotionalAndHealthState(
+        {
+          hunger: 80,
+          thirst: 80,
+          energy: 80,
+          happiness: 80,
+          hygiene: 80,
+          health: 80
+        },
+        1,
+        10
+      )
+    ).toEqual({ emotionalState: 'sick', healthCondition: 'sick' });
+
+    // Reaching or exceeding 1-month lifespan (720 hours) causes natural death by old age
+    expect(
+      deriveEmotionalAndHealthState(
+        {
+          hunger: 90,
+          thirst: 90,
+          energy: 90,
+          happiness: 90,
+          hygiene: 90,
+          health: 95
+        },
+        0,
+        MAX_NATURAL_LIFESPAN_HOURS
+      )
+    ).toEqual({ emotionalState: 'deceased', healthCondition: 'deceased' });
+  });
+
+  it('contracts, diagnoses from neglected needs, and cures all 7 diseases with specific remedies or panacea', () => {
+    expect(Object.keys(DISEASE_REGISTRY).length).toBe(7);
+    expect(DISEASE_REGISTRY.malnutrition.remedyFoodId).toBe('nutri-vital-serum');
+
+    let active = contractDisease(undefined, 'food_poisoning', 1000);
+    expect(active.length).toBe(1);
+    // Contracting the same disease again does not duplicate
+    active = contractDisease(active, 'food_poisoning', 2000);
+    expect(active.length).toBe(1);
+
+    // Diagnose all 5 needs-triggered diseases when needs are critical (<= 15)
+    const diagnosed = diagnoseNeedsTriggeredDiseases(
+      {
+        hunger: 10,
+        thirst: 10,
+        energy: 10,
+        happiness: 10,
+        hygiene: 10,
+        health: 50
+      },
+      undefined,
+      3000
+    );
+    expect(diagnosed.length).toBe(5);
+
+    // Cure specific disease (malnutrition)
+    const curedOne = cureDiseasesWithRemedy(diagnosed, 'malnutrition');
+    expect(curedOne.cured.length).toBe(1);
+    expect(curedOne.remaining.length).toBe(4);
+
+    // Cure all remaining diseases with panacea ('all')
+    const curedAll = cureDiseasesWithRemedy(curedOne.remaining, 'all');
+    expect(curedAll.cured.length).toBe(4);
+    expect(curedAll.remaining).toEqual([]);
+    expect(cureDiseasesWithRemedy(undefined, 'all').remaining).toEqual([]);
   });
 
   it('resolves character animation based on stage, health, and override action', () => {
