@@ -13,18 +13,21 @@ import {
 } from '../infrastructure/local-storage-save-repository';
 
 describe('persistence domain engine, offline simulation, and save repository', () => {
-  it('provides SystemClock and creates initial save snapshot for all 8 characters', () => {
+  it('provides SystemClock and creates initial save snapshot with random or explicit character for all 8 species', () => {
     const clock = new SystemClock();
     expect(clock.nowMs()).toBeGreaterThan(1000000);
 
-    const snapshot = createNewGameSaveSnapshot(100000);
-    expect(snapshot.schemaVersion).toBe(CURRENT_SAVE_SCHEMA_VERSION);
-    expect(snapshot.activeCharacterId).toBe('ignisauro');
-    expect(Object.keys(snapshot.characters).length).toBe(8);
+    const randomSnapshot = createNewGameSaveSnapshot(100000);
+    expect(randomSnapshot.schemaVersion).toBe(CURRENT_SAVE_SCHEMA_VERSION);
+    expect(Object.keys(randomSnapshot.characters)).toContain(randomSnapshot.activeCharacterId);
+    expect(Object.keys(randomSnapshot.characters).length).toBe(8);
+
+    const explicitSnapshot = createNewGameSaveSnapshot(100000, 'ignisauro');
+    expect(explicitSnapshot.activeCharacterId).toBe('ignisauro');
   });
 
-  it('simulates offline elapsed time across minutes, hours, days, and handles clock skew safely', () => {
-    const snapshot = createNewGameSaveSnapshot(100000);
+  it('simulates offline elapsed time across minutes, hours, days, evolves when eligible, and handles clock skew safely', () => {
+    const snapshot = createNewGameSaveSnapshot(100000, 'ignisauro');
 
     // Clock skew (now < lastSavedAtMs) should clamp elapsed time to 0 and update timestamp
     const skewed = simulateOfflineProgressOnSnapshot(snapshot, 50000);
@@ -33,12 +36,63 @@ describe('persistence domain engine, offline simulation, and save repository', (
       snapshot.characters.ignisauro.needs.hunger
     );
 
-    // 3 hours later (3 * 3600 * 1000 = 10_800_000 ms)
+    // 3 hours later (3 * 3600 * 1000 = 10_800_000 ms) -> hatches ovo -> baby
     const after3Hours = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 10_800_000);
     expect(after3Hours.characters.ignisauro.runtime.ageHours).toBe(3);
+    expect(after3Hours.characters.ignisauro.runtime.currentStage).toBe('baby');
     expect(after3Hours.characters.ignisauro.needs.hunger).toBeLessThan(
       snapshot.characters.ignisauro.needs.hunger
     );
+
+    // Another hour at level 1 stays at baby (non-evolving branch)
+    const stillBaby = simulateOfflineProgressOnSnapshot(after3Hours, 100000 + 14_400_000);
+    expect(stillBaby.characters.ignisauro.runtime.currentStage).toBe('baby');
+
+    // Character at level 3 and 24+ hours evolving from baby -> crianca when offline time advances
+    const readyToEvolve: typeof snapshot = {
+      ...after3Hours,
+      characters: {
+        ...after3Hours.characters,
+        ignisauro: {
+          ...after3Hours.characters.ignisauro,
+          runtime: {
+            ...after3Hours.characters.ignisauro.runtime,
+            ageHours: 23.5
+          },
+          progression: {
+            ...after3Hours.characters.ignisauro.progression,
+            level: 3
+          }
+        }
+      }
+    };
+    const evolvedOffline = simulateOfflineProgressOnSnapshot(readyToEvolve, 100000 + 14_400_000);
+    expect(evolvedOffline.characters.ignisauro.runtime.currentStage).toBe('crianca');
+
+    // Simulating neglect (many hours offline) triggers diseases and eventually death by neglect/disease
+    const neglected = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 48 * 3600 * 1000);
+    expect(neglected.characters.ignisauro.runtime.activeDiseases?.length).toBeGreaterThan(0);
+    expect(neglected.characters.ignisauro.runtime.causeOfDeath).toBe('neglect_or_disease');
+
+    // Simulating reaching 720 hours (30 days = 1 real-life month) causes natural death by old age
+    const elderlySnap: typeof snapshot = {
+      ...snapshot,
+      characters: {
+        ...snapshot.characters,
+        ignisauro: {
+          ...snapshot.characters.ignisauro,
+          runtime: {
+            ...snapshot.characters.ignisauro.runtime,
+            currentStage: 'adulto',
+            ageHours: 719.5
+          }
+        }
+      }
+    };
+    const oldAgeSnap = simulateOfflineProgressOnSnapshot(elderlySnap, 100000 + 3600 * 1000);
+    expect(oldAgeSnap.characters.ignisauro.runtime.healthCondition).toBe('deceased');
+    expect(oldAgeSnap.characters.ignisauro.runtime.causeOfDeath).toBe('old_age');
+    expect(oldAgeSnap.characters.ignisauro.needs.health).toBe(0);
   });
 
   it('validates and migrates legacy or corrupted save snapshots safely', () => {
@@ -61,9 +115,9 @@ describe('persistence domain engine, offline simulation, and save repository', (
     expect(migrated.activeCharacterId).toBe('glacissauro');
     expect(Object.keys(migrated.characters).length).toBe(8);
 
-    // Completely invalid input falls back to a fresh save snapshot
+    // Completely invalid input falls back to a fresh save snapshot with a valid random character
     const fallback = validateAndMigrateSaveSnapshot('corrupted-json', 5000);
-    expect(fallback.activeCharacterId).toBe('ignisauro');
+    expect(Object.keys(fallback.characters)).toContain(fallback.activeCharacterId);
     expect(fallback.lastSavedAtMs).toBe(5000);
 
     const invalidActiveId = validateAndMigrateSaveSnapshot(
@@ -91,7 +145,7 @@ describe('persistence domain engine, offline simulation, and save repository', (
     const repo = new LocalStorageGameSaveRepository('test_save_key', fallbackStorage);
     expect(await repo.loadSave()).toBeNull();
 
-    const snapshot = createNewGameSaveSnapshot(10000);
+    const snapshot = createNewGameSaveSnapshot(10000, 'ignisauro');
     await repo.saveSnapshot(snapshot);
 
     const loaded = await repo.loadSave();

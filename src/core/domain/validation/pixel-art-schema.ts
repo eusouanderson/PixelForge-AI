@@ -115,7 +115,7 @@ export const pixelArtSchema = z
       width: z.number().int().positive(),
       height: z.number().int().positive()
     }),
-    palette: z.record(z.string().regex(hexColorRegex)),
+    palette: z.record(z.string(), z.string().regex(hexColorRegex)),
     layers: z.array(pixelArtLayerSchema),
     metadata: pixelArtMetadataSchema.optional()
   })

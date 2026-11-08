@@ -1,8 +1,14 @@
 import type { CharacterId, CharacterLifeStage } from '@/domains/characters/types';
-import { getCharacterSpeciesById } from '@/domains/characters/domain/character-registry';
+import {
+  MAX_NATURAL_LIFESPAN_HOURS,
+  getCharacterSpeciesById
+} from '@/domains/characters/domain/character-registry';
 import {
   appendCharacterCareLog,
+  contractDisease,
+  cureDiseasesWithRemedy,
   deriveEmotionalAndHealthState,
+  diagnoseNeedsTriggeredDiseases,
   resolveCharacterAnimation
 } from '@/domains/characters/domain/character-state-engine';
 import { applyNeedsDelta, createInitialNeeds } from '@/domains/pet-needs/domain/pet-needs-engine';
@@ -80,17 +86,47 @@ export function feedActiveCharacterUseCase(
     };
   }
 
-  const reaction = feedCharacter(species, foodId, nowMs);
+  const reaction = feedCharacter(species, foodId, nowMs, charRecord.needs.hunger);
   const nextNeeds = applyNeedsDelta(charRecord.needs, reaction.appliedNeedsDelta);
   const nextAttributes = applyAttributeModifier(charRecord.attributes, {
     source: 'feeding_bonus',
     deltas: reaction.appliedAttributeDelta
   });
 
+  let updatedDiseases = charRecord.runtime.activeDiseases;
+  if (reaction.contractedDiseaseId) {
+    updatedDiseases = contractDisease(updatedDiseases, reaction.contractedDiseaseId, nowMs);
+  }
+  let finalMessage = reaction.message;
+  if (reaction.curedDiseaseId) {
+    const cureRes = cureDiseasesWithRemedy(updatedDiseases, reaction.curedDiseaseId);
+    updatedDiseases = cureRes.remaining;
+    if (cureRes.cured.length > 0) {
+      finalMessage = `${reaction.message} Curou ${cureRes.cured.length} enfermidade(s)!`;
+    }
+  }
+  updatedDiseases = diagnoseNeedsTriggeredDiseases(nextNeeds, updatedDiseases, nowMs);
+
   const xpResult = addExperience(charRecord.progression, reaction.experienceGained);
-  const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(nextNeeds);
+  const currentAgeHours = charRecord.runtime.ageHours;
+  const evolvedToStage =
+    updatedDiseases.length === 0
+      ? resolveEligibleEvolutionStage(
+          xpResult.state,
+          currentAgeHours,
+          nextNeeds.health,
+          nextNeeds.happiness,
+          species.evolutionRules
+        )
+      : null;
+  const finalStage = evolvedToStage ?? xpResult.state.currentStage;
+  const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(
+    nextNeeds,
+    updatedDiseases.length,
+    currentAgeHours
+  );
   const nextAnimation = resolveCharacterAnimation(
-    charRecord.runtime.currentStage,
+    finalStage,
     healthCondition,
     emotionalState,
     reaction.accepted ? 'comendo' : 'doente'
@@ -99,18 +135,21 @@ export function feedActiveCharacterUseCase(
   const nextRuntime = appendCharacterCareLog(
     {
       ...charRecord.runtime,
+      currentStage: finalStage,
+      ageHours: currentAgeHours,
       emotionalState,
       healthCondition,
-      currentAnimation: nextAnimation
+      currentAnimation: nextAnimation,
+      activeDiseases: updatedDiseases
     },
     'feed',
-    reaction.message,
+    finalMessage,
     nowMs
   );
 
   return {
     success: true,
-    message: reaction.message,
+    message: finalMessage,
     reaction,
     snapshot: {
       ...snapshot,
@@ -122,7 +161,10 @@ export function feedActiveCharacterUseCase(
           runtime: nextRuntime,
           needs: nextNeeds,
           attributes: nextAttributes,
-          progression: xpResult.state
+          progression: {
+            ...xpResult.state,
+            currentStage: finalStage
+          }
         }
       }
     }
@@ -173,14 +215,23 @@ export function performCharacterActivityUseCase(
     deltas: execRes.attributeGains
   });
 
-  const xpResult = addExperience(charRecord.progression, execRes.experienceGained);
-  const evolvedToStage = resolveEligibleEvolutionStage(
-    xpResult.state,
-    charRecord.runtime.ageHours,
-    nextNeeds.health,
-    nextNeeds.happiness,
-    species.evolutionRules
+  const updatedDiseases = diagnoseNeedsTriggeredDiseases(
+    nextNeeds,
+    charRecord.runtime.activeDiseases,
+    nowMs
   );
+  const xpResult = addExperience(charRecord.progression, execRes.experienceGained);
+  const currentAgeHours = charRecord.runtime.ageHours;
+  const evolvedToStage =
+    updatedDiseases.length === 0
+      ? resolveEligibleEvolutionStage(
+          xpResult.state,
+          currentAgeHours,
+          nextNeeds.health,
+          nextNeeds.happiness,
+          species.evolutionRules
+        )
+      : null;
 
   const finalStage = evolvedToStage ?? xpResult.state.currentStage;
   if (evolvedToStage) {
@@ -197,7 +248,11 @@ export function performCharacterActivityUseCase(
     });
   }
 
-  const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(nextNeeds);
+  const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(
+    nextNeeds,
+    updatedDiseases.length,
+    currentAgeHours
+  );
   const nextAnimation = resolveCharacterAnimation(
     finalStage,
     healthCondition,
@@ -213,9 +268,11 @@ export function performCharacterActivityUseCase(
     {
       ...charRecord.runtime,
       currentStage: finalStage,
+      ageHours: currentAgeHours,
       emotionalState,
       healthCondition,
-      currentAnimation: nextAnimation
+      currentAnimation: nextAnimation,
+      activeDiseases: updatedDiseases
     },
     evolvedToStage ? 'evolve' : 'activity',
     summary,
@@ -338,16 +395,25 @@ export function reviveDeceasedCharacterUseCase(
   const activeId = snapshot.activeCharacterId;
   const charRecord = snapshot.characters[activeId];
   const restoredNeeds = createInitialNeeds();
+  const isReincarnation = charRecord.runtime.ageHours >= MAX_NATURAL_LIFESPAN_HOURS;
+  const targetStage = isReincarnation ? 'ovo' : charRecord.runtime.currentStage;
+  const targetAgeHours = isReincarnation ? 0 : charRecord.runtime.ageHours;
 
   const nextRuntime = appendCharacterCareLog(
     {
       ...charRecord.runtime,
+      currentStage: targetStage,
+      ageHours: targetAgeHours,
       emotionalState: 'happy',
       healthCondition: 'healthy',
-      currentAnimation: 'idle'
+      currentAnimation: isReincarnation ? 'eclosao' : 'idle',
+      activeDiseases: [],
+      causeOfDeath: undefined
     },
     'revive',
-    'Renascido pela Chama Ancestral do Santuário!',
+    isReincarnation
+      ? 'Ciclo de 1 mês concluído! Um novo ovo ancestral surgiu pela Chama do Santuário!'
+      : 'Renascido pela Chama Ancestral do Santuário!',
     nowMs
   );
 
@@ -359,6 +425,10 @@ export function reviveDeceasedCharacterUseCase(
       [activeId]: {
         ...charRecord,
         needs: restoredNeeds,
+        progression: {
+          ...charRecord.progression,
+          currentStage: targetStage
+        },
         runtime: nextRuntime
       }
     }

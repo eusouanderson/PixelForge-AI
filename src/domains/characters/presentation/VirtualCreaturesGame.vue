@@ -4,8 +4,8 @@ import {
   Utensils as UtensilsIcon,
   Dumbbell as DumbbellIcon,
   FileText as FileTextIcon,
-  Users as UsersIcon,
   Settings as SettingsIcon,
+  Sparkles as SparklesIcon,
   Coins as CoinsIcon,
   Clock as ClockIcon,
   RotateCcw as RotateCcwIcon
@@ -18,13 +18,14 @@ import type {
   CharacterLifeStage
 } from '@/domains/characters/types';
 import {
-  getCharacterSpeciesById,
-  listAllCharacterSpecies
+  MAX_NATURAL_LIFESPAN_HOURS,
+  getCharacterSpeciesById
 } from '@/domains/characters/domain/character-registry';
 import { CharacterSpriteRepository } from '@/domains/characters/infrastructure/character-sprite-repository';
 import { computeTotalPowerRating } from '@/domains/attributes/domain/attributes-engine';
 import {
   evaluateDietaryPreference,
+  getFoodById,
   listAllFoods
 } from '@/domains/feeding/domain/feeding-engine';
 import { getItemQuantity } from '@/domains/inventory/domain/inventory-engine';
@@ -45,7 +46,6 @@ import {
   performCharacterActivityUseCase,
   purchaseFoodItemUseCase,
   reviveDeceasedCharacterUseCase,
-  selectActiveCharacterUseCase,
   updateSettingsUseCase
 } from '@/domains/persistence/application/game-session-service';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
@@ -57,18 +57,19 @@ const renderer2d = new Canvas2dRenderer();
 const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
-const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'roster' | 'settings'>('feed');
-const feedbackBanner = ref<string>('Bem-vindo ao Santuário Elemental! Cuide do seu dinossauro.');
+const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings'>('feed');
+const feedbackBanner = ref<string>(
+  'O ovo ancestral está rachando no Santuário Elemental! Aguarde o nascimento ou toque em Eclodir.'
+);
 const babylonCanvasRef = ref<HTMLCanvasElement | null>(null);
 const spriteOverlayCanvasRef = ref<HTMLCanvasElement | null>(null);
 const frameToggle = ref<1 | 2 | 3 | 4>(1);
-const manualStageOverride = ref<CharacterLifeStage | null>(null);
 const manualAnimOverride = ref<CharacterAnimationName | null>(null);
 
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
+let realTimeDecayTimer: ReturnType<typeof setInterval> | null = null;
 let animResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const allSpecies = listAllCharacterSpecies();
 const allFoods = listAllFoods();
 const allActivities = listAllActivities();
 
@@ -80,7 +81,11 @@ const activeParticles = computed(() => getCharacterParticleConfig(activeCharacte
 const totalPower = computed(() => computeTotalPowerRating(activeRecord.value.attributes));
 
 const displayedStage = computed<CharacterLifeStage>(
-  () => manualStageOverride.value ?? activeRecord.value.runtime.currentStage
+  () => activeRecord.value.runtime.currentStage
+);
+
+const nextEvolutionRule = computed(() =>
+  activeSpecies.value.evolutionRules.find((r) => r.fromStage === displayedStage.value) ?? null
 );
 
 const displayedAnimation = computed<CharacterAnimationName>(() => {
@@ -156,15 +161,6 @@ function triggerTemporaryAnimation(anim: CharacterAnimationName, durationMs: num
   }, durationMs);
 }
 
-async function handleSelectCharacter(characterId: CharacterId): Promise<void> {
-  manualStageOverride.value = null;
-  manualAnimOverride.value = null;
-  saveState.value = selectActiveCharacterUseCase(saveState.value, characterId, Date.now());
-  feedbackBanner.value = `${activeSpecies.value.displayName} entrou em destaque no cenário ${activeEnvironment.value.name}!`;
-  syncBabylonEnvironment();
-  await persistCurrentState();
-}
-
 async function handleFeedCharacter(foodId: string): Promise<void> {
   const res = feedActiveCharacterUseCase(saveState.value, foodId, Date.now());
   saveState.value = res.snapshot;
@@ -193,7 +189,6 @@ async function handleExecuteActivity(activityId: string): Promise<void> {
   feedbackBanner.value = res.message;
 
   if (res.success) {
-    manualStageOverride.value = null;
     triggerTemporaryAnimation('amando', 2400);
     if (res.evolvedToStage) {
       sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
@@ -215,7 +210,6 @@ async function handleReviveCharacter(): Promise<void> {
 }
 
 async function handleHatchEgg(): Promise<void> {
-  manualStageOverride.value = null;
   saveState.value = hatchCharacterEggUseCase(saveState.value, Date.now());
   feedbackBanner.value = `O ovo de ${activeSpecies.value.displayName} eclodiu!`;
   sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
@@ -225,7 +219,7 @@ async function handleHatchEgg(): Promise<void> {
 async function handleSimulateOfflineHours(hours: number): Promise<void> {
   const simulatedNow = saveState.value.lastSavedAtMs + hours * 3600 * 1000;
   saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, simulatedNow);
-  feedbackBanner.value = `Simuladas +${hours}h offline! As necessidades e idade evoluíram deterministicamente.`;
+  feedbackBanner.value = `Simuladas +${hours}h offline! As necessidades e evolução avançaram conforme o tempo.`;
   renderCurrentSpriteToOverlay();
   await persistCurrentState();
 }
@@ -250,11 +244,12 @@ async function handleTogglePixelGrid(): Promise<void> {
 
 async function handleResetSave(): Promise<void> {
   await saveRepo.clearSave();
-  manualStageOverride.value = null;
   manualAnimOverride.value = null;
+  frameToggle.value = 1;
   saveState.value = createNewGameSaveSnapshot(Date.now());
   syncBabylonEnvironment();
-  feedbackBanner.value = 'Progresso reiniciado para o estado inicial de fábrica.';
+  feedbackBanner.value = `Novo ovo sorteado de ${activeSpecies.value.displayName}! Ele já está rachando para nascer.`;
+  await persistCurrentState();
 }
 
 watch([currentSpriteArt, () => saveState.value.settings.showPixelGrid], () => {
@@ -279,55 +274,77 @@ onMounted(async () => {
   }
 
   spriteTimer = setInterval(() => {
+    /* v8 ignore start */
+    if (displayedStage.value === 'ovo' && frameToggle.value === 4) {
+      frameToggle.value = 1;
+      void handleHatchEgg();
+      return;
+    }
     frameToggle.value = frameToggle.value === 4 ? 1 : ((frameToggle.value + 1) as 1 | 2 | 3 | 4);
-  }, 550);
+    /* v8 ignore stop */
+  }, 650);
+
+  realTimeDecayTimer = setInterval(() => {
+    /* v8 ignore start */
+    saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, Date.now());
+    void persistCurrentState();
+    /* v8 ignore stop */
+  }, 60000);
 });
 
 onUnmounted(() => {
   if (spriteTimer) clearInterval(spriteTimer);
+  if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
   sceneController.dispose();
 });
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center select-none">
-    <!-- Mobile Portrait Container -->
+  <div class="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col items-center select-none">
+    <!-- Mobile Portrait Container Styled with PixelForge AI Emerald & Slate Theme -->
     <div
-      class="w-full max-w-md min-h-screen bg-slate-900 border-x-2 border-slate-800 flex flex-col justify-between shadow-2xl"
+      class="w-full max-w-md min-h-screen bg-slate-900/90 border-x border-slate-800 flex flex-col justify-between shadow-2xl"
     >
       <!-- Top HUD Header -->
-      <header class="p-3 bg-slate-950 border-b-2 border-slate-800 space-y-2">
+      <header class="px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <div>
-            <div class="flex items-center gap-1.5">
-              <h1
-                data-testid="active-character-name"
-                class="text-base font-bold tracking-wider uppercase text-amber-400"
-              >
-                {{ activeSpecies.displayName }}
-              </h1>
-              <span
-                class="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-slate-800 border border-slate-700 text-cyan-300"
-              >
-                Nv. {{ activeRecord.progression.level }}
-              </span>
-              <span
-                data-testid="active-stage-badge"
-                class="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-indigo-950 border border-indigo-700 text-indigo-200"
-              >
-                {{ displayedStage }}
-              </span>
+          <div class="flex items-center gap-2.5">
+            <div
+              class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-sm shrink-0"
+            >
+              <sparkles-icon class="w-4 h-4" />
             </div>
-            <p class="text-[11px] text-slate-400">
-              {{ activeSpecies.scientificName }} · {{ activeSpecies.elementLabel }}
-            </p>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <h1
+                  data-testid="active-character-name"
+                  class="text-sm font-bold tracking-tight uppercase text-white"
+                >
+                  {{ activeSpecies.displayName }}
+                </h1>
+                <span
+                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
+                >
+                  Nv. {{ activeRecord.progression.level }}
+                </span>
+                <span
+                  data-testid="active-stage-badge"
+                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full bg-slate-800 border border-slate-700 text-amber-300"
+                >
+                  {{ displayedStage }}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400">
+                {{ activeSpecies.scientificName }} · {{ activeSpecies.elementLabel }}
+              </p>
+            </div>
           </div>
 
           <div class="flex items-center gap-2">
             <div
               data-testid="wallet-coins"
-              class="flex items-center gap-1 px-2.5 py-1 bg-amber-950/70 border border-amber-600/60 text-amber-300 text-xs font-bold"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm"
               title="Moedas Âmbar"
             >
               <coins-icon class="w-3.5 h-3.5 text-amber-400" />
@@ -335,34 +352,12 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <!-- Quick Character Selector Strip (All 8 Real Characters) -->
-        <nav
-          aria-label="Seleção rápida de personagens"
-          class="flex items-center gap-1.5 overflow-x-auto pb-1"
-        >
-          <button
-            v-for="species in allSpecies"
-            :key="species.id"
-            type="button"
-            :data-testid="`select-char-${species.id}`"
-            class="px-2.5 py-1.5 text-xs font-bold uppercase tracking-tight border transition-colors shrink-0"
-            :class="
-              species.id === activeCharacterId
-                ? 'bg-amber-500 text-slate-950 border-amber-300'
-                : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
-            "
-            @click="handleSelectCharacter(species.id)"
-          >
-            {{ species.displayName }}
-          </button>
-        </nav>
       </header>
 
       <!-- Babylon.js 3D Environment + Crisp Nearest-Neighbor Pixel Art Viewport -->
       <section
         aria-label="Cenário 3D e Criatura"
-        class="relative w-full h-64 bg-slate-950 border-b-2 border-slate-800 overflow-hidden flex items-center justify-center"
+        class="relative w-full h-64 bg-slate-950 border-b border-slate-800 overflow-hidden flex items-center justify-center"
       >
         <canvas
           ref="babylonCanvasRef"
@@ -382,68 +377,51 @@ onUnmounted(() => {
 
         <!-- Environment & Status Overlay Pill -->
         <div
-          class="absolute top-2 left-2 z-20 px-2 py-1 bg-slate-950/85 border border-slate-700 text-[11px] text-slate-200"
+          class="absolute top-2.5 left-2.5 z-20 px-2.5 py-1 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-700 text-[11px] text-slate-200 shadow-sm"
         >
-          <span class="font-bold text-amber-300">{{ activeEnvironment.name }}</span>
+          <span class="font-bold text-emerald-400">{{ activeEnvironment.name }}</span>
           <span class="mx-1 text-slate-500">|</span>
-          <span data-testid="active-emotional-state" class="uppercase text-emerald-300">
+          <span data-testid="active-emotional-state" class="uppercase text-amber-300 font-semibold">
             Estado: {{ activeRecord.runtime.emotionalState }}
           </span>
         </div>
 
-        <!-- Stage & Animation Quick Controls on Viewport Bottom -->
+        <!-- 90s Virtual Pet Organic Evolution & Age Bar (Read-Only Status) -->
         <div
-          class="absolute bottom-2 inset-x-2 z-20 flex flex-wrap items-center justify-between gap-1 bg-slate-950/90 border border-slate-800 px-2 py-1"
+          data-testid="evolution-status-bar"
+          class="absolute bottom-2 inset-x-2.5 z-20 flex items-center justify-between gap-2 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-700 px-2.5 py-1 text-[10px] text-slate-300 shadow-sm"
         >
-          <div class="flex items-center gap-1">
-            <button
-              v-for="st in (['ovo', 'baby', 'crianca', 'pre-adolescente', 'adolescente', 'adulto'] as const)"
-              :key="st"
-              type="button"
-              :data-testid="`stage-btn-${st}`"
-              class="px-1.5 py-0.5 text-[10px] font-bold uppercase border"
-              :class="
-                displayedStage === st
-                  ? 'bg-indigo-600 text-white border-indigo-400'
-                  : 'bg-slate-900 text-slate-400 border-slate-700'
-              "
-              @click="manualStageOverride = st"
-            >
-              {{ st === 'pre-adolescente' ? 'jovem' : st === 'adolescente' ? 'adolesc' : st }}
-            </button>
-          </div>
-
-          <div class="flex items-center gap-1">
-            <button
-              v-for="anim in (['idle', 'comendo', 'amando', 'doente', 'morte'] as const)"
-              :key="anim"
-              type="button"
-              :data-testid="`anim-btn-${anim}`"
-              class="px-1.5 py-0.5 text-[10px] font-bold uppercase border"
-              :class="
-                displayedAnimation === anim
-                  ? 'bg-amber-500 text-slate-950 border-amber-300'
-                  : 'bg-slate-900 text-slate-400 border-slate-700'
-              "
-              @click="manualAnimOverride = anim"
-            >
-              {{ anim }}
-            </button>
-          </div>
+          <span>
+            Idade:
+            <strong class="text-emerald-400">
+              {{ activeRecord.runtime.ageHours }}h / {{ MAX_NATURAL_LIFESPAN_HOURS }}h (30d)
+            </strong>
+            · XP:
+            <strong class="text-amber-300">
+              {{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }}
+            </strong>
+          </span>
+          <span v-if="nextEvolutionRule" class="text-emerald-300 font-semibold">
+            Próx. fase ({{ nextEvolutionRule.toStage }}): Nv.{{ nextEvolutionRule.requiredLevel }} e
+            {{ nextEvolutionRule.requiredAgeHours }}h
+          </span>
+          <span v-else class="text-emerald-400 font-bold uppercase">
+            Evolução Completa (Adulto)
+          </span>
         </div>
       </section>
 
       <!-- Feedback Banner & Emergency Actions -->
       <div
         data-testid="feedback-banner"
-        class="px-3 py-2 bg-slate-950 border-b border-slate-800 text-xs text-amber-200 flex items-center justify-between gap-2"
+        class="px-3.5 py-2 bg-slate-950 border-b border-slate-800 text-xs text-emerald-300 flex items-center justify-between gap-2"
       >
         <span>{{ feedbackBanner }}</span>
         <button
           v-if="activeRecord.runtime.healthCondition === 'deceased' || displayedAnimation === 'morte'"
           type="button"
           data-testid="revive-creature-btn"
-          class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[11px] shrink-0"
+          class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
           @click="handleReviveCharacter"
         >
           Reviver
@@ -452,33 +430,55 @@ onUnmounted(() => {
           v-else-if="activeRecord.runtime.currentStage === 'ovo'"
           type="button"
           data-testid="hatch-egg-btn"
-          class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold uppercase text-[11px] shrink-0"
+          class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
           @click="handleHatchEgg"
         >
           Eclodir Ovo
         </button>
       </div>
 
+      <!-- Clinical Alert Box for Active Diseases -->
+      <div
+        v-if="activeRecord.runtime.activeDiseases.length > 0"
+        data-testid="active-diseases-alert"
+        class="px-3.5 py-2 bg-rose-950/90 border-b border-rose-800 text-xs text-rose-200 space-y-1"
+      >
+        <div class="font-bold uppercase text-rose-300 text-[11px]">
+          ⚠ Enfermidades Diagnosticadas — Tratamento Necessário:
+        </div>
+        <div
+          v-for="disease in activeRecord.runtime.activeDiseases"
+          :key="disease.id"
+          class="text-[11px] flex flex-col bg-slate-950/60 p-1.5 rounded border border-rose-800/70"
+        >
+          <span class="font-bold text-rose-300">{{ disease.name }}</span>
+          <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
+          <span class="text-amber-300 font-semibold text-[10px] mt-0.5">
+            Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
+          </span>
+        </div>
+      </div>
+
       <!-- 6 Normalized Need Bars (0 to 100) -->
       <section
         aria-label="Indicadores de Necessidades"
-        class="p-3 bg-slate-900 border-b-2 border-slate-800 grid grid-cols-3 gap-2"
+        class="p-3 bg-slate-900/90 border-b border-slate-800 grid grid-cols-3 gap-2"
       >
         <div
           v-for="need in needBars"
           :key="need.key"
           :data-testid="`need-bar-${need.key}`"
-          class="bg-slate-950 border border-slate-800 p-1.5"
+          class="bg-slate-950/90 rounded-lg border border-slate-800 p-1.5"
         >
           <div class="flex items-center justify-between text-[11px] font-semibold mb-1">
             <span class="text-slate-300">{{ need.label }}</span>
-            <span :class="need.value <= 20 ? 'text-rose-400 font-bold' : 'text-slate-200'">
+            <span :class="need.value <= 20 ? 'text-rose-400 font-bold' : 'text-emerald-300'">
               {{ need.value }}%
             </span>
           </div>
-          <div class="w-full h-2 bg-slate-800 overflow-hidden">
+          <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
             <div
-              class="h-full transition-all duration-300"
+              class="h-full rounded-full transition-all duration-300"
               :class="need.value <= 20 ? 'bg-rose-600' : need.color"
               :style="{ width: `${need.value}%` }"
             />
@@ -487,11 +487,11 @@ onUnmounted(() => {
       </section>
 
       <!-- Main Tab Content Area -->
-      <main class="flex-1 overflow-y-auto p-3 space-y-3">
+      <main class="flex-1 overflow-y-auto p-3 bg-slate-950/60 space-y-3">
         <!-- TAB 1: ALIMENTAÇÃO E CUIDADOS -->
         <div v-if="activeMobileTab === 'feed'" data-testid="tab-content-feed" class="space-y-2.5">
           <div class="flex items-center justify-between">
-            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">
               Dieta Individual de {{ activeSpecies.displayName }}
             </h2>
             <span class="text-[11px] text-slate-400">
@@ -504,12 +504,12 @@ onUnmounted(() => {
               v-for="food in allFoods"
               :key="food.id"
               :data-testid="`food-card-${food.id}`"
-              class="p-2.5 bg-slate-950 border border-slate-800 flex items-center justify-between gap-2"
+              class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
             >
               <div class="flex items-center gap-2.5">
                 <!-- Pixel Art Color Swatch Icon -->
                 <div
-                  class="w-9 h-9 border-2 border-slate-700 shrink-0 grid grid-cols-2 grid-rows-2 p-0.5"
+                  class="w-9 h-9 rounded-md border border-slate-700 shrink-0 grid grid-cols-2 grid-rows-2 p-0.5"
                   :style="{ backgroundColor: food.pixelColors.secondary }"
                 >
                   <div :style="{ backgroundColor: food.pixelColors.primary }" />
@@ -522,20 +522,26 @@ onUnmounted(() => {
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="text-xs font-bold text-slate-100">{{ food.name }}</span>
                     <span
-                      v-if="evaluateDietaryPreference(activeSpecies, food.id) === 'favorite'"
-                      class="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 border border-amber-500 text-amber-300"
+                      v-if="food.category === 'medicine'"
+                      class="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-500/20 border border-teal-500/50 text-teal-300"
+                    >
+                      ✚ Remédio
+                    </span>
+                    <span
+                      v-else-if="evaluateDietaryPreference(activeSpecies, food.id) === 'favorite'"
+                      class="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 border border-amber-500/50 text-amber-300"
                     >
                       ★ Favorito
                     </span>
                     <span
                       v-else-if="evaluateDietaryPreference(activeSpecies, food.id) === 'forbidden'"
-                      class="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-rose-950 border border-rose-700 text-rose-300"
+                      class="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-950 border border-rose-700 text-rose-300"
                     >
                       ✕ Proibido
                     </span>
                     <span
                       v-else
-                      class="px-1.5 py-0.5 text-[10px] uppercase bg-slate-800 text-slate-300"
+                      class="px-1.5 py-0.5 rounded-full text-[10px] uppercase bg-emerald-500/15 border border-emerald-500/30 text-emerald-300"
                     >
                       Aceito
                     </span>
@@ -555,7 +561,7 @@ onUnmounted(() => {
                 <button
                   type="button"
                   :data-testid="`feed-btn-${food.id}`"
-                  class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase"
+                  class="px-2.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shadow-sm transition"
                   @click="handleFeedCharacter(food.id)"
                 >
                   Dar
@@ -563,7 +569,7 @@ onUnmounted(() => {
                 <button
                   type="button"
                   :data-testid="`buy-food-btn-${food.id}`"
-                  class="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-[10px] font-bold"
+                  class="px-2 py-1 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-[10px] font-bold transition"
                   @click="handlePurchaseFood(food.id)"
                 >
                   +1 ({{ food.priceCoins }}¢)
@@ -579,7 +585,7 @@ onUnmounted(() => {
           data-testid="tab-content-activities"
           class="space-y-2.5"
         >
-          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">
             Atividades, Treinos e Higiene
           </h2>
 
@@ -588,20 +594,20 @@ onUnmounted(() => {
               v-for="act in allActivities"
               :key="act.id"
               :data-testid="`activity-card-${act.id}`"
-              class="p-2.5 bg-slate-950 border border-slate-800 flex items-center justify-between gap-2"
+              class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
             >
               <div>
                 <div class="flex items-center gap-1.5">
                   <span class="text-xs font-bold text-slate-100">{{ act.name }}</span>
                   <span
                     v-if="activeSpecies.personality.favoriteActivityId === act.id"
-                    class="px-1.5 py-0.5 text-[10px] font-bold uppercase bg-amber-500/20 border border-amber-500 text-amber-300"
+                    class="px-1.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 border border-amber-500/50 text-amber-300"
                   >
                     ★ Favorita
                   </span>
                 </div>
                 <p class="text-[11px] text-slate-400">{{ act.description }}</p>
-                <p class="text-[10px] text-cyan-300 mt-0.5">
+                <p class="text-[10px] text-emerald-400 mt-0.5">
                   Energia mín: {{ act.minEnergyRequired }} · Recompensa: +{{ act.experienceReward }} XP / +{{ act.coinReward }} Moedas
                 </p>
               </div>
@@ -609,7 +615,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 :data-testid="`activity-btn-${act.id}`"
-                class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold uppercase shrink-0"
+                class="px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase shrink-0 shadow-sm transition"
                 @click="handleExecuteActivity(act.id)"
               >
                 Iniciar
@@ -624,12 +630,12 @@ onUnmounted(() => {
           data-testid="tab-content-sheet"
           class="space-y-3"
         >
-          <div class="p-3 bg-slate-950 border border-slate-800 space-y-1.5">
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
             <div class="flex items-center justify-between">
-              <h2 class="text-sm font-bold uppercase text-amber-400">
+              <h2 class="text-sm font-bold uppercase text-emerald-400">
                 Ficha Oficial — {{ activeSpecies.displayName }}
               </h2>
-              <span class="text-xs font-bold text-cyan-300">
+              <span class="text-xs font-bold text-amber-300">
                 Poder Total: {{ totalPower }}
               </span>
             </div>
@@ -637,19 +643,19 @@ onUnmounted(() => {
             <p class="text-[11px] text-slate-400 italic">{{ activeSpecies.lore }}</p>
 
             <div class="grid grid-cols-2 gap-2 pt-2 text-xs">
-              <div class="bg-slate-900 p-2 border border-slate-800">
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
                 <span class="text-slate-400 block text-[10px] uppercase">Espécie</span>
                 <strong>{{ activeSpecies.species }}</strong>
               </div>
-              <div class="bg-slate-900 p-2 border border-slate-800">
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
                 <span class="text-slate-400 block text-[10px] uppercase">Idade / Fase</span>
                 <strong>{{ activeRecord.runtime.ageHours }}h · {{ activeRecord.runtime.currentStage }}</strong>
               </div>
-              <div class="bg-slate-900 p-2 border border-slate-800">
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
                 <span class="text-slate-400 block text-[10px] uppercase">Personalidade</span>
                 <strong>{{ activeSpecies.personality.archetype }}</strong>
               </div>
-              <div class="bg-slate-900 p-2 border border-slate-800">
+              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
                 <span class="text-slate-400 block text-[10px] uppercase">Experiência (XP)</span>
                 <strong>
                   Nv. {{ activeRecord.progression.level }} ({{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }})
@@ -659,97 +665,49 @@ onUnmounted(() => {
           </div>
 
           <!-- Permanent / Evolutionary Attributes -->
-          <div class="p-3 bg-slate-950 border border-slate-800 space-y-2">
-            <h3 class="text-xs font-bold uppercase text-slate-300">
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+            <h3 class="text-xs font-bold uppercase text-emerald-400">
               Atributos Permanentes e Evolutivos
             </h3>
             <div class="grid grid-cols-2 gap-2">
               <div
                 v-for="attr in attributeEntries"
                 :key="attr.label"
-                class="p-2 bg-slate-900 border border-slate-800 flex items-center justify-between text-xs"
+                class="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
               >
                 <span class="text-slate-400">{{ attr.label }}</span>
-                <strong class="text-amber-300">{{ attr.value }}</strong>
+                <strong class="text-emerald-300">{{ attr.value }}</strong>
               </div>
             </div>
           </div>
 
           <!-- Care History Log -->
-          <div class="p-3 bg-slate-950 border border-slate-800 space-y-2">
-            <h3 class="text-xs font-bold uppercase text-slate-300">
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+            <h3 class="text-xs font-bold uppercase text-emerald-400">
               Histórico Recente de Cuidados
             </h3>
             <ul class="space-y-1 max-h-36 overflow-y-auto text-[11px] text-slate-300">
               <li
                 v-for="entry in activeRecord.runtime.careHistory"
                 :key="entry.id"
-                class="p-1.5 bg-slate-900 border border-slate-800 flex items-center justify-between gap-2"
+                class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2"
               >
                 <span>{{ entry.summary }}</span>
-                <span class="text-[10px] text-slate-500 uppercase">{{ entry.actionType }}</span>
+                <span class="text-[10px] text-emerald-400 uppercase">{{ entry.actionType }}</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <!-- TAB 4: SELEÇÃO DE PERSONAGENS (CATÁLOGO COMPLETO) -->
-        <div
-          v-else-if="activeMobileTab === 'roster'"
-          data-testid="tab-content-roster"
-          class="space-y-2.5"
-        >
-          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">
-            Santuário Elemental — 8 Espécies Canônicas
-          </h2>
-          <div class="grid grid-cols-1 gap-2">
-            <div
-              v-for="species in allSpecies"
-              :key="species.id"
-              :data-testid="`roster-card-${species.id}`"
-              class="p-3 bg-slate-950 border flex items-center justify-between gap-3"
-              :class="
-                species.id === activeCharacterId
-                  ? 'border-amber-400 bg-slate-900'
-                  : 'border-slate-800'
-              "
-            >
-              <div class="space-y-0.5">
-                <div class="flex items-center gap-2">
-                  <span
-                    class="w-3 h-3 inline-block border border-white/40"
-                    :style="{ backgroundColor: species.visualTraits.primaryColors.base }"
-                  />
-                  <strong class="text-xs uppercase text-amber-300">{{ species.displayName }}</strong>
-                  <span class="text-[10px] text-slate-400">({{ species.scientificName }})</span>
-                </div>
-                <p class="text-[11px] text-slate-300">{{ species.species }}</p>
-                <p class="text-[10px] text-cyan-300">
-                  Elemento: {{ species.elementLabel }} · Fase: {{ saveState.characters[species.id].runtime.currentStage }}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                :data-testid="`roster-select-${species.id}`"
-                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold uppercase shrink-0"
-                @click="handleSelectCharacter(species.id)"
-              >
-                Selecionar
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 5: CONFIGURAÇÕES, SIMULAÇÃO OFFLINE E GERADOR LLM -->
+        <!-- TAB 4: CONFIGURAÇÕES E SIMULAÇÃO OFFLINE -->
         <div
           v-else-if="activeMobileTab === 'settings'"
           data-testid="tab-content-settings"
           class="space-y-3"
         >
-          <div class="p-3 bg-slate-950 border border-slate-800 space-y-2">
-            <h2 class="text-xs font-bold uppercase text-slate-300 flex items-center gap-1.5">
-              <clock-icon class="w-3.5 h-3.5 text-amber-400" />
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+            <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+              <clock-icon class="w-3.5 h-3.5 text-emerald-400" />
               Simulador de Passagem de Tempo Offline
             </h2>
             <p class="text-[11px] text-slate-400">
@@ -759,7 +717,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 data-testid="sim-offline-1h"
-                class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
                 @click="handleSimulateOfflineHours(1)"
               >
                 +1 Hora
@@ -767,7 +725,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 data-testid="sim-offline-6h"
-                class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
                 @click="handleSimulateOfflineHours(6)"
               >
                 +6 Horas
@@ -775,7 +733,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 data-testid="sim-offline-24h"
-                class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
                 @click="handleSimulateOfflineHours(24)"
               >
                 +24 Horas
@@ -783,8 +741,8 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="p-3 bg-slate-950 border border-slate-800 space-y-2">
-            <h2 class="text-xs font-bold uppercase text-slate-300">
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+            <h2 class="text-xs font-bold uppercase text-emerald-400">
               Desempenho Android & Partículas Babylon.js
             </h2>
             <div class="flex items-center gap-2">
@@ -793,11 +751,11 @@ onUnmounted(() => {
                 :key="q"
                 type="button"
                 :data-testid="`quality-btn-${q}`"
-                class="px-2.5 py-1.5 text-xs font-bold uppercase border"
+                class="px-2.5 py-1.5 rounded-md text-xs font-bold uppercase border transition"
                 :class="
                   saveState.settings.graphicsQuality === q
-                    ? 'bg-amber-500 text-slate-950 border-amber-300'
-                    : 'bg-slate-900 text-slate-300 border-slate-700'
+                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
+                    : 'bg-slate-950 text-slate-300 border-slate-700 hover:border-slate-500'
                 "
                 @click="handleQualityChange(q)"
               >
@@ -810,7 +768,7 @@ onUnmounted(() => {
               <button
                 type="button"
                 data-testid="toggle-grid-btn"
-                class="px-2.5 py-1 bg-slate-800 border border-slate-600 text-xs font-bold"
+                class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-xs font-bold text-emerald-300"
                 @click="handleTogglePixelGrid"
               >
                 {{ saveState.settings.showPixelGrid ? 'Ativada' : 'Desativada' }}
@@ -822,26 +780,30 @@ onUnmounted(() => {
             <button
               type="button"
               data-testid="reset-save-btn"
-              class="px-3 py-1.5 bg-rose-950 hover:bg-rose-900 border border-rose-700 text-rose-200 text-xs font-bold uppercase flex items-center gap-1"
+              class="px-3 py-1.5 rounded-md bg-rose-950 hover:bg-rose-900 border border-rose-700 text-rose-200 text-xs font-bold uppercase flex items-center gap-1"
               @click="handleResetSave"
             >
               <rotate-ccw-icon class="w-3.5 h-3.5" />
-              Resetar Save
+              Sortear Novo Bichinho (Resetar Save)
             </button>
           </div>
         </div>
       </main>
 
-      <!-- Bottom Mobile Navigation Bar -->
+      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs) -->
       <nav
         aria-label="Menu principal do jogo"
-        class="grid grid-cols-5 bg-slate-950 border-t-2 border-slate-800"
+        class="grid grid-cols-4 bg-slate-900/95 backdrop-blur border-t border-slate-800"
       >
         <button
           type="button"
           data-testid="nav-tab-feed"
-          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase"
-          :class="activeMobileTab === 'feed' ? 'text-amber-400 bg-slate-900' : 'text-slate-400'"
+          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
+          :class="
+            activeMobileTab === 'feed'
+              ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-200'
+          "
           @click="activeMobileTab = 'feed'"
         >
           <utensils-icon class="w-4 h-4" />
@@ -851,8 +813,12 @@ onUnmounted(() => {
         <button
           type="button"
           data-testid="nav-tab-activities"
-          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase"
-          :class="activeMobileTab === 'activities' ? 'text-amber-400 bg-slate-900' : 'text-slate-400'"
+          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
+          :class="
+            activeMobileTab === 'activities'
+              ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-200'
+          "
           @click="activeMobileTab = 'activities'"
         >
           <dumbbell-icon class="w-4 h-4" />
@@ -862,8 +828,12 @@ onUnmounted(() => {
         <button
           type="button"
           data-testid="nav-tab-sheet"
-          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase"
-          :class="activeMobileTab === 'sheet' ? 'text-amber-400 bg-slate-900' : 'text-slate-400'"
+          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
+          :class="
+            activeMobileTab === 'sheet'
+              ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-200'
+          "
           @click="activeMobileTab = 'sheet'"
         >
           <file-text-icon class="w-4 h-4" />
@@ -872,20 +842,13 @@ onUnmounted(() => {
 
         <button
           type="button"
-          data-testid="nav-tab-roster"
-          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase"
-          :class="activeMobileTab === 'roster' ? 'text-amber-400 bg-slate-900' : 'text-slate-400'"
-          @click="activeMobileTab = 'roster'"
-        >
-          <users-icon class="w-4 h-4" />
-          <span>Dinos</span>
-        </button>
-
-        <button
-          type="button"
           data-testid="nav-tab-settings"
-          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase"
-          :class="activeMobileTab === 'settings' ? 'text-amber-400 bg-slate-900' : 'text-slate-400'"
+          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
+          :class="
+            activeMobileTab === 'settings'
+              ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-200'
+          "
           @click="activeMobileTab = 'settings'"
         >
           <settings-icon class="w-4 h-4" />

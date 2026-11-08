@@ -16,7 +16,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 25,
     nutrition: {
       hungerRestore: 28,
-      thirstRestore: -2,
+      thirstRestore: -4,
       energyDelta: 10,
       happinessDelta: 14,
       healthDelta: 6,
@@ -42,7 +42,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 25,
     nutrition: {
       hungerRestore: 22,
-      thirstRestore: 16,
+      thirstRestore: 10,
       energyDelta: 8,
       happinessDelta: 14,
       healthDelta: 6,
@@ -68,7 +68,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 30,
     nutrition: {
       hungerRestore: 24,
-      thirstRestore: 8,
+      thirstRestore: 6,
       energyDelta: 20,
       happinessDelta: 15,
       healthDelta: 4,
@@ -93,7 +93,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 25,
     nutrition: {
       hungerRestore: 25,
-      thirstRestore: 6,
+      thirstRestore: -2,
       energyDelta: 9,
       happinessDelta: 14,
       healthDelta: 10,
@@ -119,7 +119,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 30,
     nutrition: {
       hungerRestore: 30,
-      thirstRestore: 0,
+      thirstRestore: -4,
       energyDelta: 8,
       happinessDelta: 14,
       healthDelta: 8,
@@ -144,7 +144,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 28,
     nutrition: {
       hungerRestore: 23,
-      thirstRestore: 14,
+      thirstRestore: 10,
       energyDelta: 14,
       happinessDelta: 16,
       healthDelta: 5,
@@ -170,7 +170,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 35,
     nutrition: {
       hungerRestore: 26,
-      thirstRestore: 10,
+      thirstRestore: 6,
       energyDelta: 14,
       happinessDelta: 16,
       healthDelta: 7,
@@ -196,7 +196,7 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     priceCoins: 35,
     nutrition: {
       hungerRestore: 27,
-      thirstRestore: 12,
+      thirstRestore: 8,
       energyDelta: 15,
       happinessDelta: 18,
       healthDelta: 9,
@@ -220,8 +220,8 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     rarity: 'common',
     priceCoins: 12,
     nutrition: {
-      hungerRestore: 2,
-      thirstRestore: 32,
+      hungerRestore: 0,
+      thirstRestore: 35,
       energyDelta: 6,
       happinessDelta: 6,
       healthDelta: 4,
@@ -234,13 +234,175 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
       highlight: '#e0f2fe'
     }
   },
-  'vitality-herbal-elixir': {
-    id: 'vitality-herbal-elixir',
-    name: 'Elixir Herbal de Vitalidade',
-    description: 'Tônico ancestral restaurador que cura febres, recupera a saúde e reanima criaturas debilitadas.',
+  'nutri-vital-serum': {
+    id: 'nutri-vital-serum',
+    name: 'Soro Nutri-Vital Concentrado',
+    description: 'Remédio específico para curar Desnutrição Aguda causada por fome extrema.',
+    category: 'medicine',
+    rarity: 'uncommon',
+    curesDiseaseId: 'malnutrition',
+    priceCoins: 45,
+    nutrition: {
+      hungerRestore: 35,
+      thirstRestore: 10,
+      energyDelta: 15,
+      happinessDelta: 8,
+      healthDelta: 25,
+      hygieneDelta: 0
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#f97316',
+      secondary: '#c2410c',
+      highlight: '#ffedd5'
+    }
+  },
+  'isotonic-hydra-elixir': {
+    id: 'isotonic-hydra-elixir',
+    name: 'Elixir Isotônico de Hidratação',
+    description: 'Remédio específico para curar Desidratação Severa causada por falta crítica de água.',
+    category: 'medicine',
+    rarity: 'uncommon',
+    curesDiseaseId: 'severe_dehydration',
+    priceCoins: 45,
+    nutrition: {
+      hungerRestore: 0,
+      thirstRestore: 45,
+      energyDelta: 12,
+      happinessDelta: 8,
+      healthDelta: 25,
+      hygieneDelta: 0
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#0ea5e9',
+      secondary: '#0369a1',
+      highlight: '#bae6fd'
+    }
+  },
+  'enzymatic-digest-tonic': {
+    id: 'enzymatic-digest-tonic',
+    name: 'Tônico Digestivo Enzimático',
+    description: 'Remédio específico para curar Congestão por Excesso de Comida (indigestão).',
+    category: 'medicine',
+    rarity: 'uncommon',
+    curesDiseaseId: 'overeating_indigestion',
+    priceCoins: 45,
+    nutrition: {
+      hungerRestore: -15,
+      thirstRestore: 12,
+      energyDelta: 10,
+      happinessDelta: 12,
+      healthDelta: 25,
+      hygieneDelta: 0
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#84cc16',
+      secondary: '#4d7c0f',
+      highlight: '#ecfccb'
+    }
+  },
+  'antitoxin-charcoal-extract': {
+    id: 'antitoxin-charcoal-extract',
+    name: 'Extrato Antitoxina de Carvão Vulcânico',
+    description: 'Remédio específico para curar Intoxicação por Dieta Incompatível (alimento proibido).',
     category: 'medicine',
     rarity: 'rare',
-    priceCoins: 40,
+    curesDiseaseId: 'food_poisoning',
+    priceCoins: 55,
+    nutrition: {
+      hungerRestore: 5,
+      thirstRestore: 15,
+      energyDelta: 10,
+      happinessDelta: 10,
+      healthDelta: 30,
+      hygieneDelta: 5
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#14b8a6',
+      secondary: '#0f766e',
+      highlight: '#99f6e4'
+    }
+  },
+  'antiseptic-spore-salve': {
+    id: 'antiseptic-spore-salve',
+    name: 'Bálsamo Antisséptico Purificador',
+    description: 'Remédio específico para curar Infecção Parasitária causada por falta de higiene.',
+    category: 'medicine',
+    rarity: 'uncommon',
+    curesDiseaseId: 'parasitic_infection',
+    priceCoins: 45,
+    nutrition: {
+      hungerRestore: 0,
+      thirstRestore: 5,
+      energyDelta: 8,
+      happinessDelta: 10,
+      healthDelta: 25,
+      hygieneDelta: 45
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#2dd4bf',
+      secondary: '#0d9488',
+      highlight: '#ccfbf1'
+    }
+  },
+  'adrenal-stamina-ampoule': {
+    id: 'adrenal-stamina-ampoule',
+    name: 'Ampola Revitalizante de Vigor',
+    description: 'Remédio específico para curar Estafa e Exaustão Crônica causada por falta de descanso.',
+    category: 'medicine',
+    rarity: 'uncommon',
+    curesDiseaseId: 'chronic_exhaustion',
+    priceCoins: 50,
+    nutrition: {
+      hungerRestore: 5,
+      thirstRestore: 10,
+      energyDelta: 50,
+      happinessDelta: 10,
+      healthDelta: 25,
+      hygieneDelta: 0
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#eab308',
+      secondary: '#a16207',
+      highlight: '#fef08a'
+    }
+  },
+  'serotonin-aura-nectar': {
+    id: 'serotonin-aura-nectar',
+    name: 'Néctar Floral da Serenidade',
+    description: 'Remédio específico para curar Melancolia Elemental causada por falta de afeto.',
+    category: 'medicine',
+    rarity: 'uncommon',
+    curesDiseaseId: 'elemental_melancholy',
+    priceCoins: 50,
+    nutrition: {
+      hungerRestore: 5,
+      thirstRestore: 10,
+      energyDelta: 15,
+      happinessDelta: 45,
+      healthDelta: 25,
+      hygieneDelta: 5
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#ec4899',
+      secondary: '#be185d',
+      highlight: '#fbcfe8'
+    }
+  },
+  'vitality-herbal-elixir': {
+    id: 'vitality-herbal-elixir',
+    name: 'Elixir Herbal de Vitalidade (Panaceia)',
+    description: 'Panaceia ancestral rara capaz de curar simultaneamente qualquer doença ativa e restaurar a saúde.',
+    category: 'medicine',
+    rarity: 'legendary',
+    curesDiseaseId: 'all',
+    priceCoins: 120,
     nutrition: {
       hungerRestore: 8,
       thirstRestore: 15,
@@ -280,10 +442,34 @@ export function evaluateDietaryPreference(
 export function feedCharacter(
   species: CharacterSpeciesDefinition,
   foodId: string,
-  timestampMs: number
+  timestampMs: number,
+  currentHunger: number = 50
 ): FeedingReaction {
   const food = getFoodById(foodId);
   const preference = evaluateDietaryPreference(species, foodId);
+
+  if (food.category === 'medicine' && food.curesDiseaseId) {
+    return {
+      characterId: species.id,
+      foodId,
+      preference: 'accepted',
+      accepted: true,
+      satisfactionLevel: 'satisfied',
+      curedDiseaseId: food.curesDiseaseId,
+      appliedNeedsDelta: {
+        hunger: food.nutrition.hungerRestore,
+        thirst: food.nutrition.thirstRestore,
+        energy: food.nutrition.energyDelta,
+        happiness: food.nutrition.happinessDelta,
+        health: food.nutrition.healthDelta,
+        hygiene: food.nutrition.hygieneDelta
+      },
+      appliedAttributeDelta: food.attributeBonus,
+      experienceGained: 5,
+      message: `${species.displayName} recebeu o tratamento ${food.name}!`,
+      timestampMs
+    };
+  }
 
   if (preference === 'forbidden') {
     return {
@@ -292,17 +478,42 @@ export function feedCharacter(
       preference,
       accepted: false,
       satisfactionLevel: 'poisoned',
+      contractedDiseaseId: 'food_poisoning',
       appliedNeedsDelta: {
         hunger: 4,
-        thirst: -5,
-        energy: -8,
-        happiness: -18,
-        health: -14,
+        thirst: -8,
+        energy: -10,
+        happiness: -20,
+        health: -18,
         hygiene: -6
       },
       appliedAttributeDelta: {},
       experienceGained: 0,
-      message: `${species.displayName} rejeitou ${food.name}! Esse alimento é incompatível com sua biologia elemental.`,
+      message: `${species.displayName} rejeitou ${food.name} e contraiu Intoxicação por Dieta Incompatível! Trate com Extrato Antitoxina.`,
+      timestampMs
+    };
+  }
+
+  // Overeating check: feeding solid food when already stuffed (hunger >= 95) causes indigestion!
+  if (food.category !== 'hydration' && currentHunger >= 95) {
+    return {
+      characterId: species.id,
+      foodId,
+      preference,
+      accepted: false,
+      satisfactionLevel: 'disgusted',
+      contractedDiseaseId: 'overeating_indigestion',
+      appliedNeedsDelta: {
+        hunger: 5,
+        thirst: -6,
+        energy: -10,
+        happiness: -15,
+        health: -14,
+        hygiene: -4
+      },
+      appliedAttributeDelta: {},
+      experienceGained: 0,
+      message: `${species.displayName} já estava de barriga cheia e passou mal com Congestão por Excesso de Comida! Trate com Tônico Digestivo.`,
       timestampMs
     };
   }
@@ -325,7 +536,7 @@ export function feedCharacter(
     satisfactionLevel: preference === 'favorite' ? 'ecstatic' : 'satisfied',
     appliedNeedsDelta,
     appliedAttributeDelta: preference === 'favorite' ? food.attributeBonus : {},
-    experienceGained: preference === 'favorite' ? 35 : 20,
+    experienceGained: preference === 'favorite' ? 10 : 5,
     message:
       preference === 'favorite'
         ? `${species.displayName} devorou ${food.name} com entusiasmo radiante! (+Atributos)`

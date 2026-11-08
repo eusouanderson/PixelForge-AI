@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PixelForge Virtual Creatures</string>
+    <string name="title_activity_main">PixelForge Virtual Creatures</string>
+    <string name="package_name">ai.pixelforge.virtualcreatures</string>
+    <string name="custom_url_scheme">ai.pixelforge.virtualcreatures</string>
+</resources>

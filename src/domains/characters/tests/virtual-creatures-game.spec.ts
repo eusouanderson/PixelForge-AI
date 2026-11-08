@@ -1,48 +1,54 @@
 import { describe, it, expect } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import VirtualCreaturesGame from '../presentation/VirtualCreaturesGame.vue';
+import { listAllCharacterSpecies } from '../domain/character-registry';
 
 describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () => {
-  it('renders active character, switches between all 8 species, feeds, executes activities, inspects sheet, and simulates offline time', async () => {
+  it('assigns a random dinosaur, forbids manual character/stage/animation selection, feeds, cares, inspects sheet, and simulates offline evolution', async () => {
     const wrapper = mount(VirtualCreaturesGame);
     await flushPromises();
 
-    // Default character is Ignisauro
-    expect(wrapper.get('[data-testid="active-character-name"]').text()).toBe('Ignisauro');
+    const allDisplayNames = listAllCharacterSpecies().map((s) => s.displayName);
+    const activeName = wrapper.get('[data-testid="active-character-name"]').text();
+    expect(allDisplayNames).toContain(activeName);
 
-    // Switch to Solassauro via quick selector
-    await wrapper.get('[data-testid="select-char-solassauro"]').trigger('click');
+    // Always starts as an egg (ovo) cracking and hatching into baby!
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('ovo');
+    await wrapper.get('[data-testid="hatch-egg-btn"]').trigger('click');
     await flushPromises();
-    expect(wrapper.get('[data-testid="active-character-name"]').text()).toBe('Solassauro');
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('baby');
 
-    // Feed favorite food for Solassauro (golden-starburst-sunpeach)
-    await wrapper.get('[data-testid="feed-btn-golden-starburst-sunpeach"]').trigger('click');
+    // Ensure 90s virtual pet rules: NO manual dinosaur selector, NO manual stage buttons, NO manual animation buttons
+    expect(wrapper.find('[data-testid="nav-tab-roster"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="stage-btn-adulto"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="anim-btn-comendo"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="evolution-status-bar"]').exists()).toBe(true);
+
+    // Feed universal spring water
+    await wrapper.get('[data-testid="feed-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
-    expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('Pêssego Solar Dourado');
+    expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain(
+      'Água Cristalina da Nascente'
+    );
 
     // Buy +1 food item
-    await wrapper.get('[data-testid="buy-food-btn-golden-starburst-sunpeach"]').trigger('click');
+    await wrapper.get('[data-testid="buy-food-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('Comprou');
 
-    // Switch to Activities tab and execute solar-bask
+    // Switch to Activities tab and execute purifying-bath
     await wrapper.get('[data-testid="nav-tab-activities"]').trigger('click');
-    await wrapper.get('[data-testid="activity-btn-solar-bask"]').trigger('click');
+    await wrapper.get('[data-testid="activity-btn-purifying-bath"]').trigger('click');
     await flushPromises();
-    expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('Banho de Luz da Aurora');
+    expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain(
+      'Banho Termal Purificador'
+    );
 
     // Switch to Character Sheet tab (Ficha Individual)
     await wrapper.get('[data-testid="nav-tab-sheet"]').trigger('click');
     expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Ficha Oficial');
-    expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Imperador Radiante');
 
-    // Switch to Roster tab and select Umbrassauro
-    await wrapper.get('[data-testid="nav-tab-roster"]').trigger('click');
-    await wrapper.get('[data-testid="roster-select-umbrassauro"]').trigger('click');
-    await flushPromises();
-    expect(wrapper.get('[data-testid="active-character-name"]').text()).toBe('Umbrassauro');
-
-    // Switch to Settings tab, test offline simulation (+6h), quality preset, grid toggle, and reset
+    // Switch to Settings tab, test offline simulation (+6h), quality preset, grid toggle, and random reset
     await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
     await wrapper.get('[data-testid="sim-offline-6h"]').trigger('click');
     await flushPromises();
@@ -53,9 +59,9 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
 
     await wrapper.get('[data-testid="reset-save-btn"]').trigger('click');
     await flushPromises();
-    expect(wrapper.get('[data-testid="active-character-name"]').text()).toBe('Ignisauro');
+    const nextRandomName = wrapper.get('[data-testid="active-character-name"]').text();
+    expect(allDisplayNames).toContain(nextRandomName);
 
     wrapper.unmount();
   });
 });
-

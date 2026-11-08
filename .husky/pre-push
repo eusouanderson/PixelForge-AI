@@ -1,0 +1,6 @@
+export PATH="/home/bob/.local/bin:/home/bob/.local/share/pnpm:$PATH"
+pnpm typecheck
+pnpm lint
+pnpm test:architecture
+pnpm test:coverage
+

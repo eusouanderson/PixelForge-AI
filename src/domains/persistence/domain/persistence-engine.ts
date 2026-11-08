@@ -1,18 +1,24 @@
 import type { CharacterId } from '@/domains/characters/types';
 import {
   CHARACTER_SPECIES_REGISTRY,
-  listAllCharacterSpecies
+  MAX_NATURAL_LIFESPAN_HOURS,
+  listAllCharacterSpecies,
+  pickRandomCharacterId
 } from '@/domains/characters/domain/character-registry';
 import {
   createInitialCharacterRuntime,
   deriveEmotionalAndHealthState,
+  diagnoseNeedsTriggeredDiseases,
   resolveCharacterAnimation
 } from '@/domains/characters/domain/character-state-engine';
 import {
   createInitialNeeds,
   simulateNeedsOverTime
 } from '@/domains/pet-needs/domain/pet-needs-engine';
-import { createInitialProgression } from '@/domains/progression/domain/progression-engine';
+import {
+  createInitialProgression,
+  resolveEligibleEvolutionStage
+} from '@/domains/progression/domain/progression-engine';
 import { createStarterInventory } from '@/domains/inventory/domain/inventory-engine';
 import { createInitialWallet } from '@/domains/economy/domain/economy-engine';
 import { createDefaultSettings } from '@/domains/settings/domain/settings-engine';
@@ -36,14 +42,17 @@ export function createDefaultCharacterSaveRecord(
 ): CharacterSaveRecord {
   const species = CHARACTER_SPECIES_REGISTRY[characterId];
   return {
-    runtime: createInitialCharacterRuntime(characterId, nowMs, 'baby'),
+    runtime: createInitialCharacterRuntime(characterId, nowMs, 'ovo'),
     needs: createInitialNeeds(),
     attributes: { ...species.baseAttributes },
-    progression: createInitialProgression('baby')
+    progression: createInitialProgression('ovo')
   };
 }
 
-export function createNewGameSaveSnapshot(nowMs: number): GameSaveSnapshot {
+export function createNewGameSaveSnapshot(
+  nowMs: number,
+  initialCharacterId: CharacterId = pickRandomCharacterId()
+): GameSaveSnapshot {
   const allSpecies = listAllCharacterSpecies();
   const characters = {} as Record<CharacterId, CharacterSaveRecord>;
 
@@ -53,7 +62,7 @@ export function createNewGameSaveSnapshot(nowMs: number): GameSaveSnapshot {
 
   return {
     schemaVersion: CURRENT_SAVE_SCHEMA_VERSION,
-    activeCharacterId: 'ignisauro',
+    activeCharacterId: initialCharacterId,
     lastSavedAtMs: nowMs,
     characters,
     inventory: createStarterInventory(),
@@ -82,22 +91,61 @@ export function simulateOfflineProgressOnSnapshot(
   for (const species of listAllCharacterSpecies()) {
     const prevRecord = snapshot.characters[species.id];
     const sim = simulateNeedsOverTime(prevRecord.needs, elapsedMinutes);
-    const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(sim.currentNeeds);
+    const nextAgeHours = Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10;
+    const nextDiseases = diagnoseNeedsTriggeredDiseases(
+      sim.currentNeeds,
+      prevRecord.runtime.activeDiseases,
+      nowMs
+    );
+    const reachedOldAge = nextAgeHours >= MAX_NATURAL_LIFESPAN_HOURS;
+    const evolvedStage =
+      nextDiseases.length === 0 && !reachedOldAge
+        ? resolveEligibleEvolutionStage(
+            prevRecord.progression,
+            nextAgeHours,
+            sim.currentNeeds.health,
+            sim.currentNeeds.happiness,
+            species.evolutionRules
+          )
+        : null;
+    const nextStage = evolvedStage ?? prevRecord.runtime.currentStage;
+    const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(
+      sim.currentNeeds,
+      nextDiseases.length,
+      nextAgeHours
+    );
     const nextAnimation = resolveCharacterAnimation(
-      prevRecord.runtime.currentStage,
+      nextStage,
       healthCondition,
       emotionalState
     );
 
+    const finalNeeds = reachedOldAge
+      ? { ...sim.currentNeeds, health: 0 }
+      : sim.currentNeeds;
+    const causeOfDeath =
+      healthCondition === 'deceased'
+        ? reachedOldAge
+          ? ('old_age' as const)
+          : ('neglect_or_disease' as const)
+        : undefined;
+
     updatedCharacters[species.id] = {
       ...prevRecord,
-      needs: sim.currentNeeds,
+      needs: finalNeeds,
+      progression: {
+        ...prevRecord.progression,
+        currentStage: nextStage
+      },
       runtime: {
         ...prevRecord.runtime,
-        ageHours: Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10,
+        currentStage: nextStage,
+        ageHours: nextAgeHours,
         emotionalState,
         healthCondition,
         currentAnimation: nextAnimation,
+        activeDiseases: nextDiseases,
+        causeOfDeath,
         lastUpdatedAtMs: nowMs
       }
     };

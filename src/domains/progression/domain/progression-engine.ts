@@ -6,7 +6,7 @@ export function calculateXpForNextLevel(level: number): number {
 }
 
 export function createInitialProgression(
-  initialStage: CharacterLifeStage = 'baby'
+  initialStage: CharacterLifeStage = 'ovo'
 ): ProgressionState {
   return {
     level: 1,

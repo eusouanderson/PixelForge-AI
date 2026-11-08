@@ -18,7 +18,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 4
     },
     attributeGains: { strength: 2, endurance: 1 },
-    experienceReward: 30,
+    experienceReward: 12,
     coinReward: 25
   },
   'cryo-meditation': {
@@ -37,7 +37,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 6
     },
     attributeGains: { defense: 1, intelligence: 2 },
-    experienceReward: 28,
+    experienceReward: 10,
     coinReward: 22
   },
   'thunder-dash': {
@@ -56,7 +56,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 3
     },
     attributeGains: { agility: 2, elementalAffinity: 1 },
-    experienceReward: 30,
+    experienceReward: 12,
     coinReward: 26
   },
   'spore-exploration': {
@@ -75,7 +75,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 4
     },
     attributeGains: { intelligence: 2, endurance: 1 },
-    experienceReward: 28,
+    experienceReward: 10,
     coinReward: 32
   },
   'monolith-guard': {
@@ -94,7 +94,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 5
     },
     attributeGains: { defense: 2, strength: 1 },
-    experienceReward: 30,
+    experienceReward: 12,
     coinReward: 25
   },
   'sky-glide': {
@@ -113,7 +113,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 4
     },
     attributeGains: { agility: 2, intelligence: 1 },
-    experienceReward: 30,
+    experienceReward: 12,
     coinReward: 26
   },
   'umbral-meditation': {
@@ -132,7 +132,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 5
     },
     attributeGains: { elementalAffinity: 2, strength: 1 },
-    experienceReward: 30,
+    experienceReward: 12,
     coinReward: 28
   },
   'solar-bask': {
@@ -151,7 +151,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 8
     },
     attributeGains: { elementalAffinity: 2, defense: 1 },
-    experienceReward: 30,
+    experienceReward: 12,
     coinReward: 28
   },
   'purifying-bath': {
@@ -169,7 +169,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 8
     },
     attributeGains: {},
-    experienceReward: 15,
+    experienceReward: 6,
     coinReward: 10
   },
   'deep-slumber': {
@@ -187,7 +187,7 @@ export const ACTIVITIES_CATALOG: Readonly<Record<string, ActivityDefinition>> = 
       health: 12
     },
     attributeGains: { endurance: 1 },
-    experienceReward: 15,
+    experienceReward: 6,
     coinReward: 10
   }
 };
