@@ -1,7 +1,8 @@
 import type { CharacterId } from '@/domains/characters/types';
 import {
   CHARACTER_SPECIES_REGISTRY,
-  listAllCharacterSpecies
+  listAllCharacterSpecies,
+  pickRandomCharacterId
 } from '@/domains/characters/domain/character-registry';
 import {
   createInitialCharacterRuntime,
@@ -12,7 +13,10 @@ import {
   createInitialNeeds,
   simulateNeedsOverTime
 } from '@/domains/pet-needs/domain/pet-needs-engine';
-import { createInitialProgression } from '@/domains/progression/domain/progression-engine';
+import {
+  createInitialProgression,
+  resolveEligibleEvolutionStage
+} from '@/domains/progression/domain/progression-engine';
 import { createStarterInventory } from '@/domains/inventory/domain/inventory-engine';
 import { createInitialWallet } from '@/domains/economy/domain/economy-engine';
 import { createDefaultSettings } from '@/domains/settings/domain/settings-engine';
@@ -43,7 +47,10 @@ export function createDefaultCharacterSaveRecord(
   };
 }
 
-export function createNewGameSaveSnapshot(nowMs: number): GameSaveSnapshot {
+export function createNewGameSaveSnapshot(
+  nowMs: number,
+  initialCharacterId: CharacterId = pickRandomCharacterId()
+): GameSaveSnapshot {
   const allSpecies = listAllCharacterSpecies();
   const characters = {} as Record<CharacterId, CharacterSaveRecord>;
 
@@ -53,7 +60,7 @@ export function createNewGameSaveSnapshot(nowMs: number): GameSaveSnapshot {
 
   return {
     schemaVersion: CURRENT_SAVE_SCHEMA_VERSION,
-    activeCharacterId: 'ignisauro',
+    activeCharacterId: initialCharacterId,
     lastSavedAtMs: nowMs,
     characters,
     inventory: createStarterInventory(),
@@ -82,9 +89,18 @@ export function simulateOfflineProgressOnSnapshot(
   for (const species of listAllCharacterSpecies()) {
     const prevRecord = snapshot.characters[species.id];
     const sim = simulateNeedsOverTime(prevRecord.needs, elapsedMinutes);
+    const nextAgeHours = Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10;
+    const evolvedStage = resolveEligibleEvolutionStage(
+      prevRecord.progression,
+      nextAgeHours,
+      sim.currentNeeds.health,
+      sim.currentNeeds.happiness,
+      species.evolutionRules
+    );
+    const nextStage = evolvedStage ?? prevRecord.runtime.currentStage;
     const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(sim.currentNeeds);
     const nextAnimation = resolveCharacterAnimation(
-      prevRecord.runtime.currentStage,
+      nextStage,
       healthCondition,
       emotionalState
     );
@@ -92,9 +108,14 @@ export function simulateOfflineProgressOnSnapshot(
     updatedCharacters[species.id] = {
       ...prevRecord,
       needs: sim.currentNeeds,
+      progression: {
+        ...prevRecord.progression,
+        currentStage: nextStage
+      },
       runtime: {
         ...prevRecord.runtime,
-        ageHours: Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10,
+        currentStage: nextStage,
+        ageHours: nextAgeHours,
         emotionalState,
         healthCondition,
         currentAnimation: nextAnimation,

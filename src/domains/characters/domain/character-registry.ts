@@ -458,3 +458,11 @@ export function getCharacterSpeciesById(characterId: CharacterId): CharacterSpec
   return CHARACTER_SPECIES_REGISTRY[characterId];
 }
 
+export function pickRandomCharacterId(randomZeroToOne: number = Math.random()): CharacterId {
+  const all = listAllCharacterSpecies();
+  const clamped = Math.max(0, Math.min(0.999999, randomZeroToOne));
+  const index = Math.floor(clamped * all.length);
+  return all[index].id;
+}
+
+

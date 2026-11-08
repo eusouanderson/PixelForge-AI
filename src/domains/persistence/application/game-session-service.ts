@@ -88,9 +88,18 @@ export function feedActiveCharacterUseCase(
   });
 
   const xpResult = addExperience(charRecord.progression, reaction.experienceGained);
+  const nextAgeHours = Math.round((charRecord.runtime.ageHours + 0.25) * 100) / 100;
+  const evolvedToStage = resolveEligibleEvolutionStage(
+    xpResult.state,
+    nextAgeHours,
+    nextNeeds.health,
+    nextNeeds.happiness,
+    species.evolutionRules
+  );
+  const finalStage = evolvedToStage ?? xpResult.state.currentStage;
   const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(nextNeeds);
   const nextAnimation = resolveCharacterAnimation(
-    charRecord.runtime.currentStage,
+    finalStage,
     healthCondition,
     emotionalState,
     reaction.accepted ? 'comendo' : 'doente'
@@ -99,6 +108,8 @@ export function feedActiveCharacterUseCase(
   const nextRuntime = appendCharacterCareLog(
     {
       ...charRecord.runtime,
+      currentStage: finalStage,
+      ageHours: nextAgeHours,
       emotionalState,
       healthCondition,
       currentAnimation: nextAnimation
@@ -122,7 +133,10 @@ export function feedActiveCharacterUseCase(
           runtime: nextRuntime,
           needs: nextNeeds,
           attributes: nextAttributes,
-          progression: xpResult.state
+          progression: {
+            ...xpResult.state,
+            currentStage: finalStage
+          }
         }
       }
     }
@@ -174,9 +188,10 @@ export function performCharacterActivityUseCase(
   });
 
   const xpResult = addExperience(charRecord.progression, execRes.experienceGained);
+  const nextAgeHours = Math.round((charRecord.runtime.ageHours + 0.5) * 100) / 100;
   const evolvedToStage = resolveEligibleEvolutionStage(
     xpResult.state,
-    charRecord.runtime.ageHours,
+    nextAgeHours,
     nextNeeds.health,
     nextNeeds.happiness,
     species.evolutionRules
@@ -213,6 +228,7 @@ export function performCharacterActivityUseCase(
     {
       ...charRecord.runtime,
       currentStage: finalStage,
+      ageHours: nextAgeHours,
       emotionalState,
       healthCondition,
       currentAnimation: nextAnimation

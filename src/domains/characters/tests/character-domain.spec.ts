@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   CHARACTER_SPECIES_REGISTRY,
   listAllCharacterSpecies,
-  getCharacterSpeciesById
+  getCharacterSpeciesById,
+  pickRandomCharacterId
 } from '../domain/character-registry';
 import {
   createInitialCharacterRuntime,
@@ -44,6 +45,10 @@ describe('characters domain registry, state engine, and sprite repository', () =
 
     expect(CHARACTER_SPECIES_REGISTRY.ignisauro.element).toBe('fire');
     expect(CHARACTER_SPECIES_REGISTRY.solassauro.element).toBe('light');
+
+    expect(pickRandomCharacterId(0)).toBe('ignisauro');
+    expect(pickRandomCharacterId(0.99)).toBe('solassauro');
+    expect(ids).toContain(pickRandomCharacterId());
   });
 
   it('derives emotional and health states from needs across all branches', () => {

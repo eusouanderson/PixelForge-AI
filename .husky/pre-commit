@@ -1,2 +1,4 @@
+export PATH="/home/bob/.local/bin:/home/bob/.local/share/pnpm:$PATH"
 pnpm typecheck
-pnpm test:run
+pnpm lint
+pnpm test:coverage

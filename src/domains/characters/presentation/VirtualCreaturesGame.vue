@@ -4,7 +4,6 @@ import {
   Utensils as UtensilsIcon,
   Dumbbell as DumbbellIcon,
   FileText as FileTextIcon,
-  Users as UsersIcon,
   Settings as SettingsIcon,
   Coins as CoinsIcon,
   Clock as ClockIcon,
@@ -17,10 +16,7 @@ import type {
   CharacterId,
   CharacterLifeStage
 } from '@/domains/characters/types';
-import {
-  getCharacterSpeciesById,
-  listAllCharacterSpecies
-} from '@/domains/characters/domain/character-registry';
+import { getCharacterSpeciesById } from '@/domains/characters/domain/character-registry';
 import { CharacterSpriteRepository } from '@/domains/characters/infrastructure/character-sprite-repository';
 import { computeTotalPowerRating } from '@/domains/attributes/domain/attributes-engine';
 import {
@@ -45,7 +41,6 @@ import {
   performCharacterActivityUseCase,
   purchaseFoodItemUseCase,
   reviveDeceasedCharacterUseCase,
-  selectActiveCharacterUseCase,
   updateSettingsUseCase
 } from '@/domains/persistence/application/game-session-service';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
@@ -57,18 +52,16 @@ const renderer2d = new Canvas2dRenderer();
 const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
-const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'roster' | 'settings'>('feed');
-const feedbackBanner = ref<string>('Bem-vindo ao Santuário Elemental! Cuide do seu dinossauro.');
+const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings'>('feed');
+const feedbackBanner = ref<string>('Bem-vindo ao Santuário Elemental! Cuide do seu bichinho virtual para ele evoluir.');
 const babylonCanvasRef = ref<HTMLCanvasElement | null>(null);
 const spriteOverlayCanvasRef = ref<HTMLCanvasElement | null>(null);
 const frameToggle = ref<1 | 2 | 3 | 4>(1);
-const manualStageOverride = ref<CharacterLifeStage | null>(null);
 const manualAnimOverride = ref<CharacterAnimationName | null>(null);
 
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
 let animResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const allSpecies = listAllCharacterSpecies();
 const allFoods = listAllFoods();
 const allActivities = listAllActivities();
 
@@ -80,7 +73,11 @@ const activeParticles = computed(() => getCharacterParticleConfig(activeCharacte
 const totalPower = computed(() => computeTotalPowerRating(activeRecord.value.attributes));
 
 const displayedStage = computed<CharacterLifeStage>(
-  () => manualStageOverride.value ?? activeRecord.value.runtime.currentStage
+  () => activeRecord.value.runtime.currentStage
+);
+
+const nextEvolutionRule = computed(() =>
+  activeSpecies.value.evolutionRules.find((r) => r.fromStage === displayedStage.value) ?? null
 );
 
 const displayedAnimation = computed<CharacterAnimationName>(() => {
@@ -156,15 +153,6 @@ function triggerTemporaryAnimation(anim: CharacterAnimationName, durationMs: num
   }, durationMs);
 }
 
-async function handleSelectCharacter(characterId: CharacterId): Promise<void> {
-  manualStageOverride.value = null;
-  manualAnimOverride.value = null;
-  saveState.value = selectActiveCharacterUseCase(saveState.value, characterId, Date.now());
-  feedbackBanner.value = `${activeSpecies.value.displayName} entrou em destaque no cenário ${activeEnvironment.value.name}!`;
-  syncBabylonEnvironment();
-  await persistCurrentState();
-}
-
 async function handleFeedCharacter(foodId: string): Promise<void> {
   const res = feedActiveCharacterUseCase(saveState.value, foodId, Date.now());
   saveState.value = res.snapshot;
@@ -193,7 +181,6 @@ async function handleExecuteActivity(activityId: string): Promise<void> {
   feedbackBanner.value = res.message;
 
   if (res.success) {
-    manualStageOverride.value = null;
     triggerTemporaryAnimation('amando', 2400);
     if (res.evolvedToStage) {
       sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
@@ -215,7 +202,6 @@ async function handleReviveCharacter(): Promise<void> {
 }
 
 async function handleHatchEgg(): Promise<void> {
-  manualStageOverride.value = null;
   saveState.value = hatchCharacterEggUseCase(saveState.value, Date.now());
   feedbackBanner.value = `O ovo de ${activeSpecies.value.displayName} eclodiu!`;
   sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
@@ -225,7 +211,7 @@ async function handleHatchEgg(): Promise<void> {
 async function handleSimulateOfflineHours(hours: number): Promise<void> {
   const simulatedNow = saveState.value.lastSavedAtMs + hours * 3600 * 1000;
   saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, simulatedNow);
-  feedbackBanner.value = `Simuladas +${hours}h offline! As necessidades e idade evoluíram deterministicamente.`;
+  feedbackBanner.value = `Simuladas +${hours}h offline! As necessidades e evolução avançaram conforme o tempo.`;
   renderCurrentSpriteToOverlay();
   await persistCurrentState();
 }
@@ -250,11 +236,11 @@ async function handleTogglePixelGrid(): Promise<void> {
 
 async function handleResetSave(): Promise<void> {
   await saveRepo.clearSave();
-  manualStageOverride.value = null;
   manualAnimOverride.value = null;
   saveState.value = createNewGameSaveSnapshot(Date.now());
   syncBabylonEnvironment();
-  feedbackBanner.value = 'Progresso reiniciado para o estado inicial de fábrica.';
+  feedbackBanner.value = `Novo bichinho sorteado: ${activeSpecies.value.displayName}! Cuide bem dele para evoluir.`;
+  await persistCurrentState();
 }
 
 watch([currentSpriteArt, () => saveState.value.settings.showPixelGrid], () => {
@@ -335,28 +321,6 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-
-        <!-- Quick Character Selector Strip (All 8 Real Characters) -->
-        <nav
-          aria-label="Seleção rápida de personagens"
-          class="flex items-center gap-1.5 overflow-x-auto pb-1"
-        >
-          <button
-            v-for="species in allSpecies"
-            :key="species.id"
-            type="button"
-            :data-testid="`select-char-${species.id}`"
-            class="px-2.5 py-1.5 text-xs font-bold uppercase tracking-tight border transition-colors shrink-0"
-            :class="
-              species.id === activeCharacterId
-                ? 'bg-amber-500 text-slate-950 border-amber-300'
-                : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-500'
-            "
-            @click="handleSelectCharacter(species.id)"
-          >
-            {{ species.displayName }}
-          </button>
-        </nav>
       </header>
 
       <!-- Babylon.js 3D Environment + Crisp Nearest-Neighbor Pixel Art Viewport -->
@@ -391,45 +355,24 @@ onUnmounted(() => {
           </span>
         </div>
 
-        <!-- Stage & Animation Quick Controls on Viewport Bottom -->
+        <!-- 90s Virtual Pet Organic Evolution & Age Bar (Read-Only Status) -->
         <div
-          class="absolute bottom-2 inset-x-2 z-20 flex flex-wrap items-center justify-between gap-1 bg-slate-950/90 border border-slate-800 px-2 py-1"
+          data-testid="evolution-status-bar"
+          class="absolute bottom-2 inset-x-2 z-20 flex items-center justify-between gap-2 bg-slate-950/90 border border-slate-800 px-2.5 py-1 text-[10px] text-slate-300"
         >
-          <div class="flex items-center gap-1">
-            <button
-              v-for="st in (['ovo', 'baby', 'crianca', 'pre-adolescente', 'adolescente', 'adulto'] as const)"
-              :key="st"
-              type="button"
-              :data-testid="`stage-btn-${st}`"
-              class="px-1.5 py-0.5 text-[10px] font-bold uppercase border"
-              :class="
-                displayedStage === st
-                  ? 'bg-indigo-600 text-white border-indigo-400'
-                  : 'bg-slate-900 text-slate-400 border-slate-700'
-              "
-              @click="manualStageOverride = st"
-            >
-              {{ st === 'pre-adolescente' ? 'jovem' : st === 'adolescente' ? 'adolesc' : st }}
-            </button>
-          </div>
-
-          <div class="flex items-center gap-1">
-            <button
-              v-for="anim in (['idle', 'comendo', 'amando', 'doente', 'morte'] as const)"
-              :key="anim"
-              type="button"
-              :data-testid="`anim-btn-${anim}`"
-              class="px-1.5 py-0.5 text-[10px] font-bold uppercase border"
-              :class="
-                displayedAnimation === anim
-                  ? 'bg-amber-500 text-slate-950 border-amber-300'
-                  : 'bg-slate-900 text-slate-400 border-slate-700'
-              "
-              @click="manualAnimOverride = anim"
-            >
-              {{ anim }}
-            </button>
-          </div>
+          <span>
+            Idade: <strong class="text-amber-300">{{ activeRecord.runtime.ageHours }}h</strong> · XP:
+            <strong class="text-cyan-300">
+              {{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }}
+            </strong>
+          </span>
+          <span v-if="nextEvolutionRule" class="text-indigo-300 font-semibold">
+            Próx. fase ({{ nextEvolutionRule.toStage }}): Nv.{{ nextEvolutionRule.requiredLevel }} e
+            {{ nextEvolutionRule.requiredAgeHours }}h
+          </span>
+          <span v-else class="text-emerald-400 font-bold uppercase">
+            Evolução Completa (Adulto)
+          </span>
         </div>
       </section>
 
@@ -693,55 +636,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- TAB 4: SELEÇÃO DE PERSONAGENS (CATÁLOGO COMPLETO) -->
-        <div
-          v-else-if="activeMobileTab === 'roster'"
-          data-testid="tab-content-roster"
-          class="space-y-2.5"
-        >
-          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">
-            Santuário Elemental — 8 Espécies Canônicas
-          </h2>
-          <div class="grid grid-cols-1 gap-2">
-            <div
-              v-for="species in allSpecies"
-              :key="species.id"
-              :data-testid="`roster-card-${species.id}`"
-              class="p-3 bg-slate-950 border flex items-center justify-between gap-3"
-              :class="
-                species.id === activeCharacterId
-                  ? 'border-amber-400 bg-slate-900'
-                  : 'border-slate-800'
-              "
-            >
-              <div class="space-y-0.5">
-                <div class="flex items-center gap-2">
-                  <span
-                    class="w-3 h-3 inline-block border border-white/40"
-                    :style="{ backgroundColor: species.visualTraits.primaryColors.base }"
-                  />
-                  <strong class="text-xs uppercase text-amber-300">{{ species.displayName }}</strong>
-                  <span class="text-[10px] text-slate-400">({{ species.scientificName }})</span>
-                </div>
-                <p class="text-[11px] text-slate-300">{{ species.species }}</p>
-                <p class="text-[10px] text-cyan-300">
-                  Elemento: {{ species.elementLabel }} · Fase: {{ saveState.characters[species.id].runtime.currentStage }}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                :data-testid="`roster-select-${species.id}`"
-                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold uppercase shrink-0"
-                @click="handleSelectCharacter(species.id)"
-              >
-                Selecionar
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 5: CONFIGURAÇÕES, SIMULAÇÃO OFFLINE E GERADOR LLM -->
+        <!-- TAB 4: CONFIGURAÇÕES E SIMULAÇÃO OFFLINE -->
         <div
           v-else-if="activeMobileTab === 'settings'"
           data-testid="tab-content-settings"
@@ -826,16 +721,16 @@ onUnmounted(() => {
               @click="handleResetSave"
             >
               <rotate-ccw-icon class="w-3.5 h-3.5" />
-              Resetar Save
+              Sortear Novo Bichinho (Resetar Save)
             </button>
           </div>
         </div>
       </main>
 
-      <!-- Bottom Mobile Navigation Bar -->
+      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs) -->
       <nav
         aria-label="Menu principal do jogo"
-        class="grid grid-cols-5 bg-slate-950 border-t-2 border-slate-800"
+        class="grid grid-cols-4 bg-slate-950 border-t-2 border-slate-800"
       >
         <button
           type="button"
@@ -868,17 +763,6 @@ onUnmounted(() => {
         >
           <file-text-icon class="w-4 h-4" />
           <span>Ficha</span>
-        </button>
-
-        <button
-          type="button"
-          data-testid="nav-tab-roster"
-          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase"
-          :class="activeMobileTab === 'roster' ? 'text-amber-400 bg-slate-900' : 'text-slate-400'"
-          @click="activeMobileTab = 'roster'"
-        >
-          <users-icon class="w-4 h-4" />
-          <span>Dinos</span>
         </button>
 
         <button
