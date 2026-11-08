@@ -8,6 +8,7 @@ import {
 } from '../domain/persistence-engine';
 import {
   LocalStorageGameSaveRepository,
+  MemoryKeyValueStorage,
   resolveDefaultStorageAdapter
 } from '../infrastructure/local-storage-save-repository';
 
@@ -75,10 +76,19 @@ describe('persistence domain engine, offline simulation, and save repository', (
 
   it('persists, loads, recovers from corrupted JSON, and clears snapshots in LocalStorageGameSaveRepository', async () => {
     const defaultRepo = new LocalStorageGameSaveRepository();
+    await defaultRepo.clearSave();
     expect(await defaultRepo.loadSave()).toBeNull();
 
-    const customStorage = resolveDefaultStorageAdapter();
-    const repo = new LocalStorageGameSaveRepository('test_save_key', customStorage);
+    // Explicitly exercise MemoryKeyValueStorage fallback on all Node versions (20 & 26)
+    const fallbackStorage = resolveDefaultStorageAdapter(null);
+    expect(fallbackStorage).toBeInstanceOf(MemoryKeyValueStorage);
+    expect(fallbackStorage.getItem('missing')).toBeNull();
+    fallbackStorage.setItem('k', 'v');
+    expect(fallbackStorage.getItem('k')).toBe('v');
+    fallbackStorage.removeItem('k');
+    expect(fallbackStorage.getItem('k')).toBeNull();
+
+    const repo = new LocalStorageGameSaveRepository('test_save_key', fallbackStorage);
     expect(await repo.loadSave()).toBeNull();
 
     const snapshot = createNewGameSaveSnapshot(10000);
@@ -89,23 +99,19 @@ describe('persistence domain engine, offline simulation, and save repository', (
     expect(loaded?.activeCharacterId).toBe('ignisauro');
 
     // Corrupted JSON recovers without throwing
-    customStorage.setItem('test_save_key', '{bad-json');
+    fallbackStorage.setItem('test_save_key', '{bad-json');
     const recovered = await repo.loadSave();
     expect(recovered).toBeNull();
 
     await repo.clearSave();
     expect(await repo.loadSave()).toBeNull();
 
-    // Also test browser localStorage branch when window.localStorage has getItem
+    // Explicitly exercise valid Web Storage adapter branch
     const fakeBrowserStorage = {
       getItem: () => null,
       setItem: () => undefined,
       removeItem: () => undefined
     };
-    Object.defineProperty(window, 'localStorage', {
-      value: fakeBrowserStorage,
-      configurable: true
-    });
-    expect(resolveDefaultStorageAdapter()).toBe(fakeBrowserStorage);
+    expect(resolveDefaultStorageAdapter(fakeBrowserStorage)).toBe(fakeBrowserStorage);
   });
 });

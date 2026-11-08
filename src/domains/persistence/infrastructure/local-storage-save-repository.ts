@@ -7,7 +7,7 @@ export interface KeyValueStorageAdapter {
   removeItem(key: string): void;
 }
 
-class MemoryKeyValueStorage implements KeyValueStorageAdapter {
+export class MemoryKeyValueStorage implements KeyValueStorageAdapter {
   private readonly store = new Map<string, string>();
 
   public getItem(key: string): string | null {
@@ -23,13 +23,16 @@ class MemoryKeyValueStorage implements KeyValueStorageAdapter {
   }
 }
 
-export function resolveDefaultStorageAdapter(): KeyValueStorageAdapter {
+export function resolveDefaultStorageAdapter(
+  candidate: unknown = globalThis.localStorage
+): KeyValueStorageAdapter {
   if (
-    typeof window !== 'undefined' &&
-    window.localStorage &&
-    typeof window.localStorage.getItem === 'function'
+    candidate &&
+    typeof candidate === 'object' &&
+    'getItem' in candidate &&
+    typeof (candidate as KeyValueStorageAdapter).getItem === 'function'
   ) {
-    return window.localStorage;
+    return candidate as KeyValueStorageAdapter;
   }
   return new MemoryKeyValueStorage();
 }
