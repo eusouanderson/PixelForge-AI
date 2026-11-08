@@ -32,7 +32,7 @@ describe('HttpManifestClient Infrastructure', () => {
     globalThis.fetch = originalFetch;
   });
 
-  it('successfully fetches and validates remote manifest with default URL', async () => {
+  it('successfully fetches and validates remote manifest with default URL and query params', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => validManifest
@@ -43,7 +43,14 @@ describe('HttpManifestClient Infrastructure', () => {
 
     expect(manifest.version).toBe('1.2.0');
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      DEFAULT_MANIFEST_URL,
+      expect.stringContaining(DEFAULT_MANIFEST_URL),
+      expect.objectContaining({ method: 'GET' })
+    );
+
+    // Test with URL containing existing query parameters to cover separator logic
+    await client.fetchManifest('https://test.com/version.json?env=prod');
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('https://test.com/version.json?env=prod&_t='),
       expect.objectContaining({ method: 'GET' })
     );
   });
@@ -82,6 +89,15 @@ describe('HttpManifestClient Infrastructure', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('converts browser Failed to fetch into clear friendly message', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+
+    const client = new HttpManifestClient();
+    await expect(client.fetchManifest()).rejects.toThrow(
+      'Não foi possível conectar ao servidor de atualizações'
+    );
   });
 
   it('rethrows unexpected network errors', async () => {
