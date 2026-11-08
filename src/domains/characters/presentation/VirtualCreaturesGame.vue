@@ -336,7 +336,7 @@ onUnmounted(() => {
   <div class="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col items-center select-none">
     <!-- Mobile Portrait Container Styled with PixelForge AI Emerald & Slate Theme -->
     <div
-      class="w-full max-w-md min-h-screen bg-slate-900/90 border-x border-slate-800 flex flex-col justify-between shadow-2xl"
+      class="w-full max-w-md min-h-screen bg-slate-900/90 border-x border-slate-800 flex flex-col justify-between shadow-2xl relative"
     >
       <!-- Top HUD Header -->
       <header class="px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 space-y-2">
@@ -579,7 +579,7 @@ onUnmounted(() => {
       </section>
 
       <!-- Main Tab Content Area -->
-      <main class="flex-1 overflow-y-auto p-3 bg-slate-950/60 space-y-3">
+      <main class="flex-1 overflow-y-auto p-3 pb-6 bg-slate-950/60 space-y-3">
         <!-- TAB 1: ALIMENTAÇÃO E CUIDADOS -->
         <div v-if="activeMobileTab === 'feed'" data-testid="tab-content-feed" class="space-y-2.5">
           <div class="flex items-center justify-between">
@@ -1037,10 +1037,11 @@ onUnmounted(() => {
         </div>
       </main>
 
-      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs) -->
+      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs - Always visible sticky navigation) -->
       <nav
         aria-label="Menu principal do jogo"
-        class="grid grid-cols-4 bg-slate-900/95 backdrop-blur border-t border-slate-800"
+        data-testid="bottom-navigation-bar"
+        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-4 bg-slate-900/95 backdrop-blur border-t border-slate-800 shadow-lg"
       >
         <button
           type="button"
