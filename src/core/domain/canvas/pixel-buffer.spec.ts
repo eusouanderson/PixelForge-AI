@@ -22,16 +22,20 @@ describe('PixelBuffer', () => {
     const buffer = new PixelBuffer(8, 8);
     const color = 0xff00ff00;
     buffer.setPixel(4, 4, color);
+    buffer.setPixel(-1, 0, color);
+    buffer.setPixel(10, 10, color);
     expect(buffer.getPixel(4, 4)).toBe(color);
     expect(buffer.getPixel(0, 0)).toBe(0);
     expect(buffer.getPixel(10, 10)).toBe(0);
   });
 
-  it('clears buffer with specific color', () => {
+  it('clears buffer with specific color and default zero', () => {
     const buffer = new PixelBuffer(4, 4);
     buffer.clear(0xff123456);
     expect(buffer.getPixel(0, 0)).toBe(0xff123456);
     expect(buffer.getPixel(3, 3)).toBe(0xff123456);
+    buffer.clear();
+    expect(buffer.getPixel(0, 0)).toBe(0);
   });
 
   it('clones buffer independently', () => {

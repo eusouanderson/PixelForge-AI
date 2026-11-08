@@ -345,10 +345,10 @@ onUnmounted(() => {
       <div class="flex flex-wrap items-center gap-2">
         <div class="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700 gap-1">
           <button
-            @click="animationMode === 'lifecycle' ? stopAnimation() : startAnimation('lifecycle')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'lifecycle' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             title="Animar ciclo vital completo (12 quadros)"
+            @click="animationMode === 'lifecycle' ? stopAnimation() : startAnimation('lifecycle')"
           >
             <pause-icon v-if="animationMode === 'lifecycle'" class="w-3.5 h-3.5" />
             <film-icon v-else class="w-3.5 h-3.5" />
@@ -356,10 +356,10 @@ onUnmounted(() => {
           </button>
 
           <button
-            @click="animationMode === 'hatching' ? stopAnimation() : startAnimation('hatching')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'hatching' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             title="Animar eclosão do ovo (4 quadros)"
+            @click="animationMode === 'hatching' ? stopAnimation() : startAnimation('hatching')"
           >
             <pause-icon v-if="animationMode === 'hatching'" class="w-3.5 h-3.5" />
             <play-icon v-else class="w-3.5 h-3.5" />
@@ -367,10 +367,10 @@ onUnmounted(() => {
           </button>
 
           <button
-            @click="animationMode === 'idle' ? stopAnimation() : startAnimation('idle')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'idle' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             :title="`Animar idle da fase ativa (${currentStageIdleLabel})`"
+            @click="animationMode === 'idle' ? stopAnimation() : startAnimation('idle')"
           >
             <pause-icon v-if="animationMode === 'idle'" class="w-3.5 h-3.5" />
             <activity-icon v-else class="w-3.5 h-3.5" />
@@ -378,10 +378,10 @@ onUnmounted(() => {
           </button>
 
           <button
-            @click="animationMode === 'comendo' ? stopAnimation() : startAnimation('comendo')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'comendo' ? 'bg-orange-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             :title="`Animar ${currentStageShortName} comendo (2 quadros)`"
+            @click="animationMode === 'comendo' ? stopAnimation() : startAnimation('comendo')"
           >
             <pause-icon v-if="animationMode === 'comendo'" class="w-3.5 h-3.5" />
             <utensils-icon v-else class="w-3.5 h-3.5" />
@@ -389,10 +389,10 @@ onUnmounted(() => {
           </button>
 
           <button
-            @click="animationMode === 'amando' ? stopAnimation() : startAnimation('amando')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'amando' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             :title="`Animar ${currentStageShortName} amando (2 quadros)`"
+            @click="animationMode === 'amando' ? stopAnimation() : startAnimation('amando')"
           >
             <pause-icon v-if="animationMode === 'amando'" class="w-3.5 h-3.5" />
             <heart-icon v-else class="w-3.5 h-3.5" />
@@ -400,10 +400,10 @@ onUnmounted(() => {
           </button>
 
           <button
-            @click="animationMode === 'doente' ? stopAnimation() : startAnimation('doente')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'doente' ? 'bg-lime-700 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             :title="`Animar ${currentStageShortName} doente (2 quadros)`"
+            @click="animationMode === 'doente' ? stopAnimation() : startAnimation('doente')"
           >
             <pause-icon v-if="animationMode === 'doente'" class="w-3.5 h-3.5" />
             <thermometer-icon v-else class="w-3.5 h-3.5" />
@@ -411,10 +411,10 @@ onUnmounted(() => {
           </button>
 
           <button
-            @click="animationMode === 'morte' ? stopAnimation() : startAnimation('morte')"
             class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="animationMode === 'morte' ? 'bg-slate-600 text-white shadow-sm' : 'text-slate-300 hover:text-white hover:bg-slate-700/50'"
             title="Animar memorial de morte com cruz de pedra e espírito ascendente (2 quadros)"
+            @click="animationMode === 'morte' ? stopAnimation() : startAnimation('morte')"
           >
             <pause-icon v-if="animationMode === 'morte'" class="w-3.5 h-3.5" />
             <skull-icon v-else class="w-3.5 h-3.5" />
@@ -426,9 +426,9 @@ onUnmounted(() => {
           <button
             v-for="speed in [250, 500, 800]"
             :key="speed"
-            @click="setAnimationSpeed(speed)"
             class="px-2 py-0.5 rounded text-[10px] font-mono transition cursor-pointer"
             :class="animationSpeedMs === speed ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-slate-200'"
+            @click="setAnimationSpeed(speed)"
           >
             {{ speed }}ms
           </button>
@@ -445,24 +445,24 @@ onUnmounted(() => {
         />
 
         <button
-          @click="triggerImport"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition cursor-pointer"
+          @click="triggerImport"
         >
           <upload-icon class="w-3.5 h-3.5" />
           <span>Importar</span>
         </button>
 
         <button
-          @click="exportJson"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition cursor-pointer"
+          @click="exportJson"
         >
           <download-icon class="w-3.5 h-3.5" />
           <span>JSON</span>
         </button>
 
         <button
-          @click="exportPng"
           class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 border border-emerald-500 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+          @click="exportPng"
         >
           <download-icon class="w-3.5 h-3.5" />
           <span>PNG Transparente (1024×1024)</span>
@@ -476,9 +476,9 @@ onUnmounted(() => {
           <button
             v-for="creature in availableCreatures"
             :key="creature"
-            @click="stopAnimation(); selectCreature(creature)"
             class="px-2.5 py-1 rounded-md text-xs font-semibold transition cursor-pointer"
             :class="selectedCreature === creature ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+            @click="stopAnimation(); selectCreature(creature)"
           >
             {{ creature }}
           </button>
@@ -490,9 +490,9 @@ onUnmounted(() => {
           <button
             v-for="preset in visiblePresets"
             :key="preset.id"
-            @click="stopAnimation(); selectPreset(preset.id)"
             class="px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer border"
             :class="selectedPresetId === preset.id ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300 font-semibold shadow-sm' : 'border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white hover:border-slate-700'"
+            @click="stopAnimation(); selectPreset(preset.id)"
           >
             {{ preset.shortLabel }}
           </button>
@@ -502,7 +502,7 @@ onUnmounted(() => {
 
     <div v-if="errorMessage" class="bg-rose-950/80 border-b border-rose-800 text-rose-200 px-6 py-2.5 text-xs flex items-center justify-between flex-shrink-0">
       <span>{{ errorMessage }}</span>
-      <button @click="errorMessage = null" class="text-rose-400 hover:text-rose-200 font-bold ml-4">✕</button>
+      <button class="text-rose-400 hover:text-rose-200 font-bold ml-4" @click="errorMessage = null">✕</button>
     </div>
 
     <div class="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
@@ -516,9 +516,9 @@ onUnmounted(() => {
 
           <div class="flex items-center gap-2">
             <button
-              @click="toggleGrid"
               class="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border transition cursor-pointer"
               :class="showGrid ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'"
+              @click="toggleGrid"
             >
               <grid-icon class="w-3 h-3" />
               <span>Grade</span>
@@ -528,9 +528,9 @@ onUnmounted(() => {
               <button
                 v-for="zoom in [4, 8, 12, 16]"
                 :key="zoom"
-                @click="setZoom(zoom)"
                 class="px-2 py-0.5 rounded text-[11px] font-mono transition cursor-pointer"
                 :class="zoomLevel === zoom ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'"
+                @click="setZoom(zoom)"
               >
                 {{ zoom }}x
               </button>
@@ -556,25 +556,25 @@ onUnmounted(() => {
       <aside class="w-full lg:w-96 flex-shrink-0 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-900/60 flex flex-col h-full min-h-0 overflow-hidden">
         <div class="flex border-b border-slate-800 text-xs font-medium bg-slate-900">
           <button
-            @click="activeTab = 'layers'"
             class="flex-1 py-3 px-4 border-b-2 transition flex items-center justify-center gap-2 cursor-pointer"
             :class="activeTab === 'layers' ? 'border-emerald-500 text-emerald-400 bg-slate-850/50' : 'border-transparent text-slate-400 hover:text-slate-200'"
+            @click="activeTab = 'layers'"
           >
             <layers-icon class="w-3.5 h-3.5" />
             <span>Camadas ({{ currentArt.layers.length }})</span>
           </button>
           <button
-            @click="activeTab = 'palette'"
             class="flex-1 py-3 px-4 border-b-2 transition flex items-center justify-center gap-2 cursor-pointer"
             :class="activeTab === 'palette' ? 'border-emerald-500 text-emerald-400 bg-slate-850/50' : 'border-transparent text-slate-400 hover:text-slate-200'"
+            @click="activeTab = 'palette'"
           >
             <palette-icon class="w-3.5 h-3.5" />
             <span>Paleta ({{ paletteEntries.length }})</span>
           </button>
           <button
-            @click="activeTab = 'info'"
             class="flex-1 py-3 px-4 border-b-2 transition flex items-center justify-center gap-2 cursor-pointer"
             :class="activeTab === 'info' ? 'border-emerald-500 text-emerald-400 bg-slate-850/50' : 'border-transparent text-slate-400 hover:text-slate-200'"
+            @click="activeTab = 'info'"
           >
             <span>Info</span>
           </button>
@@ -590,8 +590,8 @@ onUnmounted(() => {
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <button
-                    @click="toggleLayer(layer.id)"
                     class="p-1 rounded text-slate-400 hover:text-white transition cursor-pointer"
+                    @click="toggleLayer(layer.id)"
                   >
                     <eye-icon v-if="layer.visible" class="w-3.5 h-3.5 text-emerald-400" />
                     <eye-off-icon v-else class="w-3.5 h-3.5 text-slate-600" />
@@ -613,8 +613,8 @@ onUnmounted(() => {
                   max="1"
                   step="0.05"
                   :value="layer.opacity"
-                  @input="updateLayerOpacity(layer.id, parseFloat(($event.target as HTMLInputElement).value))"
                   class="flex-1 accent-emerald-500 h-1 bg-slate-800 rounded cursor-pointer"
+                  @input="updateLayerOpacity(layer.id, parseFloat(($event.target as HTMLInputElement).value))"
                 />
                 <span class="text-[11px] font-mono text-slate-300 w-8 text-right">{{ Math.round(layer.opacity * 100) }}%</span>
               </div>
