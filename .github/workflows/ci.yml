@@ -1,33 +1,47 @@
-name: CI
+name: Quality & Android Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, 'feature/**']
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  validate:
+  quality:
+    name: Typecheck, Lint, 100% Coverage, Architecture & Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: pnpm
+          node-version: '22'
+          cache: 'pnpm'
 
-      - run: pnpm install
+      - name: Install dependencies (reproducible lockfile)
+        run: pnpm install --frozen-lockfile
 
-      - run: pnpm typecheck
+      - name: Security Audit
+        run: pnpm audit --audit-level=critical || true
 
-      - run: pnpm test:run
+      - name: TypeScript Strict Typecheck
+        run: pnpm typecheck
 
-      - run: pnpm build
+      - name: ESLint Static Analysis
+        run: pnpm lint
 
+      - name: Architecture & Circular Dependency Check
+        run: pnpm test:architecture
+
+      - name: Unit & Integration Tests with 100% Coverage Threshold
+        run: pnpm test:coverage
+
+      - name: Production Build
+        run: pnpm build

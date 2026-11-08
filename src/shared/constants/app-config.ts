@@ -30,3 +30,25 @@ export const APP_CONFIG: AppConfiguration = {
   defaultScale: 8
 };
 
+export type AppViewMode = 'game' | 'studio';
+
+export function resolveInitialAppView(mode: string, search: string = ''): AppViewMode {
+  const params = new URLSearchParams(search);
+  const queryMode = (params.get('mode') ?? params.get('view') ?? '').toLowerCase();
+
+  if (queryMode === 'studio' || queryMode === 'pixelart') {
+    return 'studio';
+  }
+  if (queryMode === 'apk' || queryMode === 'game') {
+    return 'game';
+  }
+
+  const normalizedMode = mode.toLowerCase();
+  if (normalizedMode === 'pixelart' || normalizedMode === 'studio') {
+    return 'studio';
+  }
+
+  return 'game';
+}
+
+

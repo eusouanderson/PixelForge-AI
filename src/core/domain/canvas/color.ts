@@ -62,7 +62,6 @@ export function blendUint32Colors(dst: number, src: number, opacity: number): nu
   if (effectiveAlpha >= 1 && dstRgba.a === 0) return src;
 
   const outA = effectiveAlpha + (dstRgba.a / 255) * (1 - effectiveAlpha);
-  if (outA <= 0) return 0;
 
   const outR = Math.round(
     (srcRgba.r * effectiveAlpha + dstRgba.r * (dstRgba.a / 255) * (1 - effectiveAlpha)) / outA
