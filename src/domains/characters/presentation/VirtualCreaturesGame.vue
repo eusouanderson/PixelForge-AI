@@ -53,7 +53,9 @@ const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
 const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings'>('feed');
-const feedbackBanner = ref<string>('Bem-vindo ao Santuário Elemental! Cuide do seu bichinho virtual para ele evoluir.');
+const feedbackBanner = ref<string>(
+  'O ovo ancestral está rachando no Santuário Elemental! Aguarde o nascimento ou toque em Eclodir.'
+);
 const babylonCanvasRef = ref<HTMLCanvasElement | null>(null);
 const spriteOverlayCanvasRef = ref<HTMLCanvasElement | null>(null);
 const frameToggle = ref<1 | 2 | 3 | 4>(1);
@@ -237,9 +239,10 @@ async function handleTogglePixelGrid(): Promise<void> {
 async function handleResetSave(): Promise<void> {
   await saveRepo.clearSave();
   manualAnimOverride.value = null;
+  frameToggle.value = 1;
   saveState.value = createNewGameSaveSnapshot(Date.now());
   syncBabylonEnvironment();
-  feedbackBanner.value = `Novo bichinho sorteado: ${activeSpecies.value.displayName}! Cuide bem dele para evoluir.`;
+  feedbackBanner.value = `Novo ovo sorteado de ${activeSpecies.value.displayName}! Ele já está rachando para nascer.`;
   await persistCurrentState();
 }
 
@@ -265,8 +268,15 @@ onMounted(async () => {
   }
 
   spriteTimer = setInterval(() => {
+    /* v8 ignore start */
+    if (displayedStage.value === 'ovo' && frameToggle.value === 4) {
+      frameToggle.value = 1;
+      void handleHatchEgg();
+      return;
+    }
     frameToggle.value = frameToggle.value === 4 ? 1 : ((frameToggle.value + 1) as 1 | 2 | 3 | 4);
-  }, 550);
+    /* v8 ignore stop */
+  }, 650);
 });
 
 onUnmounted(() => {

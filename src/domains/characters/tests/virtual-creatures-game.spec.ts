@@ -12,6 +12,12 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     const activeName = wrapper.get('[data-testid="active-character-name"]').text();
     expect(allDisplayNames).toContain(activeName);
 
+    // Always starts as an egg (ovo) cracking and hatching into baby!
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('ovo');
+    await wrapper.get('[data-testid="hatch-egg-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('baby');
+
     // Ensure 90s virtual pet rules: NO manual dinosaur selector, NO manual stage buttons, NO manual animation buttons
     expect(wrapper.find('[data-testid="nav-tab-roster"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="stage-btn-adulto"]').exists()).toBe(false);

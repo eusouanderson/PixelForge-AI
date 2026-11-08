@@ -83,7 +83,7 @@ describe('GameSessionService application use cases', () => {
 
   it('executes activities, triggers stage evolution when eligible, and handles tired/deceased states', () => {
     let snap = createNewGameSaveSnapshot(1000, 'ignisauro');
-    // Boost ignisauro ageHours to 5 and level to 1 with 90 XP so one activity levels up to 2 and evolves baby -> crianca!
+    // Boost ignisauro (in baby stage) ageHours to 5 and level to 1 with 85 XP so one activity levels up to 2 and evolves baby -> crianca!
     snap = {
       ...snap,
       characters: {
@@ -92,10 +92,12 @@ describe('GameSessionService application use cases', () => {
           ...snap.characters.ignisauro,
           runtime: {
             ...snap.characters.ignisauro.runtime,
+            currentStage: 'baby',
             ageHours: 5
           },
           progression: {
             ...snap.characters.ignisauro.progression,
+            currentStage: 'baby',
             currentXp: 85
           }
         }

@@ -71,7 +71,7 @@ export function resolveCharacterAnimation(
 export function createInitialCharacterRuntime(
   characterId: CharacterId,
   nowMs: number,
-  initialStage: CharacterLifeStage = 'baby'
+  initialStage: CharacterLifeStage = 'ovo'
 ): CharacterRuntimeState {
   return {
     characterId,
@@ -85,7 +85,7 @@ export function createInitialCharacterRuntime(
         id: `${characterId}-born-${nowMs}`,
         timestampMs: nowMs,
         actionType: 'evolve',
-        summary: 'Despertou no santuário elemental!'
+        summary: 'Um ovo ancestral despertou no santuário elemental!'
       }
     ],
     createdAtMs: nowMs,

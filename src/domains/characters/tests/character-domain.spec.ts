@@ -161,11 +161,12 @@ describe('characters domain registry, state engine, and sprite repository', () =
     expect(resolveCharacterAnimation('adulto', 'healthy', 'radiant')).toBe('idle');
   });
 
-  it('creates initial runtime state and appends bounded care log entries', () => {
-    const eggRuntime = createInitialCharacterRuntime('ignisauro', 500, 'ovo');
+  it('creates initial runtime state starting as egg (ovo/eclosao) and appends bounded care log entries', () => {
+    const eggRuntime = createInitialCharacterRuntime('ignisauro', 500);
+    expect(eggRuntime.currentStage).toBe('ovo');
     expect(eggRuntime.currentAnimation).toBe('eclosao');
 
-    let runtime = createInitialCharacterRuntime('ignisauro', 1000);
+    let runtime = createInitialCharacterRuntime('ignisauro', 1000, 'baby');
     expect(runtime.characterId).toBe('ignisauro');
     expect(runtime.currentStage).toBe('baby');
     expect(runtime.careHistory.length).toBe(1);

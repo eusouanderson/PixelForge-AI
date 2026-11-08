@@ -16,7 +16,10 @@ describe('progression domain engine', () => {
     { fromStage: 'adolescente', toStage: 'adulto', requiredLevel: 10, requiredAgeHours: 24, minHealth: 75, minHappiness: 75 }
   ];
 
-  it('creates initial progression state and computes XP curve', () => {
+  it('creates initial progression state starting as ovo and computes XP curve', () => {
+    const defaultOvo = createInitialProgression();
+    expect(defaultOvo.currentStage).toBe('ovo');
+
     const init = createInitialProgression('baby');
     expect(init).toEqual({
       level: 1,

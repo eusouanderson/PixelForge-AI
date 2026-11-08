@@ -36,28 +36,33 @@ describe('persistence domain engine, offline simulation, and save repository', (
       snapshot.characters.ignisauro.needs.hunger
     );
 
-    // 3 hours later (3 * 3600 * 1000 = 10_800_000 ms)
+    // 3 hours later (3 * 3600 * 1000 = 10_800_000 ms) -> hatches ovo -> baby
     const after3Hours = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 10_800_000);
     expect(after3Hours.characters.ignisauro.runtime.ageHours).toBe(3);
+    expect(after3Hours.characters.ignisauro.runtime.currentStage).toBe('baby');
     expect(after3Hours.characters.ignisauro.needs.hunger).toBeLessThan(
       snapshot.characters.ignisauro.needs.hunger
     );
 
-    // Character at level 2 evolving from baby -> crianca when offline time reaches required ageHours
+    // Another hour at level 1 stays at baby (non-evolving branch)
+    const stillBaby = simulateOfflineProgressOnSnapshot(after3Hours, 100000 + 14_400_000);
+    expect(stillBaby.characters.ignisauro.runtime.currentStage).toBe('baby');
+
+    // Character at level 2 evolving from baby -> crianca when offline time advances
     const readyToEvolve: typeof snapshot = {
-      ...snapshot,
+      ...after3Hours,
       characters: {
-        ...snapshot.characters,
+        ...after3Hours.characters,
         ignisauro: {
-          ...snapshot.characters.ignisauro,
+          ...after3Hours.characters.ignisauro,
           progression: {
-            ...snapshot.characters.ignisauro.progression,
+            ...after3Hours.characters.ignisauro.progression,
             level: 2
           }
         }
       }
     };
-    const evolvedOffline = simulateOfflineProgressOnSnapshot(readyToEvolve, 100000 + 3600 * 1000);
+    const evolvedOffline = simulateOfflineProgressOnSnapshot(readyToEvolve, 100000 + 14_400_000);
     expect(evolvedOffline.characters.ignisauro.runtime.currentStage).toBe('crianca');
   });
 

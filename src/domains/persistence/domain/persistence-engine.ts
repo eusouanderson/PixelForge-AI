@@ -40,10 +40,10 @@ export function createDefaultCharacterSaveRecord(
 ): CharacterSaveRecord {
   const species = CHARACTER_SPECIES_REGISTRY[characterId];
   return {
-    runtime: createInitialCharacterRuntime(characterId, nowMs, 'baby'),
+    runtime: createInitialCharacterRuntime(characterId, nowMs, 'ovo'),
     needs: createInitialNeeds(),
     attributes: { ...species.baseAttributes },
-    progression: createInitialProgression('baby')
+    progression: createInitialProgression('ovo')
   };
 }
 
