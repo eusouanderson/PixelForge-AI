@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { defineAsyncComponent } from 'vue';
+import { computed } from 'vue';
 import VirtualCreaturesGame from '@/domains/characters/presentation/VirtualCreaturesGame.vue';
+import PixelArtViewer from '@/features/pixel-art-viewer/PixelArtViewer.vue';
 
-const isPixelArtCreatorMode = import.meta.env.MODE === 'pixelart';
+const urlParams =
+  typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+const urlMode = urlParams?.get('mode');
 
-const PixelArtCreatorTool = isPixelArtCreatorMode
-  ? defineAsyncComponent(() => import('@/features/pixel-art-viewer/PixelArtViewer.vue'))
-  : null;
+const isPixelArtMode = computed(() => {
+  if (urlMode === 'pixelart' || urlMode === 'studio') return true;
+  if (urlMode === 'game' || urlMode === 'apk') return false;
+  return import.meta.env.MODE === 'pixelart';
+});
 </script>
 
 <template>
-  <component :is="PixelArtCreatorTool" v-if="isPixelArtCreatorMode && PixelArtCreatorTool" />
+  <pixel-art-viewer v-if="isPixelArtMode" />
   <virtual-creatures-game v-else />
 </template>

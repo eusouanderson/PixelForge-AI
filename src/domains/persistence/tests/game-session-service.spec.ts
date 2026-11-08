@@ -24,6 +24,15 @@ describe('GameSessionService application use cases', () => {
   it('feeds active character with favorite, forbidden, out-of-stock, evolution, and deceased states', () => {
     let snap = createNewGameSaveSnapshot(1000, 'ignisauro');
 
+    // Feeding an egg before hatching is blocked
+    const eggBlocked = feedActiveCharacterUseCase(snap, 'volcanic-roast-meat', 1100);
+    expect(eggBlocked.success).toBe(false);
+    expect(eggBlocked.message).toContain('ovo ancestral');
+
+    // Hatch egg into baby
+    snap = hatchCharacterEggUseCase(snap, 1200);
+    expect(snap.characters.ignisauro.runtime.currentStage).toBe('baby');
+
     // Out of stock item
     const outOfStock = feedActiveCharacterUseCase(snap, 'missing-food-id', 1500);
     expect(outOfStock.success).toBe(false);
@@ -42,8 +51,8 @@ describe('GameSessionService application use cases', () => {
     expect(overfed.success).toBe(true);
     expect(overfed.reaction?.contractedDiseaseId).toBe('overeating_indigestion');
 
-    // Feeding when hungry and ready to evolve triggers stage evolution (ovo -> baby)
-    const eggReadySnap = {
+    // Feeding when hungry and ready to evolve triggers stage evolution (baby -> crianca)
+    const babyReadySnap = {
       ...favFeed.snapshot,
       characters: {
         ...favFeed.snapshot.characters,
@@ -51,22 +60,28 @@ describe('GameSessionService application use cases', () => {
           ...favFeed.snapshot.characters.ignisauro,
           needs: {
             ...favFeed.snapshot.characters.ignisauro.needs,
-            hunger: 50
+            hunger: 50,
+            health: 80,
+            happiness: 80
           },
           runtime: {
             ...favFeed.snapshot.characters.ignisauro.runtime,
-            currentStage: 'ovo' as const,
+            currentStage: 'baby' as const,
+            ageHours: 25,
             activeDiseases: []
           },
           progression: {
             ...favFeed.snapshot.characters.ignisauro.progression,
-            currentStage: 'ovo' as const
+            currentStage: 'baby' as const,
+            level: 3,
+            currentXp: 0,
+            nextLevelXp: 300
           }
         }
       }
     };
-    const evolvedByFeed = feedActiveCharacterUseCase(eggReadySnap, 'volcanic-roast-meat', 2500);
-    expect(evolvedByFeed.snapshot.characters.ignisauro.runtime.currentStage).toBe('baby');
+    const evolvedByFeed = feedActiveCharacterUseCase(babyReadySnap, 'volcanic-roast-meat', 2500);
+    expect(evolvedByFeed.snapshot.characters.ignisauro.runtime.currentStage).toBe('crianca');
 
     // Forbidden food for ignisauro: frosted-crystal-berry -> contracts food_poisoning and blocks evolution
     const forbFeed = feedActiveCharacterUseCase(evolvedByFeed.snapshot, 'frosted-crystal-berry', 3000);
@@ -109,6 +124,12 @@ describe('GameSessionService application use cases', () => {
 
   it('executes activities, triggers stage evolution when eligible, and handles tired/deceased/sick states', () => {
     let snap = createNewGameSaveSnapshot(1000, 'ignisauro');
+
+    // Attempting activity on an unhatched egg is blocked
+    const eggAct = performCharacterActivityUseCase(snap, 'lava-sprint', 1100);
+    expect(eggAct.success).toBe(false);
+    expect(eggAct.message).toContain('ovo ancestral');
+
     // Boost ignisauro (in baby stage) ageHours to 25 and level to 2 with 190 XP so one activity levels up to 3 and evolves baby -> crianca!
     snap = {
       ...snap,

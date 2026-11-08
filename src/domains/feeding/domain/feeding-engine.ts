@@ -1,4 +1,4 @@
-import type { CharacterSpeciesDefinition } from '@/domains/characters/types';
+import type { ActiveDisease, CharacterSpeciesDefinition } from '@/domains/characters/types';
 import type {
   DietaryPreference,
   FeedingReaction,
@@ -443,12 +443,42 @@ export function feedCharacter(
   species: CharacterSpeciesDefinition,
   foodId: string,
   timestampMs: number,
-  currentHunger: number = 50
+  currentHunger: number = 50,
+  currentThirst: number = 50,
+  activeDiseases: readonly ActiveDisease[] = []
 ): FeedingReaction {
   const food = getFoodById(foodId);
   const preference = evaluateDietaryPreference(species, foodId);
 
+  // Medicine administration validation
   if (food.category === 'medicine' && food.curesDiseaseId) {
+    const hasTargetDisease =
+      food.curesDiseaseId === 'all'
+        ? activeDiseases.length > 0
+        : activeDiseases.some((d) => d.id === food.curesDiseaseId);
+
+    if (!hasTargetDisease) {
+      return {
+        characterId: species.id,
+        foodId,
+        preference: 'accepted',
+        accepted: false,
+        satisfactionLevel: 'disgusted',
+        appliedNeedsDelta: {
+          hunger: 0,
+          thirst: 0,
+          energy: -5,
+          happiness: -10,
+          health: -5,
+          hygiene: 0
+        },
+        appliedAttributeDelta: {},
+        experienceGained: 0,
+        message: `${species.displayName} não possui a enfermidade tratada por ${food.name}! Medicamento desnecessário rejeitado sem concessão de XP.`,
+        timestampMs
+      };
+    }
+
     return {
       characterId: species.id,
       foodId,
@@ -465,8 +495,31 @@ export function feedCharacter(
         hygiene: food.nutrition.hygieneDelta
       },
       appliedAttributeDelta: food.attributeBonus,
-      experienceGained: 5,
-      message: `${species.displayName} recebeu o tratamento ${food.name}!`,
+      experienceGained: 8,
+      message: `${species.displayName} recebeu o tratamento correto com ${food.name}!`,
+      timestampMs
+    };
+  }
+
+  // Hydration overdrinking check: feeding water when already fully hydrated (thirst >= 95)
+  if (food.category === 'hydration' && currentThirst >= 95) {
+    return {
+      characterId: species.id,
+      foodId,
+      preference: 'accepted',
+      accepted: false,
+      satisfactionLevel: 'disgusted',
+      appliedNeedsDelta: {
+        hunger: 0,
+        thirst: 2,
+        energy: -5,
+        happiness: -10,
+        health: 0,
+        hygiene: 0
+      },
+      appliedAttributeDelta: {},
+      experienceGained: 0,
+      message: `${species.displayName} já está totalmente saciado de água (${currentThirst}%) e recusou beber mais! Forçar hidratação causou empanturramento.`,
       timestampMs
     };
   }

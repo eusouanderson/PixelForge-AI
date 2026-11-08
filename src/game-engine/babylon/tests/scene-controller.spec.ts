@@ -36,10 +36,10 @@ describe('BabylonCreatureSceneController', () => {
 
       const metrics = controller.getActiveResourceMetrics();
       expect(metrics.isDisposed).toBe(false);
-      // 1 ground + 1 pedestal + 1 creature plane + N props (no leaked meshes from previous character!)
-      expect(metrics.activeMeshes).toBe(3 + env.props.length);
+      // 1 backdrop plane + 1 ground + 1 pedestal + 1 creature plane + N props (no leaked meshes from previous character!)
+      expect(metrics.activeMeshes).toBe(4 + env.props.length);
       expect(metrics.activeParticleSystems).toBe(1);
-      expect(metrics.activeTextures).toBe(2);
+      expect(metrics.activeTextures).toBe(4);
     }
 
     controller.updateCreatureSprite(stage6BabyIdle2Preset, true);
@@ -49,6 +49,43 @@ describe('BabylonCreatureSceneController', () => {
     controller.pauseRendering();
     controller.resumeRendering();
     controller.resize();
+
+    // Test environment without backdrop and without point light
+    const baseEnv = getCharacterEnvironmentConfig('ignisauro');
+    const noBackdropEnv = {
+      ...baseEnv,
+      backdrop: undefined,
+      lighting: {
+        ...baseEnv.lighting,
+        pointLightColorHex: undefined
+      }
+    };
+    controller.loadCharacterEnvironment(
+      'ignisauro',
+      noBackdropEnv,
+      getCharacterParticleConfig('ignisauro'),
+      stage5BabyIdle1Preset
+    );
+    expect(controller.getActiveResourceMetrics().activeMeshes).toBe(3 + baseEnv.props.length);
+
+    // Test environment with point light using default position, intensity, and range
+    const defaultPointLightEnv = {
+      ...baseEnv,
+      lighting: {
+        ...baseEnv.lighting,
+        pointLightColorHex: '#ff8800',
+        pointLightPosition: undefined,
+        pointLightIntensity: undefined,
+        pointLightRange: undefined
+      }
+    };
+    controller.loadCharacterEnvironment(
+      'ignisauro',
+      defaultPointLightEnv,
+      getCharacterParticleConfig('ignisauro'),
+      stage5BabyIdle1Preset
+    );
+    expect(controller.getActiveResourceMetrics().activeMeshes).toBe(4 + baseEnv.props.length);
 
     controller.dispose();
     const afterDispose = controller.getActiveResourceMetrics();

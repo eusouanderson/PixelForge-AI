@@ -13,14 +13,14 @@ import {
 } from '../infrastructure/local-storage-save-repository';
 
 describe('persistence domain engine, offline simulation, and save repository', () => {
-  it('provides SystemClock and creates initial save snapshot with random or explicit character for all 8 species', () => {
+  it('provides SystemClock and creates initial save snapshot with random or explicit character for all 11 species', () => {
     const clock = new SystemClock();
     expect(clock.nowMs()).toBeGreaterThan(1000000);
 
     const randomSnapshot = createNewGameSaveSnapshot(100000);
     expect(randomSnapshot.schemaVersion).toBe(CURRENT_SAVE_SCHEMA_VERSION);
     expect(Object.keys(randomSnapshot.characters)).toContain(randomSnapshot.activeCharacterId);
-    expect(Object.keys(randomSnapshot.characters).length).toBe(8);
+    expect(Object.keys(randomSnapshot.characters).length).toBe(11);
 
     const explicitSnapshot = createNewGameSaveSnapshot(100000, 'ignisauro');
     expect(explicitSnapshot.activeCharacterId).toBe('ignisauro');
@@ -113,7 +113,7 @@ describe('persistence domain engine, offline simulation, and save repository', (
     const migrated = validateAndMigrateSaveSnapshot(legacy, 2000);
     expect(migrated.schemaVersion).toBe(CURRENT_SAVE_SCHEMA_VERSION);
     expect(migrated.activeCharacterId).toBe('glacissauro');
-    expect(Object.keys(migrated.characters).length).toBe(8);
+    expect(Object.keys(migrated.characters).length).toBe(11);
 
     // Completely invalid input falls back to a fresh save snapshot with a valid random character
     const fallback = validateAndMigrateSaveSnapshot('corrupted-json', 5000);

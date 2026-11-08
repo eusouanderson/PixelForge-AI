@@ -47,6 +47,21 @@ const PIXEL_PARTICLE_PATTERNS: Readonly<Record<string, PixelParticleTexturePatte
     id: 'solarStar',
     size: 4,
     pixels: ['.X..', 'XXXX', '.X..', '.X..']
+  },
+  fairyHeart: {
+    id: 'fairyHeart',
+    size: 4,
+    pixels: ['X.X.', 'XXXX', '.XX.', '..X.']
+  },
+  crystalShard: {
+    id: 'crystalShard',
+    size: 4,
+    pixels: ['.X..', 'XXX.', '.X..', '..X.']
+  },
+  cosmicStar: {
+    id: 'cosmicStar',
+    size: 4,
+    pixels: ['..X.', '.XX.', 'XXXX', '..X.']
   }
 };
 
@@ -226,6 +241,72 @@ export const PARTICLE_PRESET_REGISTRY: Readonly<Record<CharacterId, CharacterPar
     direction2: { x: 0.5, y: 1.4, z: 0.3 },
     emitBoxMin: { x: -1.4, y: -0.7, z: -0.6 },
     emitBoxMax: { x: 1.4, y: 1.2, z: 0.6 }
+  },
+  rosassauro: {
+    id: 'rosassauro-fairy-petals',
+    characterId: 'rosassauro',
+    behavior: 'fairy-petals',
+    texturePattern: PIXEL_PARTICLE_PATTERNS.fairyHeart,
+    primaryColorHex: '#f472b6',
+    secondaryColorHex: '#fbcfe8',
+    accentColorHex: '#c084fc',
+    maxParticles: 46,
+    emitRate: 14,
+    minLifeTimeSec: 1.2,
+    maxLifeTimeSec: 2.3,
+    minSize: 0.08,
+    maxSize: 0.16,
+    minEmitPower: 0.35,
+    maxEmitPower: 1.0,
+    gravity: { x: 0, y: 0.6, z: 0 },
+    direction1: { x: -0.4, y: 0.6, z: -0.3 },
+    direction2: { x: 0.4, y: 1.2, z: 0.3 },
+    emitBoxMin: { x: -1.3, y: -0.6, z: -0.5 },
+    emitBoxMax: { x: 1.3, y: 1.1, z: 0.5 }
+  },
+  cristalissauro: {
+    id: 'cristalissauro-prism-shards',
+    characterId: 'cristalissauro',
+    behavior: 'crystal-prisms',
+    texturePattern: PIXEL_PARTICLE_PATTERNS.crystalShard,
+    primaryColorHex: '#38bdf8',
+    secondaryColorHex: '#e0f2fe',
+    accentColorHex: '#0284c7',
+    maxParticles: 44,
+    emitRate: 13,
+    minLifeTimeSec: 1.0,
+    maxLifeTimeSec: 2.0,
+    minSize: 0.07,
+    maxSize: 0.15,
+    minEmitPower: 0.3,
+    maxEmitPower: 0.9,
+    gravity: { x: 0, y: 0.5, z: 0 },
+    direction1: { x: -0.35, y: 0.5, z: -0.3 },
+    direction2: { x: 0.35, y: 1.1, z: 0.3 },
+    emitBoxMin: { x: -1.4, y: -0.6, z: -0.5 },
+    emitBoxMax: { x: 1.4, y: 1.1, z: 0.5 }
+  },
+  astrassauro: {
+    id: 'astrassauro-cosmic-starlight',
+    characterId: 'astrassauro',
+    behavior: 'cosmic-starlight',
+    texturePattern: PIXEL_PARTICLE_PATTERNS.cosmicStar,
+    primaryColorHex: '#fbbf24',
+    secondaryColorHex: '#fef08a',
+    accentColorHex: '#818cf8',
+    maxParticles: 48,
+    emitRate: 15,
+    minLifeTimeSec: 1.1,
+    maxLifeTimeSec: 2.2,
+    minSize: 0.08,
+    maxSize: 0.16,
+    minEmitPower: 0.4,
+    maxEmitPower: 1.1,
+    gravity: { x: 0, y: 0.6, z: 0 },
+    direction1: { x: -0.4, y: 0.65, z: -0.3 },
+    direction2: { x: 0.4, y: 1.3, z: 0.3 },
+    emitBoxMin: { x: -1.35, y: -0.6, z: -0.5 },
+    emitBoxMax: { x: 1.35, y: 1.2, z: 0.5 }
   }
 };
 

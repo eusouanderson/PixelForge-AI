@@ -8,7 +8,10 @@ export type CharacterId =
   | 'terrassauro'
   | 'aerossauro'
   | 'umbrassauro'
-  | 'solassauro';
+  | 'solassauro'
+  | 'rosassauro'
+  | 'cristalissauro'
+  | 'astrassauro';
 
 export type ElementAffinity =
   | 'fire'
@@ -18,7 +21,10 @@ export type ElementAffinity =
   | 'earth'
   | 'air'
   | 'shadow'
-  | 'light';
+  | 'light'
+  | 'fairy'
+  | 'crystal'
+  | 'cosmic';
 
 export type CharacterAnimationName =
   | 'eclosao'

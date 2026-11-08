@@ -69,6 +69,14 @@ export function feedActiveCharacterUseCase(
   const charRecord = snapshot.characters[activeId];
   const species = getCharacterSpeciesById(activeId);
 
+  if (charRecord.runtime.currentStage === 'ovo') {
+    return {
+      success: false,
+      message: `${species.displayName} ainda está no ovo ancestral! Aguarde a eclosão para alimentá-lo.`,
+      snapshot
+    };
+  }
+
   if (charRecord.runtime.healthCondition === 'deceased') {
     return {
       success: false,
@@ -86,7 +94,14 @@ export function feedActiveCharacterUseCase(
     };
   }
 
-  const reaction = feedCharacter(species, foodId, nowMs, charRecord.needs.hunger);
+  const reaction = feedCharacter(
+    species,
+    foodId,
+    nowMs,
+    charRecord.needs.hunger,
+    charRecord.needs.thirst,
+    charRecord.runtime.activeDiseases
+  );
   const nextNeeds = applyNeedsDelta(charRecord.needs, reaction.appliedNeedsDelta);
   const nextAttributes = applyAttributeModifier(charRecord.attributes, {
     source: 'feeding_bonus',
@@ -101,9 +116,7 @@ export function feedActiveCharacterUseCase(
   if (reaction.curedDiseaseId) {
     const cureRes = cureDiseasesWithRemedy(updatedDiseases, reaction.curedDiseaseId);
     updatedDiseases = cureRes.remaining;
-    if (cureRes.cured.length > 0) {
-      finalMessage = `${reaction.message} Curou ${cureRes.cured.length} enfermidade(s)!`;
-    }
+    finalMessage = `${reaction.message} Curou ${cureRes.cured.length} enfermidade(s)!`;
   }
   updatedDiseases = diagnoseNeedsTriggeredDiseases(nextNeeds, updatedDiseases, nowMs);
 
@@ -188,6 +201,16 @@ export function performCharacterActivityUseCase(
   const charRecord = snapshot.characters[activeId];
   const species = getCharacterSpeciesById(activeId);
 
+  if (charRecord.runtime.currentStage === 'ovo') {
+    return {
+      success: false,
+      message: `${species.displayName} ainda é um ovo ancestral! Ele precisa eclodir antes de realizar atividades.`,
+      leveledUp: false,
+      evolvedToStage: null,
+      snapshot
+    };
+  }
+
   if (charRecord.runtime.healthCondition === 'deceased') {
     return {
       success: false,
@@ -198,7 +221,12 @@ export function performCharacterActivityUseCase(
     };
   }
 
-  const execRes = executeCharacterActivity(species, activityId, charRecord.needs.energy);
+  const execRes = executeCharacterActivity(
+    species,
+    activityId,
+    charRecord.needs.energy,
+    charRecord.needs
+  );
   if (!execRes.success) {
     return {
       success: false,

@@ -8,7 +8,10 @@ export type ParticleBehaviorKind =
   | 'floating-shards'
   | 'swirling-feathers'
   | 'shadow-wisps'
-  | 'solar-corona';
+  | 'solar-corona'
+  | 'fairy-petals'
+  | 'crystal-prisms'
+  | 'cosmic-starlight';
 
 export type ReactiveParticleTrigger =
   | 'ambient'
