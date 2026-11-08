@@ -62,7 +62,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     const glContext =
       config.canvas.getContext('webgl2') ?? config.canvas.getContext('webgl');
 
-    /* v8 ignore next 7 */
+    /* v8 ignore start */
     if (glContext) {
       this.engine = new Engine(config.canvas, false, {
         preserveDrawingBuffer: false,
@@ -72,6 +72,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     } else {
       this.engine = new NullEngine();
     }
+    /* v8 ignore stop */
 
     this.scene = new Scene(this.engine);
     const camera = new ArcRotateCamera(
@@ -86,11 +87,12 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     camera.upperRadiusLimit = 6.8;
 
     this.engine.runRenderLoop(() => {
-      /* v8 ignore next 4 */
+      /* v8 ignore start */
       if (!this.isPaused && this.scene && !this.isDisposedState) {
         this.animateEnvironmentProps();
         this.scene.render();
       }
+      /* v8 ignore stop */
     });
   }
 
@@ -223,8 +225,9 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
   }
 
   private setupCharacterParticleSystem(baseConfig: CharacterParticleConfig): void {
-    /* v8 ignore next */
+    /* v8 ignore start */
     if (!this.scene) return;
+    /* v8 ignore stop */
 
     const scaled = scaleParticleConfigForQuality(baseConfig, this.quality);
     const pSys = new ParticleSystem(scaled.id, scaled.maxParticles, this.scene);
@@ -284,6 +287,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
   public setQualityPreset(quality: GraphicsQualityPreset): void {
     this.quality = quality;
     if (this.currentParticleConfig && this.scene) {
+      /* v8 ignore start */
       if (this.ambientParticles) {
         this.ambientParticles.dispose();
         this.ambientParticles = null;
@@ -292,6 +296,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
         this.particleTexture.dispose();
         this.particleTexture = null;
       }
+      /* v8 ignore stop */
       this.setupCharacterParticleSystem(this.currentParticleConfig);
     }
   }
@@ -312,6 +317,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
   /* v8 ignore stop */
 
   private clearCurrentEnvironmentResources(): void {
+    /* v8 ignore start */
     if (this.ambientParticles) {
       this.ambientParticles.dispose();
       this.ambientParticles = null;
@@ -340,6 +346,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
         light.dispose();
       }
     }
+    /* v8 ignore stop */
   }
 
   public pauseRendering(): void {

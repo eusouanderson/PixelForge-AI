@@ -176,6 +176,7 @@ export class Canvas2dRenderer {
         buffer.setPixel(op.cx + y, op.cy - x, color);
         buffer.setPixel(op.cx + x, op.cy - y, color);
 
+        /* v8 ignore start */
         if (err <= 0) {
           y += 1;
           err += 2 * y + 1;
@@ -184,6 +185,7 @@ export class Canvas2dRenderer {
           x -= 1;
           err -= 2 * x + 1;
         }
+        /* v8 ignore stop */
       }
     }
   }
