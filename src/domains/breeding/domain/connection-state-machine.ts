@@ -7,12 +7,12 @@ const VALID_CONNECTION_TRANSITIONS: Record<NearbyConnectionStatus, readonly Near
   starting_discovery: ['discovering', 'failed', 'idle'],
   discovering: ['player_found', 'connection_requested', 'connection_pending', 'connecting', 'connected', 'idle', 'failed'],
   player_found: ['connection_requested', 'connection_pending', 'connecting', 'connected', 'discovering', 'idle', 'failed'],
-  connection_requested: ['connecting', 'authenticating', 'connected', 'player_found', 'discovering', 'failed', 'idle'],
-  connection_pending: ['connecting', 'authenticating', 'connected', 'player_found', 'discovering', 'failed', 'idle'],
+  connection_requested: ['connecting', 'authenticating', 'connected', 'player_found', 'discovering', 'disconnected', 'failed', 'idle'],
+  connection_pending: ['connecting', 'authenticating', 'connected', 'player_found', 'discovering', 'disconnected', 'failed', 'idle'],
   connecting: ['authenticating', 'connected', 'disconnected', 'failed', 'idle'],
   authenticating: ['connected', 'disconnected', 'failed', 'idle'],
   connected: ['disconnected', 'failed', 'idle'],
-  disconnected: ['idle', 'starting_discovery', 'discovering', 'checking_environment'],
+  disconnected: ['idle', 'starting_discovery', 'discovering', 'checking_environment', 'connection_requested', 'connecting'],
   failed: ['idle', 'starting_discovery', 'discovering', 'checking_environment', 'connection_requested', 'connecting']
 };
 

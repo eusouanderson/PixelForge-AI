@@ -19,6 +19,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.nearby.Nearby;
 import com.google.android.gms.nearby.connection.AdvertisingOptions;
 import com.google.android.gms.nearby.connection.ConnectionInfo;
@@ -234,6 +235,15 @@ public class NearbyConnectionsPlugin extends Plugin {
         return sb.toString();
     }
 
+    private boolean isAlreadyConnectedStatus(Exception e) {
+        if (e instanceof ApiException) {
+            int code = ((ApiException) e).getStatusCode();
+            return code == ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT;
+        }
+        String msg = e.getMessage();
+        return msg != null && (msg.contains("8003") || msg.contains("STATUS_ALREADY_CONNECTED_TO_ENDPOINT"));
+    }
+
     @PluginMethod
     public void startAdvertising(PluginCall call) {
         String endpointName = call.getString("endpointName", "PixelForge-Player");
@@ -251,6 +261,13 @@ public class NearbyConnectionsPlugin extends Plugin {
                     call.resolve(ret);
                 })
                 .addOnFailureListener(e -> {
+                    if (e instanceof ApiException && ((ApiException) e).getStatusCode() == ConnectionsStatusCodes.STATUS_ALREADY_ADVERTISING) {
+                        isAdvertising = true;
+                        JSObject ret = new JSObject();
+                        ret.put("success", true);
+                        call.resolve(ret);
+                        return;
+                    }
                     isAdvertising = false;
                     String diag = getHardwareDiagnostics();
                     call.reject("Falha ao iniciar anúncio Nearby: " + e.getMessage() + diag, e);
@@ -286,6 +303,13 @@ public class NearbyConnectionsPlugin extends Plugin {
                     call.resolve(ret);
                 })
                 .addOnFailureListener(e -> {
+                    if (e instanceof ApiException && ((ApiException) e).getStatusCode() == ConnectionsStatusCodes.STATUS_ALREADY_DISCOVERING) {
+                        isDiscovering = true;
+                        JSObject ret = new JSObject();
+                        ret.put("success", true);
+                        call.resolve(ret);
+                        return;
+                    }
                     isDiscovering = false;
                     String diag = getHardwareDiagnostics();
                     call.reject("Falha ao iniciar descoberta Nearby: " + e.getMessage() + diag, e);
@@ -321,7 +345,16 @@ public class NearbyConnectionsPlugin extends Plugin {
                     ret.put("success", true);
                     call.resolve(ret);
                 })
-                .addOnFailureListener(e -> call.reject("Falha ao solicitar conexão Nearby: " + e.getMessage(), e));
+                .addOnFailureListener(e -> {
+                    if (isAlreadyConnectedStatus(e)) {
+                        JSObject ret = new JSObject();
+                        ret.put("success", true);
+                        ret.put("alreadyConnected", true);
+                        call.resolve(ret);
+                        return;
+                    }
+                    call.reject("Falha ao solicitar conexão Nearby: " + e.getMessage(), e);
+                });
     }
 
     @PluginMethod
@@ -339,7 +372,16 @@ public class NearbyConnectionsPlugin extends Plugin {
                     ret.put("success", true);
                     call.resolve(ret);
                 })
-                .addOnFailureListener(e -> call.reject("Falha ao aceitar conexão Nearby: " + e.getMessage(), e));
+                .addOnFailureListener(e -> {
+                    if (isAlreadyConnectedStatus(e)) {
+                        JSObject ret = new JSObject();
+                        ret.put("success", true);
+                        ret.put("alreadyConnected", true);
+                        call.resolve(ret);
+                        return;
+                    }
+                    call.reject("Falha ao aceitar conexão Nearby: " + e.getMessage(), e);
+                });
     }
 
     @PluginMethod
