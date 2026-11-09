@@ -22,6 +22,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "pixelforge-virtual-creatures-v${variant.versionName}.apk"
+        }
+    }
 }
 
 repositories {

@@ -91,3 +91,16 @@ export interface AppUpdaterPort {
   resetToBundledVersion(): Promise<void>;
   reloadApp(): void;
 }
+
+export type VersionBumpType = 'major' | 'minor' | 'patch';
+
+export interface VersionBumpResult {
+  readonly currentVersion: string;
+  readonly nextVersion: string;
+  readonly nextBuild: number;
+  readonly bumpType: VersionBumpType;
+  readonly apkFilename: string;
+  readonly tagName: string;
+  readonly releaseTitle: string;
+}
+

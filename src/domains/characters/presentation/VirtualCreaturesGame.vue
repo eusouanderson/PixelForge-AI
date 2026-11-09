@@ -22,8 +22,10 @@ import type {
 } from '@/domains/characters/types';
 import {
   MAX_NATURAL_LIFESPAN_HOURS,
-  getCharacterSpeciesById
+  getCharacterSpeciesById,
+  listAllCharacterSpecies
 } from '@/domains/characters/domain/character-registry';
+import { generateCreatureTheme } from '@/domains/characters/domain/creature-theme-engine';
 import { CharacterSpriteRepository } from '@/domains/characters/infrastructure/character-sprite-repository';
 import { computeTotalPowerRating } from '@/domains/attributes/domain/attributes-engine';
 import {
@@ -81,8 +83,15 @@ let unsubscribeUpdater: (() => void) | null = null;
 const allFoods = listAllFoods();
 const allActivities = listAllActivities();
 
+const allAvailableSpecies = listAllCharacterSpecies();
 const activeCharacterId = computed<CharacterId>(() => saveState.value.activeCharacterId);
 const activeSpecies = computed(() => getCharacterSpeciesById(activeCharacterId.value));
+const creatureTheme = computed(() =>
+  generateCreatureTheme(
+    activeSpecies.value.visualTraits.primaryColors.base,
+    activeSpecies.value.visualTraits.primaryColors.highlight
+  )
+);
 const activeRecord = computed(() => saveState.value.characters[activeCharacterId.value]);
 const activeEnvironment = computed(() => getCharacterEnvironmentConfig(activeCharacterId.value));
 const activeParticles = computed(() => getCharacterParticleConfig(activeCharacterId.value));
@@ -277,6 +286,36 @@ async function handleResetToBundledVersion(): Promise<void> {
   updaterService.reloadApp();
 }
 
+async function handleSelectActiveSpecies(speciesId: CharacterId): Promise<void> {
+  if (saveState.value.activeCharacterId === speciesId) return;
+  saveState.value = {
+    ...saveState.value,
+    activeCharacterId: speciesId
+  };
+  manualAnimOverride.value = null;
+  frameToggle.value = 1;
+  syncBabylonEnvironment();
+  feedbackBanner.value = `Companheiro alterado para ${activeSpecies.value.displayName}!`;
+  await persistCurrentState();
+}
+
+watch(
+  creatureTheme,
+  (theme) => {
+    if (typeof document !== 'undefined') {
+      document.body.style.backgroundColor = theme.rootBackground;
+      let metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (!metaTheme) {
+        metaTheme = document.createElement('meta');
+        metaTheme.setAttribute('name', 'theme-color');
+        document.head.appendChild(metaTheme);
+      }
+      metaTheme.setAttribute('content', theme.headerBackground);
+    }
+  },
+  { immediate: true }
+);
+
 watch([currentSpriteArt, () => saveState.value.settings.showPixelGrid], () => {
   renderCurrentSpriteToOverlay();
 });
@@ -333,17 +372,46 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col items-center select-none">
-    <!-- Mobile Portrait Container Styled with PixelForge AI Emerald & Slate Theme -->
+  <div
+    data-testid="game-root-container"
+    class="min-h-screen text-slate-100 font-sans flex flex-col items-center select-none transition-colors duration-500"
+    :style="{ backgroundColor: creatureTheme.rootBackground }"
+  >
+    <!-- Mobile Portrait Container Styled with Dynamic Active Creature Theme -->
     <div
-      class="w-full max-w-md min-h-screen bg-slate-900/90 border-x border-slate-800 flex flex-col justify-between shadow-2xl relative"
+      data-testid="game-mobile-shell"
+      class="w-full max-w-md min-h-screen flex flex-col justify-between shadow-2xl relative transition-colors duration-500"
+      :style="{
+        backgroundColor: creatureTheme.containerBackground,
+        borderLeftColor: creatureTheme.borderColor,
+        borderRightColor: creatureTheme.borderColor,
+        borderLeftWidth: '1px',
+        borderRightWidth: '1px'
+      }"
     >
+      <!-- Atmospheric creature aura overlay -->
+      <div
+        class="pointer-events-none absolute inset-0 z-0 opacity-80 transition-opacity duration-500"
+        :style="{ background: creatureTheme.ambientGradient }"
+      />
+
       <!-- Top HUD Header -->
-      <header class="px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 space-y-2">
+      <header
+        class="relative z-10 px-4 py-3 backdrop-blur border-b space-y-2 transition-colors duration-500"
+        :style="{
+          backgroundColor: creatureTheme.headerBackground,
+          borderBottomColor: creatureTheme.borderColor
+        }"
+      >
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5">
             <div
-              class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-sm shrink-0"
+              class="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm shrink-0 border"
+              :style="{
+                backgroundColor: creatureTheme.cardDarkBackground,
+                borderColor: creatureTheme.borderColor,
+                color: creatureTheme.primaryColor
+              }"
             >
               <sparkles-icon class="w-4 h-4" />
             </div>
@@ -356,13 +424,23 @@ onUnmounted(() => {
                   {{ activeSpecies.displayName }}
                 </h1>
                 <span
-                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
+                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full border"
+                  :style="{
+                    backgroundColor: creatureTheme.cardDarkBackground,
+                    borderColor: creatureTheme.borderColor,
+                    color: creatureTheme.primaryColor
+                  }"
                 >
                   Nv. {{ activeRecord.progression.level }}
                 </span>
                 <span
                   data-testid="active-stage-badge"
-                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full bg-slate-800 border border-slate-700 text-amber-300"
+                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full border"
+                  :style="{
+                    backgroundColor: creatureTheme.cardBackground,
+                    borderColor: creatureTheme.borderSubtleColor,
+                    color: '#facc15'
+                  }"
                 >
                   {{ displayedStage }}
                 </span>
@@ -376,7 +454,12 @@ onUnmounted(() => {
           <div class="flex items-center gap-2">
             <div
               data-testid="wallet-coins"
-              class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderSubtleColor,
+                color: '#34d399'
+              }"
               title="Moedas Âmbar"
             >
               <coins-icon class="w-3.5 h-3.5 text-amber-400" />
@@ -389,7 +472,11 @@ onUnmounted(() => {
       <!-- Babylon.js 3D Environment + Crisp Nearest-Neighbor Pixel Art Viewport -->
       <section
         aria-label="Cenário 3D e Criatura"
-        class="relative w-full h-64 bg-slate-950 border-b border-slate-800 overflow-hidden flex items-center justify-center"
+        class="relative w-full h-64 border-b overflow-hidden flex items-center justify-center transition-colors duration-500"
+        :style="{
+          backgroundColor: creatureTheme.cardDarkBackground,
+          borderBottomColor: creatureTheme.borderColor
+        }"
       >
         <canvas
           ref="babylonCanvasRef"
@@ -483,9 +570,14 @@ onUnmounted(() => {
       </div>
 
       <!-- Feedback Banner & Emergency Actions -->
+      <!-- Dynamic Feedback Action Banner -->
       <div
         data-testid="feedback-banner"
-        class="px-3.5 py-2 bg-slate-950 border-b border-slate-800 text-xs text-emerald-300 flex items-center justify-between gap-2"
+        class="px-3.5 py-2 border-b text-xs text-emerald-300 flex items-center justify-between gap-2 transition-colors duration-500"
+        :style="{
+          backgroundColor: creatureTheme.cardDarkBackground,
+          borderBottomColor: creatureTheme.borderSubtleColor
+        }"
       >
         <span>{{ feedbackBanner }}</span>
         <button
@@ -520,7 +612,8 @@ onUnmounted(() => {
         <div
           v-for="disease in activeRecord.runtime.activeDiseases"
           :key="disease.id"
-          class="text-[11px] flex flex-col bg-slate-950/60 p-1.5 rounded border border-rose-800/70"
+          class="text-[11px] flex flex-col p-1.5 rounded border border-rose-800/70"
+          :style="{ backgroundColor: creatureTheme.cardDarkBackground }"
         >
           <span class="font-bold text-rose-300">{{ disease.name }}</span>
           <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
@@ -533,13 +626,21 @@ onUnmounted(() => {
       <!-- 6 Normalized Need Bars (0 to 100) -->
       <section
         aria-label="Indicadores de Necessidades"
-        class="p-3 bg-slate-900/90 border-b border-slate-800 grid grid-cols-3 gap-2"
+        class="p-3 border-b grid grid-cols-3 gap-2 transition-colors duration-500"
+        :style="{
+          backgroundColor: creatureTheme.containerBackground,
+          borderBottomColor: creatureTheme.borderSubtleColor
+        }"
       >
         <div
           v-for="need in needBars"
           :key="need.key"
           :data-testid="`need-bar-${need.key}`"
-          class="bg-slate-950/90 rounded-lg border border-slate-800 p-1.5"
+          class="rounded-lg border p-1.5 transition-colors duration-500"
+          :style="{
+            backgroundColor: creatureTheme.cardDarkBackground,
+            borderColor: creatureTheme.borderSubtleColor
+          }"
         >
           <div class="flex items-center justify-between text-[11px] font-semibold mb-1">
             <span class="text-slate-300">{{ need.label }}</span>
@@ -558,7 +659,10 @@ onUnmounted(() => {
       </section>
 
       <!-- Main Tab Content Area -->
-      <main class="flex-1 overflow-y-auto p-3 pb-6 bg-slate-950/60 space-y-3">
+      <main
+        class="flex-1 overflow-y-auto p-3 pb-6 space-y-3 transition-colors duration-500"
+        :style="{ backgroundColor: creatureTheme.cardDarkBackground }"
+      >
         <!-- TAB 1: ALIMENTAÇÃO E CUIDADOS -->
         <div v-if="activeMobileTab === 'feed'" data-testid="tab-content-feed" class="space-y-2.5">
           <div class="flex items-center justify-between">
@@ -582,7 +686,11 @@ onUnmounted(() => {
               v-for="food in allFoods"
               :key="food.id"
               :data-testid="`food-card-${food.id}`"
-              class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
+              class="p-2.5 rounded-xl border flex items-center justify-between gap-2 shadow-sm transition-colors duration-500"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderSubtleColor
+              }"
             >
               <div class="flex items-center gap-2.5">
                 <!-- Pixel Art Color Swatch Icon -->
@@ -681,7 +789,11 @@ onUnmounted(() => {
               v-for="act in allActivities"
               :key="act.id"
               :data-testid="`activity-card-${act.id}`"
-              class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
+              class="p-2.5 rounded-xl border flex items-center justify-between gap-2 shadow-sm transition-colors duration-500"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderSubtleColor
+              }"
             >
               <div>
                 <div class="flex items-center gap-1.5">
@@ -719,7 +831,71 @@ onUnmounted(() => {
           data-testid="tab-content-sheet"
           class="space-y-3"
         >
-          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+          <!-- Creature Companion Switcher & Active Animal Theme Indicator -->
+          <div
+            data-testid="companion-selector-card"
+            class="p-3 rounded-xl border space-y-2.5 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between">
+              <h2
+                class="text-xs font-bold uppercase flex items-center gap-1.5"
+                :style="{ color: creatureTheme.primaryColor }"
+              >
+                <sparkles-icon class="w-3.5 h-3.5" />
+                <span>Trocar Criatura Companheira</span>
+              </h2>
+              <span
+                data-testid="active-companion-badge"
+                class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  color: creatureTheme.primaryColor,
+                  borderColor: creatureTheme.borderColor
+                }"
+              >
+                {{ activeSpecies.displayName }}
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-300">
+              Escolha seu companheiro. O tema e as cores de todo o APK se adaptam automaticamente à cor principal do animal:
+            </p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+              <button
+                v-for="species in allAvailableSpecies"
+                :key="species.id"
+                type="button"
+                :data-testid="`select-species-${species.id}`"
+                class="p-2 rounded-lg border text-left flex items-center gap-2 transition-all duration-200"
+                :style="{
+                  backgroundColor: activeCharacterId === species.id ? creatureTheme.cardDarkBackground : 'transparent',
+                  borderColor: activeCharacterId === species.id ? creatureTheme.primaryColor : creatureTheme.borderSubtleColor,
+                  boxShadow: activeCharacterId === species.id ? creatureTheme.accentGlow : 'none'
+                }"
+                @click="handleSelectActiveSpecies(species.id)"
+              >
+                <div
+                  class="w-4 h-4 rounded-full shrink-0 border border-white/20"
+                  :style="{ backgroundColor: species.visualTraits.primaryColors.base }"
+                />
+                <div class="truncate">
+                  <span class="block text-xs font-bold text-white truncate">{{ species.displayName }}</span>
+                  <span class="block text-[9px] text-slate-400 capitalize truncate">{{ species.element }}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="p-3 rounded-xl border space-y-1.5 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
             <div class="flex items-center justify-between">
               <h2 class="text-sm font-bold uppercase text-emerald-400">
                 Ficha Oficial — {{ activeSpecies.displayName }}
@@ -732,25 +908,55 @@ onUnmounted(() => {
             <p class="text-[11px] text-slate-400 italic">{{ activeSpecies.lore }}</p>
 
             <div class="grid grid-cols-2 gap-2 pt-2 text-xs">
-              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+              <div
+                class="p-2 rounded-lg border transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
                 <span class="text-slate-400 block text-[10px] uppercase">Espécie</span>
                 <strong>{{ activeSpecies.species }}</strong>
               </div>
-              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+              <div
+                class="p-2 rounded-lg border transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
                 <span class="text-slate-400 block text-[10px] uppercase">Idade / Fase</span>
                 <strong>{{ activeRecord.runtime.ageHours }}h · {{ activeRecord.runtime.currentStage }}</strong>
               </div>
-              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+              <div
+                class="p-2 rounded-lg border transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
                 <span class="text-slate-400 block text-[10px] uppercase">Personalidade</span>
                 <strong>{{ activeSpecies.personality.archetype }}</strong>
               </div>
-              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+              <div
+                class="p-2 rounded-lg border transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
                 <span class="text-slate-400 block text-[10px] uppercase">Experiência (XP)</span>
                 <strong>
                   Nv. {{ activeRecord.progression.level }} ({{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }})
                 </strong>
               </div>
-              <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+              <div
+                class="p-2 rounded-lg border transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
                 <span class="text-slate-400 block text-[10px] uppercase">Versão do App</span>
                 <strong data-testid="sheet-version-info" class="font-mono text-emerald-400">
                   v{{ updaterState.installedInfo.version }} (b{{ updaterState.installedInfo.build }})
@@ -760,7 +966,13 @@ onUnmounted(() => {
           </div>
 
           <!-- Permanent / Evolutionary Attributes -->
-          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
             <h3 class="text-xs font-bold uppercase text-emerald-400">
               Atributos Permanentes e Evolutivos
             </h3>
@@ -768,7 +980,11 @@ onUnmounted(() => {
               <div
                 v-for="attr in attributeEntries"
                 :key="attr.label"
-                class="p-2 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between text-xs"
+                class="p-2 rounded-lg border flex items-center justify-between text-xs transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
               >
                 <span class="text-slate-400">{{ attr.label }}</span>
                 <strong class="text-emerald-300">{{ attr.value }}</strong>
@@ -777,7 +993,13 @@ onUnmounted(() => {
           </div>
 
           <!-- Care History Log -->
-          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
             <h3 class="text-xs font-bold uppercase text-emerald-400">
               Histórico Recente de Cuidados
             </h3>
@@ -785,7 +1007,11 @@ onUnmounted(() => {
               <li
                 v-for="entry in activeRecord.runtime.careHistory"
                 :key="entry.id"
-                class="p-1.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between gap-2"
+                class="p-1.5 rounded-lg border flex items-center justify-between gap-2 transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
               >
                 <span>{{ entry.summary }}</span>
                 <span class="text-[10px] text-emerald-400 uppercase">{{ entry.actionType }}</span>
@@ -803,12 +1029,19 @@ onUnmounted(() => {
           <!-- Atualizador Automático & Controle de Versão -->
           <div
             data-testid="updater-settings-card"
-            class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2.5"
+            class="p-3 rounded-xl border space-y-2.5 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
           >
             <div class="flex items-center justify-between">
-              <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-                <sparkles-icon class="w-3.5 h-3.5 text-emerald-400" />
-                Atualização Automática (OTA)
+              <h2
+                class="text-xs font-bold uppercase flex items-center gap-1.5"
+                :style="{ color: creatureTheme.primaryColor }"
+              >
+                <sparkles-icon class="w-3.5 h-3.5" />
+                <span>Atualização Automática (OTA)</span>
               </h2>
               <span
                 data-testid="updater-status-badge"
@@ -824,7 +1057,13 @@ onUnmounted(() => {
               </span>
             </div>
 
-            <div class="p-2 rounded-lg bg-slate-950 border border-slate-800 space-y-1 text-xs">
+            <div
+              class="p-2 rounded-lg border space-y-1 text-xs transition-colors duration-500"
+              :style="{
+                backgroundColor: creatureTheme.cardDarkBackground,
+                borderColor: creatureTheme.borderSubtleColor
+              }"
+            >
               <div class="flex items-center justify-between text-slate-300">
                 <span>Versão Instalada:</span>
                 <strong data-testid="installed-version-label" class="font-mono text-emerald-400">
@@ -907,7 +1146,11 @@ onUnmounted(() => {
             <div
               v-if="isChangelogOpen && updaterState.availableManifest"
               data-testid="changelog-box"
-              class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5 text-xs"
+              class="p-2.5 rounded-lg border space-y-1.5 text-xs transition-colors duration-500"
+              :style="{
+                backgroundColor: creatureTheme.cardDarkBackground,
+                borderColor: creatureTheme.borderSubtleColor
+              }"
             >
               <div class="font-bold text-emerald-400">
                 Novidades da v{{ updaterState.availableManifest.version }}:
@@ -931,7 +1174,13 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
             <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
               <clock-icon class="w-3.5 h-3.5 text-emerald-400" />
               Simulador de Passagem de Tempo Offline
@@ -967,7 +1216,13 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
             <h2 class="text-xs font-bold uppercase text-emerald-400">
               Desempenho Android & Partículas Babylon.js
             </h2>
@@ -1020,7 +1275,11 @@ onUnmounted(() => {
       <nav
         aria-label="Menu principal do jogo"
         data-testid="bottom-navigation-bar"
-        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-4 bg-slate-900/95 backdrop-blur border-t border-slate-800 shadow-lg"
+        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-4 backdrop-blur border-t shadow-lg transition-colors duration-500"
+        :style="{
+          backgroundColor: creatureTheme.headerBackground,
+          borderTopColor: creatureTheme.borderColor
+        }"
       >
         <button
           type="button"

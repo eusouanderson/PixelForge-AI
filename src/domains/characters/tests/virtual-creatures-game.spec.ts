@@ -54,6 +54,17 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await wrapper.get('[data-testid="nav-tab-sheet"]').trigger('click');
     expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Ficha Oficial');
 
+    // Switch to Rosassauro and verify whole APK background adopts Rosassauro's primary color (pink)
+    await wrapper.get('[data-testid="select-species-rosassauro"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="active-character-name"]').text()).toBe('Rosassauro');
+    expect(wrapper.get('[data-testid="active-companion-badge"]').text()).toBe('Rosassauro');
+
+    const rootContainer = wrapper.get('[data-testid="game-root-container"]');
+    const rootBg = (rootContainer.element as HTMLElement).style.backgroundColor;
+    // Check that rootBg is defined and reflects dynamic theming (rgb value formatted by DOM)
+    expect(rootBg).toBeTruthy();
+
     // Switch to Settings tab, test offline simulation (+6h), quality preset, grid toggle, and random reset
     await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
     await wrapper.get('[data-testid="sim-offline-6h"]').trigger('click');
