@@ -1,8 +1,10 @@
 package ai.pixelforge.virtualcreatures;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Build;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -45,6 +47,12 @@ import java.util.List;
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_ADVERTISE,
                 Manifest.permission.BLUETOOTH_CONNECT
+            }
+        ),
+        @Permission(
+            alias = "nearby_wifi",
+            strings = {
+                Manifest.permission.NEARBY_WIFI_DEVICES
             }
         ),
         @Permission(
@@ -179,12 +187,17 @@ public class NearbyConnectionsPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("granted", missingPermissions.isEmpty());
         ret.put("missingCount", missingPermissions.size());
+        if (!missingPermissions.isEmpty()) {
+            ret.put("missingDetails", String.join(", ", missingPermissions));
+        }
         call.resolve(ret);
     }
 
     @PluginMethod
     public void requestPermissions(PluginCall call) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionForAliases(new String[]{"nearby_bluetooth", "nearby_wifi", "nearby_location"}, call, "nearbyPermissionsCallback");
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requestPermissionForAliases(new String[]{"nearby_bluetooth", "nearby_location"}, call, "nearbyPermissionsCallback");
         } else {
             requestPermissionForAlias("nearby_location", call, "nearbyPermissionsCallback");
@@ -194,6 +207,31 @@ public class NearbyConnectionsPlugin extends Plugin {
     @PermissionCallback
     private void nearbyPermissionsCallback(PluginCall call) {
         checkPermissions(call);
+    }
+
+    private String getHardwareDiagnostics() {
+        StringBuilder sb = new StringBuilder();
+        try {
+            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (btAdapter == null) {
+                sb.append(" [Dispositivo sem suporte a Bluetooth]");
+            } else if (!btAdapter.isEnabled()) {
+                sb.append(" [Bluetooth está DESLIGADO no aparelho - ative para parear]");
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            LocationManager locManager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+            if (locManager != null) {
+                boolean isGpsEnabled = locManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                boolean isNetworkEnabled = locManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                if (!isGpsEnabled && !isNetworkEnabled) {
+                    sb.append(" [Localização/GPS está DESLIGADA no aparelho - ative para parear]");
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return sb.toString();
     }
 
     @PluginMethod
@@ -214,7 +252,8 @@ public class NearbyConnectionsPlugin extends Plugin {
                 })
                 .addOnFailureListener(e -> {
                     isAdvertising = false;
-                    call.reject("Falha ao iniciar anúncio Nearby: " + e.getMessage(), e);
+                    String diag = getHardwareDiagnostics();
+                    call.reject("Falha ao iniciar anúncio Nearby: " + e.getMessage() + diag, e);
                 });
     }
 
@@ -248,7 +287,8 @@ public class NearbyConnectionsPlugin extends Plugin {
                 })
                 .addOnFailureListener(e -> {
                     isDiscovering = false;
-                    call.reject("Falha ao iniciar descoberta Nearby: " + e.getMessage(), e);
+                    String diag = getHardwareDiagnostics();
+                    call.reject("Falha ao iniciar descoberta Nearby: " + e.getMessage() + diag, e);
                 });
     }
 

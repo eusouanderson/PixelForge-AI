@@ -213,7 +213,9 @@ describe('NearbyConnectionsP2PAdapter', () => {
 
       await adapter.connect('room-123');
       expect(errSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Permissões de Nearby / Bluetooth não concedidas.' })
+        expect.objectContaining({
+          message: expect.stringContaining('Permissões de Nearby / Bluetooth não concedidas')
+        })
       );
       expect(adapter.getConnectionStatus()).toBe('failed');
     });

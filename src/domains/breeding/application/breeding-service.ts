@@ -96,6 +96,10 @@ export class BreedingService {
   }
 
   public async openDiscovery(channelCode: string): Promise<void> {
+    if (this.state.phase === 'failed') {
+      this.setPhase('idle');
+      this.updateState(() => ({ errorMessage: null }));
+    }
     await this.transport.connect(channelCode);
     this.setPhase('discovering');
     this.transport.send({

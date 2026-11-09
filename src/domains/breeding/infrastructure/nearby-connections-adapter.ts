@@ -160,7 +160,11 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
 
     const hasPermissions = await this.checkAndRequestPermissions();
     if (!hasPermissions) {
-      this.emitError(new Error('Permissões de Nearby / Bluetooth não concedidas.'));
+      this.emitError(
+        new Error(
+          'Permissões de Nearby / Bluetooth não concedidas. Por favor, autorize o acesso a Dispositivos Próximos nas configurações do aparelho.'
+        )
+      );
       return;
     }
 
