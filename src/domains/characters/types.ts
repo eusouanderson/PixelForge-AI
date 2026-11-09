@@ -175,3 +175,18 @@ export interface CharacterSpriteRepositoryPort {
   ): readonly DeclarativePixelArt[];
 }
 
+export interface CreatureTheme {
+  readonly primaryColor: string;
+  readonly highlightColor: string;
+  readonly rootBackground: string;
+  readonly containerBackground: string;
+  readonly headerBackground: string;
+  readonly cardBackground: string;
+  readonly cardDarkBackground: string;
+  readonly borderColor: string;
+  readonly borderSubtleColor: string;
+  readonly ambientGradient: string;
+  readonly accentGlow: string;
+}
+
+

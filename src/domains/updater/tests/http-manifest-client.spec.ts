@@ -91,19 +91,36 @@ describe('HttpManifestClient Infrastructure', () => {
     }
   });
 
-  it('converts browser Failed to fetch into clear friendly message', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
-
+  it('converts browser Failed to fetch and network errors into clear friendly message', async () => {
     const client = new HttpManifestClient();
+
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    await expect(client.fetchManifest()).rejects.toThrow(
+      'Não foi possível conectar ao servidor de atualizações'
+    );
+
+    globalThis.fetch = vi.fn().mockRejectedValue(new TypeError('Load failed'));
+    await expect(client.fetchManifest()).rejects.toThrow(
+      'Não foi possível conectar ao servidor de atualizações'
+    );
+
+    const netErr = new Error('Network failure');
+    netErr.name = 'NetworkError';
+    globalThis.fetch = vi.fn().mockRejectedValue(netErr);
+    await expect(client.fetchManifest()).rejects.toThrow(
+      'Não foi possível conectar ao servidor de atualizações'
+    );
+
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Cross-Origin Request Blocked by CORS'));
     await expect(client.fetchManifest()).rejects.toThrow(
       'Não foi possível conectar ao servidor de atualizações'
     );
   });
 
-  it('rethrows unexpected network errors', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
+  it('rethrows unexpected non-network errors', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Custom parsing failure'));
 
     const client = new HttpManifestClient();
-    await expect(client.fetchManifest()).rejects.toThrow('Network failure');
+    await expect(client.fetchManifest()).rejects.toThrow('Custom parsing failure');
   });
 });

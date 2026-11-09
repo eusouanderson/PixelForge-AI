@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "build": 10000,
   "minimumVersion": "1.0.0",
-  "releaseDate": "2026-11-08",
+  "releaseDate": "2026-11-09",
   "changelog": [
     "PixelForge AI v1.0.0 (Build 10000)",
     "Sistema Inteligente de Atualização Automática (OTA Web + APK Nativo)",
@@ -13,8 +13,8 @@
     "available": true,
     "version": "1.0.0",
     "bundleUrl": "https://eusouanderson.github.io/PixelForge-AI/web-bundle.zip",
-    "checksum": "bf9f8009978842640ba41dcc95ed56da36606b6a28b89db2b1261eceeb0b4e55",
-    "sizeBytes": 1032851
+    "checksum": "10bf72d5f81e0f36fbdc87378ab11ee621c33897724d78d79dbf86898b4c8fb0",
+    "sizeBytes": 1034511
   },
   "androidUpdate": {
     "available": true,

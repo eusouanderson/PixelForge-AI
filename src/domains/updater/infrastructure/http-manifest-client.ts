@@ -37,7 +37,16 @@ export class HttpManifestClient {
           cause: err
         });
       }
-      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+      if (
+        (err instanceof TypeError && (
+          err.message === 'Failed to fetch' ||
+          err.message.includes('fetch') ||
+          err.message.includes('NetworkError') ||
+          err.message.includes('Load failed')
+        )) ||
+        (err instanceof Error && err.name === 'NetworkError') ||
+        (err instanceof Error && err.message.includes('Cross-Origin Request Blocked'))
+      ) {
         throw new Error(
           'Não foi possível conectar ao servidor de atualizações (sem conexão ou rede indisponível).',
           { cause: err }
