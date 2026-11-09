@@ -1,12 +1,27 @@
 <template>
   <div class="space-y-3 font-sans text-slate-100 select-none">
-    <div class="w-full bg-slate-900/90 border border-indigo-700/50 rounded-2xl shadow-lg flex flex-col overflow-hidden">
+    <div
+      class="w-full rounded-2xl shadow-lg flex flex-col overflow-hidden border transition-colors duration-500"
+      :style="{
+        backgroundColor: theme.containerBackground,
+        borderColor: theme.borderColor
+      }"
+    >
       <!-- Section Header -->
-      <div class="px-4 py-3 bg-slate-950/90 border-b border-indigo-800/40 flex items-center justify-between">
+      <div
+        class="px-4 py-3 border-b flex items-center justify-between transition-colors duration-500"
+        :style="{
+          backgroundColor: theme.headerBackground,
+          borderBottomColor: theme.borderColor
+        }"
+      >
         <div class="flex items-center gap-2.5">
           <span class="text-xl">🧬</span>
           <div>
-            <h2 class="text-sm sm:text-base font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-sky-300 to-pink-300">
+            <h2
+              class="text-sm sm:text-base font-black tracking-wide"
+              :style="{ color: theme.primaryColor }"
+            >
               PixelForge Genetics & Reprodução
             </h2>
             <p class="text-[10px] text-slate-400">Multiplayer P2P Offline • Hereditariedade • Consenso</p>
@@ -15,30 +30,54 @@
       </div>
 
       <!-- Navigation Tabs -->
-      <div class="flex border-b border-indigo-900/40 bg-slate-950/40 px-3 pt-2 gap-1 text-xs font-bold overflow-x-auto">
+      <div
+        class="flex border-b px-3 pt-2 gap-1 text-xs font-bold overflow-x-auto transition-colors duration-500"
+        :style="{
+          backgroundColor: theme.cardDarkBackground,
+          borderBottomColor: theme.borderSubtleColor
+        }"
+      >
         <button
           type="button"
+          data-testid="subtab-breeding"
           class="px-3 py-2 rounded-t-xl transition-all border-b-2"
-          :class="activeTab === 'breeding' ? 'border-indigo-400 text-indigo-300 bg-slate-900' : 'border-transparent text-slate-400 hover:text-slate-200'"
+          :style="
+            activeTab === 'breeding'
+              ? { borderBottomColor: theme.primaryColor, color: theme.primaryColor, backgroundColor: theme.cardBackground }
+              : { borderBottomColor: 'transparent', color: '#94a3b8' }
+          "
           @click="activeTab = 'breeding'"
         >
           💞 Reprodução P2P
         </button>
         <button
           type="button"
+          data-testid="subtab-nursery"
           class="px-3 py-2 rounded-t-xl transition-all border-b-2 relative"
-          :class="activeTab === 'nursery' ? 'border-amber-400 text-amber-300 bg-slate-900' : 'border-transparent text-slate-400 hover:text-slate-200'"
+          :style="
+            activeTab === 'nursery'
+              ? { borderBottomColor: '#f59e0b', color: '#fbbf24', backgroundColor: theme.cardBackground }
+              : { borderBottomColor: 'transparent', color: '#94a3b8' }
+          "
           @click="activeTab = 'nursery'"
         >
           🥚 Berçário de Ovos
-          <span v-if="incubatorEggs.length > 0" class="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-amber-500 text-slate-950 font-black">
+          <span
+            v-if="incubatorEggs.length > 0"
+            class="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-amber-500 text-slate-950 font-black"
+          >
             {{ incubatorEggs.length }}
           </span>
         </button>
         <button
           type="button"
+          data-testid="subtab-lineage"
           class="px-3 py-2 rounded-t-xl transition-all border-b-2"
-          :class="activeTab === 'lineage' ? 'border-sky-400 text-sky-300 bg-slate-900' : 'border-transparent text-slate-400 hover:text-slate-200'"
+          :style="
+            activeTab === 'lineage'
+              ? { borderBottomColor: '#38bdf8', color: '#7dd3fc', backgroundColor: theme.cardBackground }
+              : { borderBottomColor: 'transparent', color: '#94a3b8' }
+          "
           @click="activeTab = 'lineage'"
         >
           🌳 Árvore Genealógica
@@ -46,11 +85,20 @@
       </div>
 
       <!-- Tab Content Area -->
-      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
+      <div
+        class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 transition-colors duration-500"
+        :style="{ backgroundColor: theme.cardBackground }"
+      >
         <!-- TAB 1: BREEDING -->
         <div v-if="activeTab === 'breeding'" class="space-y-4">
           <!-- Connection Bar -->
-          <div class="p-3 bg-slate-950/60 border border-indigo-800/40 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div
+            class="p-3 border rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs transition-colors duration-500"
+            :style="{
+              backgroundColor: theme.cardDarkBackground,
+              borderColor: theme.borderSubtleColor
+            }"
+          >
             <div class="flex items-center gap-2">
               <span
                 class="w-2.5 h-2.5 rounded-full"
@@ -65,12 +113,19 @@
               <input
                 v-model="roomChannelCode"
                 type="text"
-                class="w-28 px-2 py-1 bg-slate-900 border border-indigo-700/50 rounded-lg text-indigo-300 font-mono text-center text-xs"
+                class="w-28 px-2 py-1 border rounded-lg font-mono text-center text-xs"
+                :style="{
+                  backgroundColor: theme.cardBackground,
+                  borderColor: theme.borderSubtleColor,
+                  color: theme.primaryColor
+                }"
                 placeholder="SALA-123"
               />
               <button
                 type="button"
-                class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold rounded-lg text-xs"
+                data-testid="p2p-connect-btn"
+                class="px-3 py-1 font-bold rounded-lg text-xs text-white shadow-sm transition active:scale-95 hover:brightness-110"
+                :style="{ backgroundColor: theme.primaryColor }"
                 @click="handleConnect"
               >
                 Conectar
@@ -98,10 +153,25 @@
             <!-- Selected Progenitors Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Local Dinosaur Selection -->
-              <div class="p-4 bg-slate-950/70 border-2 rounded-2xl flex flex-col gap-3" :class="localCreature ? 'border-sky-500/50' : 'border-slate-800'">
+              <div
+                class="p-4 border-2 rounded-2xl flex flex-col gap-3 transition-colors duration-500"
+                :style="{
+                  backgroundColor: theme.cardDarkBackground,
+                  borderColor: localCreature ? theme.primaryColor : theme.borderSubtleColor
+                }"
+              >
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-sky-400 uppercase tracking-wider">Seu Dinossauro</span>
-                  <span v-if="localCreature" class="text-xs font-mono px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-600/30">
+                  <span
+                    class="text-xs font-bold uppercase tracking-wider"
+                    :style="{ color: theme.primaryColor }"
+                  >
+                    Seu Dinossauro
+                  </span>
+                  <span
+                    v-if="localCreature"
+                    class="text-xs font-mono px-2 py-0.5 rounded border"
+                    :class="localCreature.genetics.sex === 'male' ? 'bg-sky-950/60 text-sky-300 border-sky-600/40' : 'bg-pink-950/60 text-pink-300 border-pink-600/40'"
+                  >
                     {{ localCreature.genetics.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }}
                   </span>
                 </div>
@@ -109,31 +179,66 @@
                 <!-- Selector dropdown -->
                 <select
                   v-model="selectedLocalSpeciesId"
-                  class="w-full bg-slate-900 border border-indigo-700/50 rounded-xl px-3 py-2 text-sm text-white font-bold"
+                  data-testid="local-dinosaur-select"
+                  class="w-full border rounded-xl px-3 py-2 text-sm text-white font-bold transition-colors"
+                  :style="{
+                    backgroundColor: theme.cardBackground,
+                    borderColor: theme.borderColor,
+                    color: theme.primaryColor
+                  }"
                   @change="handleSelectLocalCreature"
                 >
-                  <option v-for="creature in adultCreatures" :key="creature.speciesId" :value="creature.speciesId">
-                    {{ creature.name }} ({{ creature.genetics.sex === 'male' ? '♂' : '♀' }}) - Gen {{ creature.genetics.generation }}
+                  <option
+                    v-for="creature in availableCreatures"
+                    :key="creature.speciesId"
+                    :value="creature.speciesId"
+                  >
+                    {{ creature.name }} ({{ creature.genetics.sex === 'male' ? '♂' : '♀' }}) - {{ creature.stageLabel }} (Gen {{ creature.genetics.generation }})
                   </option>
                 </select>
 
-                <div v-if="localCreature" class="text-xs text-slate-300 space-y-1 bg-slate-900/60 p-2.5 rounded-xl">
+                <div
+                  v-if="localCreature"
+                  class="text-xs text-slate-300 space-y-1 p-2.5 rounded-xl border transition-colors"
+                  :style="{
+                    backgroundColor: theme.cardBackground,
+                    borderColor: theme.borderSubtleColor
+                  }"
+                >
                   <div>Espécie: <strong class="text-white capitalize">{{ localCreature.name }}</strong></div>
-                  <div>Geração: <span class="text-sky-300 font-bold">Gen {{ localCreature.genetics.generation }}</span></div>
+                  <div>Estágio: <span class="capitalize font-semibold text-amber-300">{{ localCreature.stageLabel }}</span></div>
+                  <div>Geração: <span class="font-bold" :style="{ color: theme.primaryColor }">Gen {{ localCreature.genetics.generation }}</span></div>
                   <div>Força: {{ localCreature.genetics.phenotype.attributes.strength }} | Defesa: {{ localCreature.genetics.phenotype.attributes.defense }}</div>
                 </div>
               </div>
 
               <!-- Remote Partner Dinosaur -->
-              <div class="p-4 bg-slate-950/70 border-2 rounded-2xl flex flex-col gap-3" :class="remoteParticipant ? 'border-pink-500/50' : 'border-slate-800'">
+              <div
+                class="p-4 border-2 rounded-2xl flex flex-col gap-3 transition-colors duration-500"
+                :style="{
+                  backgroundColor: theme.cardDarkBackground,
+                  borderColor: remoteParticipant ? '#f472b6' : theme.borderSubtleColor
+                }"
+              >
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-bold text-pink-400 uppercase tracking-wider">Parceiro P2P</span>
-                  <span v-if="remoteParticipant" class="text-xs font-mono px-2 py-0.5 rounded bg-pink-950 text-pink-300 border border-pink-600/30">
+                  <span
+                    v-if="remoteParticipant"
+                    class="text-xs font-mono px-2 py-0.5 rounded border"
+                    :class="remoteParticipant.genome.sex === 'male' ? 'bg-sky-950/60 text-sky-300 border-sky-600/40' : 'bg-pink-950/60 text-pink-300 border-pink-600/40'"
+                  >
                     {{ remoteParticipant.genome.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }}
                   </span>
                 </div>
 
-                <div v-if="remoteParticipant" class="text-xs text-slate-300 space-y-1 bg-slate-900/60 p-3 rounded-xl flex-1 flex flex-col justify-center">
+                <div
+                  v-if="remoteParticipant"
+                  class="text-xs text-slate-300 space-y-1 p-3 rounded-xl flex-1 flex flex-col justify-center border transition-colors"
+                  :style="{
+                    backgroundColor: theme.cardBackground,
+                    borderColor: theme.borderSubtleColor
+                  }"
+                >
                   <div class="font-bold text-white text-sm capitalize">{{ remoteParticipant.playerName }}</div>
                   <div>Espécie: <strong class="text-white capitalize">{{ remoteParticipant.characterId }}</strong></div>
                   <div>Geração: <span class="text-pink-300 font-bold">Gen {{ remoteParticipant.genome.generation }}</span></div>
@@ -142,19 +247,33 @@
                   </div>
                 </div>
 
-                <div v-else class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-800 rounded-xl flex-1 flex items-center justify-center">
+                <div
+                  v-else
+                  class="text-xs text-slate-400 italic p-6 text-center border border-dashed rounded-xl flex-1 flex items-center justify-center transition-colors"
+                  :style="{ borderColor: theme.borderSubtleColor }"
+                >
                   Aguardando seleção do parceiro conectado...
                 </div>
               </div>
             </div>
 
             <!-- Compatibility Analysis Card -->
-            <div v-if="compatibilityResult" class="p-4 rounded-2xl border text-xs space-y-2.5" :class="compatibilityResult.compatible ? 'bg-emerald-950/20 border-emerald-600/40' : 'bg-rose-950/20 border-rose-600/40'">
+            <div
+              v-if="compatibilityResult"
+              class="p-4 rounded-2xl border text-xs space-y-2.5 transition-colors duration-500"
+              :class="compatibilityResult.compatible ? 'bg-emerald-950/20 border-emerald-600/40' : 'bg-rose-950/20 border-rose-600/40'"
+            >
               <div class="flex items-center justify-between">
-                <span class="font-bold uppercase tracking-wider" :class="compatibilityResult.compatible ? 'text-emerald-300' : 'text-rose-300'">
+                <span
+                  class="font-bold uppercase tracking-wider"
+                  :class="compatibilityResult.compatible ? 'text-emerald-300' : 'text-rose-300'"
+                >
                   {{ compatibilityResult.compatible ? '✓ Cruzamento Geneticamente Compatível' : '✕ Cruzamento Bloqueado' }}
                 </span>
-                <span v-if="compatibilityResult.compatible" class="px-2 py-0.5 rounded-full font-mono text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span
+                  v-if="compatibilityResult.compatible"
+                  class="px-2 py-0.5 rounded-full font-mono text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                >
                   Sinergia: {{ Math.round(compatibilityResult.elementalSynergy * 100) }}%
                 </span>
               </div>
@@ -169,7 +288,16 @@
               <!-- Projection preview if compatible -->
               <div v-else class="text-slate-300 flex items-center gap-2">
                 <span>Possíveis filhotes:</span>
-                <span v-for="off in compatibilityResult.projectedOffspringSpeciesOptions" :key="off" class="px-2 py-0.5 rounded bg-indigo-950 border border-indigo-700 text-indigo-300 uppercase font-mono text-[10px]">
+                <span
+                  v-for="off in compatibilityResult.projectedOffspringSpeciesOptions"
+                  :key="off"
+                  class="px-2 py-0.5 rounded uppercase font-mono text-[10px] border"
+                  :style="{
+                    backgroundColor: theme.cardDarkBackground,
+                    borderColor: theme.borderSubtleColor,
+                    color: theme.primaryColor
+                  }"
+                >
                   {{ off }}
                 </span>
               </div>
@@ -179,8 +307,10 @@
             <div class="pt-2 flex justify-center">
               <button
                 type="button"
+                data-testid="confirm-breeding-btn"
                 class="w-full sm:w-auto px-8 py-3 rounded-2xl text-sm font-black tracking-wide uppercase shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                :class="canConfirmBreeding ? 'bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white cursor-pointer' : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'"
+                :class="canConfirmBreeding ? 'text-white cursor-pointer hover:brightness-110 shadow-md' : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'"
+                :style="canConfirmBreeding ? { backgroundColor: theme.primaryColor } : {}"
                 :disabled="!canConfirmBreeding"
                 @click="handleToggleReady"
               >
@@ -197,7 +327,14 @@
             <span class="text-xs text-slate-400 font-mono">{{ incubatorEggs.length }} ovo(s) no ninho</span>
           </div>
 
-          <div v-if="incubatorEggs.length === 0" class="p-8 text-center bg-slate-950/40 border border-dashed border-amber-900/40 rounded-2xl text-xs text-slate-400 space-y-2">
+          <div
+            v-if="incubatorEggs.length === 0"
+            class="p-8 text-center border border-dashed rounded-2xl text-xs text-slate-400 space-y-2 transition-colors"
+            :style="{
+              backgroundColor: theme.cardDarkBackground,
+              borderColor: theme.borderSubtleColor
+            }"
+          >
             <div class="text-3xl">🥚</div>
             <p class="font-bold text-amber-200">Nenhum ovo em incubação no momento.</p>
             <p>Realize um cruzamento no modo P2P para gerar novos descendentes com DNA exclusivo!</p>
@@ -207,7 +344,11 @@
             <div
               v-for="egg in incubatorEggs"
               :key="egg.id"
-              class="p-4 bg-slate-950/80 border border-amber-500/40 rounded-2xl space-y-3 shadow-md"
+              class="p-4 border rounded-2xl space-y-3 shadow-md transition-colors"
+              :style="{
+                backgroundColor: theme.cardDarkBackground,
+                borderColor: '#f59e0b'
+              }"
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -217,7 +358,10 @@
                     <div class="text-[10px] text-amber-300 font-mono">Geração: Gen {{ egg.genome.generation }}</div>
                   </div>
                 </div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold" :class="egg.genome.sex === 'male' ? 'bg-sky-500/20 text-sky-300' : 'bg-pink-500/20 text-pink-300'">
+                <span
+                  class="px-2 py-0.5 rounded text-[10px] font-bold border"
+                  :class="egg.genome.sex === 'male' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-pink-500/20 text-pink-300 border-pink-500/30'"
+                >
                   {{ egg.genome.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }}
                 </span>
               </div>
@@ -256,7 +400,14 @@
             <span class="text-xs text-slate-400 font-mono">{{ genealogyArchive.length }} cruza(s) registrada(s)</span>
           </div>
 
-          <div v-if="genealogyArchive.length === 0" class="p-8 text-center bg-slate-950/40 border border-dashed border-sky-900/40 rounded-2xl text-xs text-slate-400 space-y-2">
+          <div
+            v-if="genealogyArchive.length === 0"
+            class="p-8 text-center border border-dashed rounded-2xl text-xs text-slate-400 space-y-2 transition-colors"
+            :style="{
+              backgroundColor: theme.cardDarkBackground,
+              borderColor: theme.borderSubtleColor
+            }"
+          >
             <div class="text-3xl">📜</div>
             <p class="font-bold text-sky-200">Nenhum registro genealógico arquivado.</p>
             <p>Quando você e seu parceiro realizarem uma reprodução, o histórico genealógico será arquivado permanentemente aqui.</p>
@@ -266,14 +417,18 @@
             <div
               v-for="(rec, idx) in genealogyArchive"
               :key="idx"
-              class="p-3 bg-slate-950/70 border border-indigo-800/40 rounded-xl text-xs flex items-center justify-between"
+              class="p-3 border rounded-xl text-xs flex items-center justify-between transition-colors"
+              :style="{
+                backgroundColor: theme.cardDarkBackground,
+                borderColor: theme.borderSubtleColor
+              }"
             >
               <div>
                 <div class="font-bold text-white capitalize">
                   {{ rec.sireSpecies }} (♂) × {{ rec.damSpecies }} (♀)
                 </div>
                 <div class="text-[10px] text-slate-400 font-mono">
-                  Descendente: <span class="text-indigo-300 font-bold capitalize">{{ rec.offspringSpecies }}</span> • {{ rec.mutationCount }} mutação(ões)
+                  Descendente: <span class="font-bold capitalize" :style="{ color: theme.primaryColor }">{{ rec.offspringSpecies }}</span> • {{ rec.mutationCount }} mutação(ões)
                 </div>
               </div>
               <span
@@ -291,8 +446,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import type { CharacterId } from '@/domains/characters/types';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import type { CharacterId, CharacterLifeStage, CreatureTheme } from '@/domains/characters/types';
+import { CHARACTER_SPECIES_REGISTRY } from '@/domains/characters/domain/character-registry';
+import { generateCreatureTheme } from '@/domains/characters/domain/creature-theme-engine';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
 import type { BreedingSessionState } from '@/domains/breeding/types';
 import { BreedingService } from '@/domains/breeding/application/breeding-service';
@@ -300,13 +457,33 @@ import { BroadcastChannelP2PAdapter } from '@/domains/breeding/infrastructure/p2
 import { hatchBredEggUseCase } from '@/domains/persistence/application/game-session-service';
 import BreedingAnimationCanvas from './BreedingAnimationCanvas.vue';
 
-const props = defineProps<{
-  saveSnapshot: GameSaveSnapshot;
-}>();
+const props = withDefaults(
+  defineProps<{
+    saveSnapshot: GameSaveSnapshot;
+    creatureTheme?: CreatureTheme;
+  }>(),
+  {
+    creatureTheme: undefined
+  }
+);
 
 const emit = defineEmits<{
   (e: 'update-save', snapshot: GameSaveSnapshot): void;
 }>();
+
+const fallbackTheme = computed<CreatureTheme>(() => {
+  const activeId = props.saveSnapshot.activeCharacterId;
+  const species = CHARACTER_SPECIES_REGISTRY[activeId];
+  if (species) {
+    return generateCreatureTheme(
+      species.visualTraits.primaryColors.base,
+      species.visualTraits.primaryColors.highlight
+    );
+  }
+  return generateCreatureTheme('#0284c7');
+});
+
+const theme = computed<CreatureTheme>(() => props.creatureTheme ?? fallbackTheme.value);
 
 const activeTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
 const roomChannelCode = ref('SALA-777');
@@ -327,32 +504,102 @@ const remoteParticipant = computed(() => sessionState.value.remoteParticipant);
 const incubatorEggs = computed(() => props.saveSnapshot.incubator ?? []);
 const genealogyArchive = computed(() => props.saveSnapshot.genealogyArchive ?? []);
 
-const adultCreatures = computed(() => {
-  const result: Array<{ speciesId: CharacterId; name: string; genetics: import('@/domains/genetics/types').CreatureGenome }> = [];
+const availableCreatures = computed(() => {
+  const result: Array<{
+    speciesId: CharacterId;
+    name: string;
+    stage: CharacterLifeStage;
+    stageLabel: string;
+    genetics: import('@/domains/genetics/types').CreatureGenome;
+  }> = [];
+
+  const stageLabels: Record<CharacterLifeStage, string> = {
+    ovo: 'Ovo',
+    baby: 'Bebê',
+    crianca: 'Criança',
+    'pre-adolescente': 'Pré-Adolescente',
+    adolescente: 'Adolescente',
+    adulto: 'Adulto'
+  };
+
   for (const [id, record] of Object.entries(props.saveSnapshot.characters)) {
-    if (record.runtime.currentStage === 'adulto' && record.runtime.healthCondition !== 'deceased') {
+    if (record.runtime.healthCondition !== 'deceased' && record.genetics) {
+      const species = CHARACTER_SPECIES_REGISTRY[id as CharacterId];
+      const displayName = record.runtime.customNickname || species?.displayName || id;
       result.push({
         speciesId: id as CharacterId,
-        name: record.runtime.customNickname || id,
+        name: displayName,
+        stage: record.runtime.currentStage,
+        stageLabel: stageLabels[record.runtime.currentStage] ?? record.runtime.currentStage,
         genetics: record.genetics
       });
     }
   }
+
+  // Ensure active character is first
+  const activeId = props.saveSnapshot.activeCharacterId;
+  result.sort((a, b) => {
+    if (a.speciesId === activeId) return -1;
+    if (b.speciesId === activeId) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return result;
 });
 
-const selectedLocalSpeciesId = ref<CharacterId | null>(adultCreatures.value[0]?.speciesId ?? null);
+const selectedLocalSpeciesId = ref<CharacterId | null>(
+  props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null
+);
 
 const localCreature = computed(() => {
   if (!selectedLocalSpeciesId.value) return null;
   const rec = props.saveSnapshot.characters[selectedLocalSpeciesId.value];
-  if (!rec) return null;
+  if (!rec || !rec.genetics) return null;
+  const species = CHARACTER_SPECIES_REGISTRY[selectedLocalSpeciesId.value];
+  const stageLabels: Record<CharacterLifeStage, string> = {
+    ovo: 'Ovo',
+    baby: 'Bebê',
+    crianca: 'Criança',
+    'pre-adolescente': 'Pré-Adolescente',
+    adolescente: 'Adolescente',
+    adulto: 'Adulto'
+  };
   return {
     speciesId: selectedLocalSpeciesId.value,
-    name: rec.runtime.customNickname || selectedLocalSpeciesId.value,
+    name: rec.runtime.customNickname || species?.displayName || selectedLocalSpeciesId.value,
+    stage: rec.runtime.currentStage,
+    stageLabel: stageLabels[rec.runtime.currentStage] ?? rec.runtime.currentStage,
     genetics: rec.genetics
   };
 });
+
+function handleSelectLocalCreature(): void {
+  if (localCreature.value) {
+    breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+  }
+}
+
+watch(
+  () => props.saveSnapshot.activeCharacterId,
+  (newId) => {
+    if (newId) {
+      selectedLocalSpeciesId.value = newId;
+      handleSelectLocalCreature();
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  availableCreatures,
+  (list) => {
+    if (!selectedLocalSpeciesId.value && list.length > 0) {
+      selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? list[0]?.speciesId ?? null;
+      handleSelectLocalCreature();
+    }
+  },
+  { immediate: true }
+);
 
 const selectedSire = computed(() => {
   const local = sessionState.value.localParticipant;
@@ -390,13 +637,10 @@ const connectionStatusLabel = computed(() => {
 });
 
 async function handleConnect(): Promise<void> {
-  await breedingService.openDiscovery(roomChannelCode.value);
-  if (localCreature.value) {
-    breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+  if (!selectedLocalSpeciesId.value) {
+    selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
   }
-}
-
-function handleSelectLocalCreature(): void {
+  await breedingService.openDiscovery(roomChannelCode.value);
   if (localCreature.value) {
     breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
   }
@@ -419,6 +663,9 @@ function handleHatchEgg(eggId: string): void {
 }
 
 onMounted(() => {
+  if (!selectedLocalSpeciesId.value) {
+    selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
+  }
   if (localCreature.value) {
     breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
   }

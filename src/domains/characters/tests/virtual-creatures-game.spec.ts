@@ -64,6 +64,10 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     expect(wrapper.get('[data-testid="tab-content-genetics"]').text()).toContain(
       'PixelForge Genetics & Reprodução'
     );
+    // Verify local dinosaur select dropdown exists, lists dinosaurs, and selects active creature
+    const dinoSelect = wrapper.get('[data-testid="local-dinosaur-select"]');
+    expect(dinoSelect.findAll('option').length).toBeGreaterThan(0);
+    expect((dinoSelect.element as HTMLSelectElement).value).toBeTruthy();
 
     // Clicking header genetics button also activates genetics tab
     await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');

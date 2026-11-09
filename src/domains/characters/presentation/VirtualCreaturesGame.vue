@@ -1065,6 +1065,7 @@ onUnmounted(() => {
         >
           <breeding-modal
             :save-snapshot="saveState"
+            :creature-theme="creatureTheme"
             @update-save="handleUpdateSave"
           />
         </div>
@@ -1381,8 +1382,17 @@ onUnmounted(() => {
           class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
           :class="
             activeMobileTab === 'genetics'
-              ? 'text-indigo-400 bg-indigo-500/10 border-t-2 border-indigo-500'
+              ? 'border-t-2'
               : 'text-slate-400 hover:text-slate-200'
+          "
+          :style="
+            activeMobileTab === 'genetics'
+              ? {
+                borderTopColor: creatureTheme.primaryColor,
+                color: creatureTheme.primaryColor,
+                backgroundColor: creatureTheme.cardBackground
+              }
+              : {}
           "
           @click="activeMobileTab = 'genetics'"
         >
