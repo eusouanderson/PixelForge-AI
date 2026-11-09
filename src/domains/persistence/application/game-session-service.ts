@@ -174,6 +174,7 @@ export function feedActiveCharacterUseCase(
       characters: {
         ...snapshot.characters,
         [activeId]: {
+          ...charRecord,
           runtime: nextRuntime,
           needs: nextNeeds,
           attributes: nextAttributes,
@@ -324,6 +325,7 @@ export function performCharacterActivityUseCase(
       characters: {
         ...snapshot.characters,
         [activeId]: {
+          ...charRecord,
           runtime: nextRuntime,
           needs: nextNeeds,
           attributes: nextAttributes,

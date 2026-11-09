@@ -66,7 +66,6 @@ const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
 const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings' | 'genetics'>('feed');
-const showBreedingModal = ref<boolean>(false);
 const showGenealogyModal = ref<boolean>(false);
 const feedbackBanner = ref<string>(
   'O ovo ancestral está rachando no Santuário Elemental! Aguarde o nascimento ou toque em Eclodir.'
@@ -454,16 +453,6 @@ onUnmounted(() => {
                 >
                   {{ displayedStage }}
                 </span>
-                <span
-                  v-if="activeRecord.genetics"
-                  data-testid="active-sex-badge"
-                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full border flex items-center gap-1 cursor-pointer transition-transform active:scale-95"
-                  :class="activeRecord.genetics.sex === 'male' ? 'text-sky-300 border-sky-500/40 bg-sky-950/40' : 'text-pink-300 border-pink-500/40 bg-pink-950/40'"
-                  :title="formatBiologicalSexLabel(activeRecord.genetics.sex)"
-                  @click="showGenealogyModal = true"
-                >
-                  {{ formatBiologicalSexSymbol(activeRecord.genetics.sex) }} {{ activeRecord.genetics.sex === 'male' ? 'Macho' : 'Fêmea' }}
-                </span>
               </div>
               <p class="text-[11px] text-slate-400">
                 {{ activeSpecies.scientificName }} · {{ activeSpecies.elementLabel }}
@@ -482,7 +471,7 @@ onUnmounted(() => {
                 color: creatureTheme.primaryColor
               }"
               title="Abrir PixelForge Genetics & Reprodução"
-              @click="showBreedingModal = true"
+              @click="activeMobileTab = 'genetics'"
             >
               <span>🧬</span>
               <span class="hidden sm:inline">Genética</span>
@@ -532,13 +521,25 @@ onUnmounted(() => {
 
         <!-- Environment & Status Overlay Pill -->
         <div
-          class="absolute top-2.5 left-2.5 z-20 px-2.5 py-1 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-700 text-[11px] text-slate-200 shadow-sm"
+          class="absolute top-2.5 left-2.5 z-20 px-2.5 py-1 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-700 text-[11px] text-slate-200 shadow-sm flex items-center gap-1.5"
         >
           <span class="font-bold text-emerald-400">{{ activeEnvironment.name }}</span>
-          <span class="mx-1 text-slate-500">|</span>
+          <span class="text-slate-500">|</span>
           <span data-testid="active-emotional-state" class="uppercase text-amber-300 font-semibold">
             Estado: {{ activeRecord.runtime.emotionalState }}
           </span>
+          <template v-if="activeRecord.genetics">
+            <span class="text-slate-500">|</span>
+            <span
+              data-testid="active-sex-badge"
+              class="font-black text-sm cursor-pointer transition-transform active:scale-95 flex items-center"
+              :class="activeRecord.genetics.sex === 'male' ? 'text-sky-400' : 'text-pink-400'"
+              :title="formatBiologicalSexLabel(activeRecord.genetics.sex)"
+              @click="showGenealogyModal = true"
+            >
+              {{ formatBiologicalSexSymbol(activeRecord.genetics.sex) }}
+            </span>
+          </template>
         </div>
 
         <!-- 90s Virtual Pet Organic Evolution & Age Bar (Read-Only Status) -->
@@ -1056,7 +1057,19 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- TAB 4: CONFIGURAÇÕES E SIMULAÇÃO OFFLINE -->
+        <!-- TAB 4: GENÉTICA E REPRODUÇÃO MULTIPLAYER P2P -->
+        <div
+          v-else-if="activeMobileTab === 'genetics'"
+          data-testid="tab-content-genetics"
+          class="space-y-3"
+        >
+          <breeding-modal
+            :save-snapshot="saveState"
+            @update-save="handleUpdateSave"
+          />
+        </div>
+
+        <!-- TAB 5: CONFIGURAÇÕES E SIMULAÇÃO OFFLINE -->
         <div
           v-else-if="activeMobileTab === 'settings'"
           data-testid="tab-content-settings"
@@ -1367,11 +1380,11 @@ onUnmounted(() => {
           data-testid="nav-tab-genetics"
           class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
           :class="
-            showBreedingModal
+            activeMobileTab === 'genetics'
               ? 'text-indigo-400 bg-indigo-500/10 border-t-2 border-indigo-500'
               : 'text-slate-400 hover:text-slate-200'
           "
-          @click="showBreedingModal = true"
+          @click="activeMobileTab = 'genetics'"
         >
           <span class="text-sm leading-none">🧬</span>
           <span>Genética</span>
@@ -1392,14 +1405,6 @@ onUnmounted(() => {
           <span>Ajustes</span>
         </button>
       </nav>
-
-      <!-- PixelForge Genetics & Reprodução Modal -->
-      <breeding-modal
-        v-if="showBreedingModal"
-        :save-snapshot="saveState"
-        @update-save="handleUpdateSave"
-        @close="showBreedingModal = false"
-      />
 
       <!-- Interactive Genealogy Tree Modal -->
       <genealogy-tree-modal

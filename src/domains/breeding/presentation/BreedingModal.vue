@@ -1,24 +1,17 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md select-none font-sans text-slate-100 overflow-y-auto">
-    <div class="relative w-full max-w-2xl max-h-[95vh] bg-slate-900 border-2 border-indigo-700/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
-      <!-- Modal Navigation Bar -->
-      <div class="px-5 py-3.5 bg-slate-950/90 border-b border-indigo-800/40 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="text-2xl">🧬</span>
+  <div class="space-y-3 font-sans text-slate-100 select-none">
+    <div class="w-full bg-slate-900/90 border border-indigo-700/50 rounded-2xl shadow-lg flex flex-col overflow-hidden">
+      <!-- Section Header -->
+      <div class="px-4 py-3 bg-slate-950/90 border-b border-indigo-800/40 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">🧬</span>
           <div>
-            <h1 class="text-base sm:text-lg font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-sky-300 to-pink-300">
+            <h2 class="text-sm sm:text-base font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-sky-300 to-pink-300">
               PixelForge Genetics & Reprodução
-            </h1>
-            <p class="text-[11px] text-slate-400">Multiplayer P2P Offline • Hereditariedade • Consenso</p>
+            </h2>
+            <p class="text-[10px] text-slate-400">Multiplayer P2P Offline • Hereditariedade • Consenso</p>
           </div>
         </div>
-        <button
-          type="button"
-          class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 flex items-center justify-center font-bold text-sm transition-all"
-          @click="handleClose"
-        >
-          ✕
-        </button>
       </div>
 
       <!-- Navigation Tabs -->
@@ -312,7 +305,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'close'): void;
   (e: 'update-save', snapshot: GameSaveSnapshot): void;
 }>();
 
@@ -424,11 +416,6 @@ function handleHatchEgg(eggId: string): void {
 
   const nextSnapshot = hatchBredEggUseCase(props.saveSnapshot, eggId, Date.now());
   emit('update-save', nextSnapshot);
-}
-
-function handleClose(): void {
-  breedingService.cancel('Janela fechada pelo usuário.');
-  emit('close');
 }
 
 onMounted(() => {
