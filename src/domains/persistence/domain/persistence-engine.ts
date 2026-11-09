@@ -22,13 +22,15 @@ import {
 import { createStarterInventory } from '@/domains/inventory/domain/inventory-engine';
 import { createInitialWallet } from '@/domains/economy/domain/economy-engine';
 import { createDefaultSettings } from '@/domains/settings/domain/settings-engine';
+import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
+import { deterministicSexFromSeed } from '@/domains/genetics/domain/sex-determination-engine';
 import type {
   CharacterSaveRecord,
   ClockPort,
   GameSaveSnapshot
 } from '../types';
 
-export const CURRENT_SAVE_SCHEMA_VERSION = 1;
+export const CURRENT_SAVE_SCHEMA_VERSION = 2;
 
 export class SystemClock implements ClockPort {
   public nowMs(): number {
@@ -41,11 +43,15 @@ export function createDefaultCharacterSaveRecord(
   nowMs: number
 ): CharacterSaveRecord {
   const species = CHARACTER_SPECIES_REGISTRY[characterId];
+  const sex = deterministicSexFromSeed(`${characterId}:v2`);
+  const genetics = createGenesisGenome(characterId, sex, nowMs);
+
   return {
     runtime: createInitialCharacterRuntime(characterId, nowMs, 'ovo'),
     needs: createInitialNeeds(),
     attributes: { ...species.baseAttributes },
-    progression: createInitialProgression('ovo')
+    progression: createInitialProgression('ovo'),
+    genetics
   };
 }
 
@@ -67,7 +73,9 @@ export function createNewGameSaveSnapshot(
     characters,
     inventory: createStarterInventory(),
     wallet: createInitialWallet(),
-    settings: createDefaultSettings()
+    settings: createDefaultSettings(),
+    incubator: [],
+    genealogyArchive: []
   };
 }
 
@@ -188,7 +196,15 @@ export function validateAndMigrateSaveSnapshot(
         species.id
       ];
       if (existing && existing.runtime && existing.needs && existing.attributes && existing.progression) {
-        mergedCharacters[species.id] = existing;
+        const genetics = existing.genetics ?? createGenesisGenome(
+          species.id,
+          deterministicSexFromSeed(`${species.id}:${existing.runtime.createdAtMs || 1000}`),
+          existing.runtime.createdAtMs || nowMs
+        );
+        mergedCharacters[species.id] = {
+          ...existing,
+          genetics
+        };
       }
     }
   }
@@ -200,7 +216,9 @@ export function validateAndMigrateSaveSnapshot(
     characters: mergedCharacters,
     inventory: candidate.inventory ?? fresh.inventory,
     wallet: candidate.wallet ?? fresh.wallet,
-    settings: candidate.settings ?? fresh.settings
+    settings: candidate.settings ?? fresh.settings,
+    incubator: Array.isArray(candidate.incubator) ? candidate.incubator : [],
+    genealogyArchive: Array.isArray(candidate.genealogyArchive) ? candidate.genealogyArchive : []
   };
 }
 

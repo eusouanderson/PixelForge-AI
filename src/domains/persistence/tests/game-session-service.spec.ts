@@ -7,7 +7,10 @@ import {
   purchaseFoodItemUseCase,
   reviveDeceasedCharacterUseCase,
   hatchCharacterEggUseCase,
-  updateSettingsUseCase
+  updateSettingsUseCase,
+  recordBreedingResultUseCase,
+  advanceIncubationUseCase,
+  hatchBredEggUseCase
 } from '../application/game-session-service';
 
 describe('GameSessionService application use cases', () => {
@@ -320,5 +323,68 @@ describe('GameSessionService application use cases', () => {
     expect(reincarnated.characters.ignisauro.runtime.currentStage).toBe('ovo');
     expect(reincarnated.characters.ignisauro.runtime.ageHours).toBe(0);
     expect(reincarnated.characters.ignisauro.runtime.currentAnimation).toBe('eclosao');
+  });
+
+  it('records breeding result, advances incubation and hatches bred egg', () => {
+    const snap = createNewGameSaveSnapshot(1000, 'ignisauro');
+    const dummyGenome = snap.characters.ignisauro.genetics;
+
+    const historyRecord = {
+      sessionId: 'sess-123',
+      timestampMs: 1500,
+      sireGenomeId: 'sire-id',
+      damGenomeId: 'dam-id',
+      sireSpecies: 'ignisauro' as const,
+      damSpecies: 'terrassauro' as const,
+      offspringGenomeId: 'child-genome-id',
+      offspringSpecies: 'ignisauro' as const,
+      winnerPeerId: 'my-peer',
+      isLocalWinner: true,
+      mutationCount: 0
+    };
+
+    const egg = {
+      id: 'egg-test-1',
+      genome: dummyGenome,
+      targetSpecies: 'ignisauro' as const,
+      incubationProgress: 0,
+      maxIncubationHours: 2,
+      isWarm: true,
+      createdAtMs: 1500,
+      isReadyToHatch: false
+    };
+
+    // 1. Record breeding result with egg won
+    const withEgg = recordBreedingResultUseCase(snap, historyRecord, egg, 1600);
+    expect(withEgg.incubator).toHaveLength(1);
+    expect(withEgg.genealogyArchive).toHaveLength(1);
+
+    // Record breeding result when remote won (no egg for local)
+    const withoutEgg = recordBreedingResultUseCase(withEgg, { ...historyRecord, isLocalWinner: false }, null, 1700);
+    expect(withoutEgg.incubator).toHaveLength(1);
+    expect(withoutEgg.genealogyArchive).toHaveLength(2);
+
+    // 2. Advance incubation
+    const advanced1 = advanceIncubationUseCase(withEgg, 'egg-test-1', 60, 1800); // 1 hour
+    expect(advanced1.incubator[0].incubationProgress).toBe(1);
+    expect(advanced1.incubator[0].isReadyToHatch).toBe(false);
+
+    // Other egg id ignored
+    const unchanged = advanceIncubationUseCase(withEgg, 'other-id', 60, 1800);
+    expect(unchanged.incubator[0].incubationProgress).toBe(0);
+
+    const readyEggSnap = advanceIncubationUseCase(advanced1, 'egg-test-1', 60, 1900); // 2 hours
+    expect(readyEggSnap.incubator[0].incubationProgress).toBe(2);
+    expect(readyEggSnap.incubator[0].isReadyToHatch).toBe(true);
+
+    // 3. Hatch bred egg
+    const hatchedSnap = hatchBredEggUseCase(readyEggSnap, 'egg-test-1', 2000);
+    expect(hatchedSnap.incubator).toHaveLength(0);
+    expect(hatchedSnap.characters.ignisauro.runtime.currentStage).toBe('baby');
+    expect(hatchedSnap.characters.ignisauro.genetics).toBe(dummyGenome);
+
+    // Hatch non-existent egg returns snapshot untouched
+    const fallbackSnap = hatchBredEggUseCase(hatchedSnap, 'non-existent-egg', 2100);
+    expect(fallbackSnap).toBe(hatchedSnap);
   });
 });

@@ -115,6 +115,29 @@ describe('persistence domain engine, offline simulation, and save repository', (
     expect(migrated.activeCharacterId).toBe('glacissauro');
     expect(Object.keys(migrated.characters).length).toBe(11);
 
+    // Legacy v0/v1 snapshot missing genetics gets assigned permanent genetics & sex
+    const legacyWithoutGenetics = {
+      schemaVersion: 1,
+      activeCharacterId: 'glacissauro',
+      lastSavedAtMs: 1500,
+      characters: {
+        glacissauro: {
+          runtime: {
+            ...valid.characters.glacissauro.runtime,
+            createdAtMs: 0
+          },
+          needs: valid.characters.glacissauro.needs,
+          attributes: valid.characters.glacissauro.attributes,
+          progression: valid.characters.glacissauro.progression
+          // no genetics property
+        }
+      }
+    };
+    const migratedGenetics = validateAndMigrateSaveSnapshot(legacyWithoutGenetics, 2000);
+    expect(migratedGenetics.characters.glacissauro.genetics).toBeDefined();
+    expect(['male', 'female']).toContain(migratedGenetics.characters.glacissauro.genetics.sex);
+    expect(migratedGenetics.characters.glacissauro.genetics.generation).toBe(1);
+
     // Completely invalid input falls back to a fresh save snapshot with a valid random character
     const fallback = validateAndMigrateSaveSnapshot('corrupted-json', 5000);
     expect(Object.keys(fallback.characters)).toContain(fallback.activeCharacterId);
