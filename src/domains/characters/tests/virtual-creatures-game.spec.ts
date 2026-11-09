@@ -24,6 +24,12 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     expect(wrapper.find('[data-testid="anim-btn-comendo"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="evolution-status-bar"]').exists()).toBe(true);
 
+    // Verify navigation bar is always sticky at the bottom
+    const navBar = wrapper.get('[data-testid="bottom-navigation-bar"]');
+    expect(navBar.classes()).toContain('sticky');
+    expect(navBar.classes()).toContain('bottom-0');
+    expect(navBar.classes()).toContain('z-50');
+
     // Feed universal spring water
     await wrapper.get('[data-testid="feed-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();

@@ -336,7 +336,7 @@ onUnmounted(() => {
   <div class="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col items-center select-none">
     <!-- Mobile Portrait Container Styled with PixelForge AI Emerald & Slate Theme -->
     <div
-      class="w-full max-w-md min-h-screen bg-slate-900/90 border-x border-slate-800 flex flex-col justify-between shadow-2xl"
+      class="w-full max-w-md min-h-screen bg-slate-900/90 border-x border-slate-800 flex flex-col justify-between shadow-2xl relative"
     >
       <!-- Top HUD Header -->
       <header class="px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800 space-y-2">
@@ -373,28 +373,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex items-center gap-1.5">
-            <!-- App Version Badge Pill (Prominently visible in Header HUD) -->
-            <button
-              type="button"
-              data-testid="app-version-badge"
-              class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-800/90 border border-slate-700 hover:border-slate-500 text-[10px] font-mono font-semibold text-slate-300 transition"
-              :title="`PixelForge AI v${updaterState.installedInfo.version} (build ${updaterState.installedInfo.build})`"
-              @click="activeMobileTab = 'settings'"
-            >
-              <span
-                class="w-1.5 h-1.5 rounded-full"
-                :class="{
-                  'bg-emerald-400': updaterState.status === 'up_to_date',
-                  'bg-amber-400 animate-pulse': updaterState.status === 'checking' || updaterState.status === 'downloading_web' || updaterState.status === 'downloading_apk',
-                  'bg-emerald-300 animate-ping': updaterState.status === 'ready_to_reload' || updaterState.status === 'ready_to_install_apk',
-                  'bg-rose-400': updaterState.status === 'error',
-                  'bg-slate-500': updaterState.status === 'idle'
-                }"
-              />
-              <span>v{{ updaterState.installedInfo.version }}</span>
-            </button>
-
+          <div class="flex items-center gap-2">
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/90 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-sm"
@@ -579,7 +558,7 @@ onUnmounted(() => {
       </section>
 
       <!-- Main Tab Content Area -->
-      <main class="flex-1 overflow-y-auto p-3 bg-slate-950/60 space-y-3">
+      <main class="flex-1 overflow-y-auto p-3 pb-6 bg-slate-950/60 space-y-3">
         <!-- TAB 1: ALIMENTAÇÃO E CUIDADOS -->
         <div v-if="activeMobileTab === 'feed'" data-testid="tab-content-feed" class="space-y-2.5">
           <div class="flex items-center justify-between">
@@ -1037,10 +1016,11 @@ onUnmounted(() => {
         </div>
       </main>
 
-      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs) -->
+      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs - Always visible sticky navigation) -->
       <nav
         aria-label="Menu principal do jogo"
-        class="grid grid-cols-4 bg-slate-900/95 backdrop-blur border-t border-slate-800"
+        data-testid="bottom-navigation-bar"
+        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-4 bg-slate-900/95 backdrop-blur border-t border-slate-800 shadow-lg"
       >
         <button
           type="button"
