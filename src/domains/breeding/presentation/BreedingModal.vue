@@ -102,10 +102,19 @@
             <div class="flex items-center gap-2">
               <span
                 class="w-2.5 h-2.5 rounded-full"
-                :class="isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'"
+                :class="
+                  isConnected
+                    ? 'bg-emerald-400 animate-pulse'
+                    : (sessionState.phase === 'failed' || nearbyStatus === 'failed')
+                      ? 'bg-rose-500'
+                      : 'bg-amber-400'
+                "
               ></span>
               <span class="text-slate-300 font-mono">
-                Status: <strong class="text-white">{{ connectionStatusLabel }}</strong>
+                Status:
+                <strong :class="(sessionState.phase === 'failed' || nearbyStatus === 'failed') ? 'text-rose-400' : 'text-white'">
+                  {{ connectionStatusLabel }}
+                </strong>
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -128,8 +137,32 @@
                 :style="{ backgroundColor: theme.primaryColor }"
                 @click="handleConnect"
               >
-                Conectar
+                {{ (sessionState.phase === 'failed' || nearbyStatus === 'failed') ? 'Tentar Novamente' : 'Conectar' }}
               </button>
+            </div>
+          </div>
+
+          <!-- Helpful error banner when connection failed -->
+          <div
+            v-if="sessionState.phase === 'failed' || nearbyStatus === 'failed'"
+            data-testid="connection-error-banner"
+            class="p-3 rounded-2xl border border-rose-500/40 bg-rose-950/30 text-rose-200 text-xs flex items-start gap-2.5 shadow-inner"
+          >
+            <span class="text-base leading-none">⚠️</span>
+            <div class="space-y-1.5 flex-1">
+              <div class="font-bold text-rose-300">Falha ao iniciar conexão P2P:</div>
+              <p class="text-[11px] text-rose-100/90 leading-relaxed">
+                {{ sessionState.errorMessage || 'Não foi possível iniciar o rádio Nearby. Verifique se o Bluetooth e a Localização (GPS) estão ativados nas configurações rápidas do Android e se as permissões de dispositivos por perto foram concedidas.' }}
+              </p>
+              <div class="text-[10px] text-slate-300 bg-slate-900/70 p-2 rounded-xl border border-slate-700/60">
+                <span class="font-bold text-amber-300">💡 Como resolver no aparelho:</span>
+                <ul class="list-disc list-inside mt-1 space-y-0.5 text-slate-300">
+                  <li>Ative o <strong>Bluetooth</strong> no painel de atalhos do Android.</li>
+                  <li>Ative a <strong>Localização (GPS)</strong> no painel de atalhos.</li>
+                  <li>Autorize a permissão de <strong>Dispositivos Próximos</strong> nas permissões do app.</li>
+                  <li>Para testar no PC / Navegador Web: abra duas abas com o mesmo código de sala.</li>
+                </ul>
+              </div>
             </div>
           </div>
 

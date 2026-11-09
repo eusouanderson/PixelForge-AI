@@ -294,4 +294,29 @@ describe('Breeding: Application Service & Protocol', () => {
 
     service.dispose();
   });
+
+  it('resets phase and error when retrying openDiscovery after failure', async () => {
+    const transport = new DirectLinkedMockP2PAdapter('peer-fail');
+    const service = new BreedingService(transport);
+
+    // Trigger error through registered error handler
+    let registeredErrorHandler: ((err: Error) => void) | undefined;
+    transport.onError = (handler) => {
+      registeredErrorHandler = handler;
+      return () => {};
+    };
+    const testService = new BreedingService(transport);
+    if (registeredErrorHandler) {
+      registeredErrorHandler(new Error('Simulated failure'));
+      expect(testService.getState().phase).toBe('failed');
+      expect(testService.getState().errorMessage).toBe('Simulated failure');
+
+      await testService.openDiscovery('retry-room');
+      expect(testService.getState().phase).toBe('discovering');
+      expect(testService.getState().errorMessage).toBeNull();
+    }
+
+    testService.dispose();
+    service.dispose();
+  });
 });
