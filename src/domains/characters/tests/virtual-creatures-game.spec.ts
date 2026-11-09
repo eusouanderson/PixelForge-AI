@@ -50,6 +50,33 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
       'Banho Termal Purificador'
     );
 
+    // Verify biological sex symbol (♂ or ♀) is displayed on top of dinosaur image
+    const sexBadge = wrapper.get('[data-testid="active-sex-badge"]');
+    expect(['♂', '♀']).toContain(sexBadge.text().trim());
+    // Verify text "Macho" or "Fêmea" is not present in header
+    const headerEl = wrapper.get('header');
+    expect(headerEl.text()).not.toContain('Macho');
+    expect(headerEl.text()).not.toContain('Fêmea');
+
+    // Switch to Genetics tab and verify it modifies the view div directly
+    await wrapper.get('[data-testid="nav-tab-genetics"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="tab-content-genetics"]').text()).toContain(
+      'PixelForge Genetics & Reprodução'
+    );
+    // Verify local dinosaur select dropdown exists, lists dinosaurs, and selects active creature
+    const dinoSelect = wrapper.get('[data-testid="local-dinosaur-select"]');
+    expect(dinoSelect.findAll('option').length).toBeGreaterThan(0);
+    expect((dinoSelect.element as HTMLSelectElement).value).toBeTruthy();
+
+    // Clicking header genetics button also activates genetics tab
+    await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
+    await wrapper.get('[data-testid="header-open-genetics-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="tab-content-genetics"]').text()).toContain(
+      'PixelForge Genetics & Reprodução'
+    );
+
     // Switch to Character Sheet tab (Ficha Individual)
     await wrapper.get('[data-testid="nav-tab-sheet"]').trigger('click');
     expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Ficha Oficial');
