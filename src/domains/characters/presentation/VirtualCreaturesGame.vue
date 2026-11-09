@@ -55,6 +55,9 @@ import {
 } from '@/domains/persistence/application/game-session-service';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
 import type { GraphicsQualityPreset } from '@/domains/settings/types';
+import BreedingModal from '@/domains/breeding/presentation/BreedingModal.vue';
+import GenealogyTreeModal from '@/domains/breeding/presentation/GenealogyTreeModal.vue';
+import { formatBiologicalSexLabel, formatBiologicalSexSymbol } from '@/domains/genetics/domain/sex-determination-engine';
 
 const spriteRepo = new CharacterSpriteRepository();
 const saveRepo = new LocalStorageGameSaveRepository();
@@ -62,7 +65,9 @@ const renderer2d = new Canvas2dRenderer();
 const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
-const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings'>('feed');
+const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings' | 'genetics'>('feed');
+const showBreedingModal = ref<boolean>(false);
+const showGenealogyModal = ref<boolean>(false);
 const feedbackBanner = ref<string>(
   'O ovo ancestral está rachando no Santuário Elemental! Aguarde o nascimento ou toque em Eclodir.'
 );
@@ -299,6 +304,11 @@ async function handleSelectActiveSpecies(speciesId: CharacterId): Promise<void> 
   await persistCurrentState();
 }
 
+async function handleUpdateSave(newSnapshot: GameSaveSnapshot): Promise<void> {
+  saveState.value = newSnapshot;
+  await persistCurrentState();
+}
+
 watch(
   creatureTheme,
   (theme) => {
@@ -444,6 +454,16 @@ onUnmounted(() => {
                 >
                   {{ displayedStage }}
                 </span>
+                <span
+                  v-if="activeRecord.genetics"
+                  data-testid="active-sex-badge"
+                  class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full border flex items-center gap-1 cursor-pointer transition-transform active:scale-95"
+                  :class="activeRecord.genetics.sex === 'male' ? 'text-sky-300 border-sky-500/40 bg-sky-950/40' : 'text-pink-300 border-pink-500/40 bg-pink-950/40'"
+                  :title="formatBiologicalSexLabel(activeRecord.genetics.sex)"
+                  @click="showGenealogyModal = true"
+                >
+                  {{ formatBiologicalSexSymbol(activeRecord.genetics.sex) }} {{ activeRecord.genetics.sex === 'male' ? 'Macho' : 'Fêmea' }}
+                </span>
               </div>
               <p class="text-[11px] text-slate-400">
                 {{ activeSpecies.scientificName }} · {{ activeSpecies.elementLabel }}
@@ -452,6 +472,22 @@ onUnmounted(() => {
           </div>
 
           <div class="flex items-center gap-2">
+            <button
+              type="button"
+              data-testid="header-open-genetics-btn"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm transition-all active:scale-95 hover:brightness-110"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderColor,
+                color: creatureTheme.primaryColor
+              }"
+              title="Abrir PixelForge Genetics & Reprodução"
+              @click="showBreedingModal = true"
+            >
+              <span>🧬</span>
+              <span class="hidden sm:inline">Genética</span>
+            </button>
+
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm"
@@ -1271,11 +1307,11 @@ onUnmounted(() => {
         </div>
       </main>
 
-      <!-- Bottom Mobile Navigation Bar (4 Pure Game Tabs - Always visible sticky navigation) -->
+      <!-- Bottom Mobile Navigation Bar (5 Pure Game Tabs - Always visible sticky navigation) -->
       <nav
         aria-label="Menu principal do jogo"
         data-testid="bottom-navigation-bar"
-        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-4 backdrop-blur border-t shadow-lg transition-colors duration-500"
+        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-5 backdrop-blur border-t shadow-lg transition-colors duration-500"
         :style="{
           backgroundColor: creatureTheme.headerBackground,
           borderTopColor: creatureTheme.borderColor
@@ -1328,6 +1364,21 @@ onUnmounted(() => {
 
         <button
           type="button"
+          data-testid="nav-tab-genetics"
+          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
+          :class="
+            showBreedingModal
+              ? 'text-indigo-400 bg-indigo-500/10 border-t-2 border-indigo-500'
+              : 'text-slate-400 hover:text-slate-200'
+          "
+          @click="showBreedingModal = true"
+        >
+          <span class="text-sm leading-none">🧬</span>
+          <span>Genética</span>
+        </button>
+
+        <button
+          type="button"
           data-testid="nav-tab-settings"
           class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
           :class="
@@ -1341,6 +1392,21 @@ onUnmounted(() => {
           <span>Ajustes</span>
         </button>
       </nav>
+
+      <!-- PixelForge Genetics & Reprodução Modal -->
+      <breeding-modal
+        v-if="showBreedingModal"
+        :save-snapshot="saveState"
+        @update-save="handleUpdateSave"
+        @close="showBreedingModal = false"
+      />
+
+      <!-- Interactive Genealogy Tree Modal -->
+      <genealogy-tree-modal
+        v-if="showGenealogyModal && activeRecord.genetics"
+        :target-genome="activeRecord.genetics"
+        @close="showGenealogyModal = false"
+      />
     </div>
   </div>
 </template>

@@ -5,6 +5,8 @@ import type { ProgressionState } from '@/domains/progression/types';
 import type { InventoryState } from '@/domains/inventory/types';
 import type { WalletState } from '@/domains/economy/types';
 import type { GameSettingsState } from '@/domains/settings/types';
+import type { CreatureGenome } from '@/domains/genetics/types';
+import type { BredEggRecord, BreedingHistoryRecord } from '@/domains/breeding/types';
 
 export interface ClockPort {
   nowMs(): number;
@@ -15,6 +17,7 @@ export interface CharacterSaveRecord {
   readonly needs: PetNeedsState;
   readonly attributes: CharacterAttributes;
   readonly progression: ProgressionState;
+  readonly genetics: CreatureGenome;
 }
 
 export interface GameSaveSnapshot {
@@ -25,6 +28,8 @@ export interface GameSaveSnapshot {
   readonly inventory: InventoryState;
   readonly wallet: WalletState;
   readonly settings: GameSettingsState;
+  readonly incubator: readonly BredEggRecord[];
+  readonly genealogyArchive: readonly BreedingHistoryRecord[];
 }
 
 export interface GameSaveRepositoryPort {
@@ -32,4 +37,3 @@ export interface GameSaveRepositoryPort {
   saveSnapshot(snapshot: GameSaveSnapshot): Promise<void>;
   clearSave(): Promise<void>;
 }
-

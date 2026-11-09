@@ -6,6 +6,7 @@ import {
 import {
   appendCharacterCareLog,
   contractDisease,
+  createInitialCharacterRuntime,
   cureDiseasesWithRemedy,
   deriveEmotionalAndHealthState,
   diagnoseNeedsTriggeredDiseases,
@@ -15,6 +16,7 @@ import { applyNeedsDelta, createInitialNeeds } from '@/domains/pet-needs/domain/
 import { applyAttributeModifier } from '@/domains/attributes/domain/attributes-engine';
 import {
   addExperience,
+  createInitialProgression,
   resolveEligibleEvolutionStage
 } from '@/domains/progression/domain/progression-engine';
 import { feedCharacter, getFoodById } from '@/domains/feeding/domain/feeding-engine';
@@ -27,7 +29,8 @@ import { executeCharacterActivity } from '@/domains/activities/domain/activities
 import { earnCoins, spendCoins } from '@/domains/economy/domain/economy-engine';
 import { updateGameSettings } from '@/domains/settings/domain/settings-engine';
 import type { GameSettingsState } from '@/domains/settings/types';
-import type { GameSaveSnapshot } from '../types';
+import type { BredEggRecord, BreedingHistoryRecord } from '@/domains/breeding/types';
+import type { GameSaveSnapshot, CharacterSaveRecord } from '../types';
 
 export function selectActiveCharacterUseCase(
   snapshot: GameSaveSnapshot,
@@ -460,5 +463,88 @@ export function reviveDeceasedCharacterUseCase(
         runtime: nextRuntime
       }
     }
+  };
+}
+
+export function recordBreedingResultUseCase(
+  snapshot: GameSaveSnapshot,
+  historyRecord: BreedingHistoryRecord,
+  bredEggIfWon: BredEggRecord | null,
+  nowMs: number
+): GameSaveSnapshot {
+  const nextIncubator = bredEggIfWon
+    ? [...snapshot.incubator, bredEggIfWon]
+    : snapshot.incubator;
+
+  return {
+    ...snapshot,
+    lastSavedAtMs: nowMs,
+    incubator: nextIncubator,
+    genealogyArchive: [historyRecord, ...snapshot.genealogyArchive]
+  };
+}
+
+export function advanceIncubationUseCase(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  elapsedMinutes: number,
+  nowMs: number
+): GameSaveSnapshot {
+  const updatedIncubator = snapshot.incubator.map((egg) => {
+    if (egg.id !== eggId) return egg;
+    const progressInc = elapsedMinutes / 60;
+    const nextProgress = Math.min(egg.maxIncubationHours, egg.incubationProgress + progressInc);
+    return {
+      ...egg,
+      incubationProgress: nextProgress,
+      isReadyToHatch: nextProgress >= egg.maxIncubationHours
+    };
+  });
+
+  return {
+    ...snapshot,
+    lastSavedAtMs: nowMs,
+    incubator: updatedIncubator
+  };
+}
+
+export function hatchBredEggUseCase(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  nowMs: number
+): GameSaveSnapshot {
+  const egg = snapshot.incubator.find((e) => e.id === eggId);
+  if (!egg) {
+    return snapshot;
+  }
+
+  const targetSpecies = egg.targetSpecies;
+  const initialRuntime = createInitialCharacterRuntime(targetSpecies, nowMs, 'baby');
+  const loggedRuntime = appendCharacterCareLog(
+    initialRuntime,
+    'evolve',
+    `Ovo de reprodução (${egg.genome.generation}ª Geração) eclodiu com sucesso!`,
+    nowMs
+  );
+
+  const newRecord: CharacterSaveRecord = {
+    runtime: loggedRuntime,
+    needs: createInitialNeeds(),
+    attributes: { ...egg.genome.phenotype.attributes },
+    progression: createInitialProgression('baby'),
+    genetics: egg.genome
+  };
+
+  const remainingIncubator = snapshot.incubator.filter((e) => e.id !== eggId);
+
+  return {
+    ...snapshot,
+    activeCharacterId: targetSpecies,
+    lastSavedAtMs: nowMs,
+    characters: {
+      ...snapshot.characters,
+      [targetSpecies]: newRecord
+    },
+    incubator: remainingIncubator
   };
 }
