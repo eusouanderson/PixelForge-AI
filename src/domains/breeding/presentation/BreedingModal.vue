@@ -133,6 +133,42 @@
             </div>
           </div>
 
+          <!-- Discovered Nearby Peers List -->
+          <div
+            v-if="discoveredPeers.length > 0 && !isConnected"
+            class="p-3 rounded-2xl border flex flex-col gap-2 text-xs"
+            :style="{
+              backgroundColor: theme.cardDarkBackground,
+              borderColor: theme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="font-semibold text-white">📡 Jogadores Próximos (Google Nearby):</span>
+              <span class="font-mono text-emerald-400">{{ discoveredPeers.length }} encontrado(s)</span>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <div
+                v-for="peer in discoveredPeers"
+                :key="peer.endpointId"
+                class="flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl border bg-slate-900/60"
+                :style="{ borderColor: theme.borderSubtleColor }"
+              >
+                <div>
+                  <div class="font-bold text-white">{{ peer.playerName }}</div>
+                  <div class="text-[10px] text-slate-400 font-mono">v{{ peer.protocolVersion }}</div>
+                </div>
+                <button
+                  type="button"
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-sm transition hover:brightness-110 active:scale-95"
+                  :style="{ backgroundColor: theme.primaryColor }"
+                  @click="handleConnectToPeer(peer.endpointId)"
+                >
+                  Parear
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Animation View if running or completed -->
           <div v-if="sessionState.phase === 'breeding_started' || sessionState.phase === 'animation_running' || sessionState.phase === 'completed'" class="my-2">
             <breeding-animation-canvas
@@ -451,10 +487,10 @@ import type { CharacterId, CharacterLifeStage, CreatureTheme } from '@/domains/c
 import { CHARACTER_SPECIES_REGISTRY } from '@/domains/characters/domain/character-registry';
 import { generateCreatureTheme } from '@/domains/characters/domain/creature-theme-engine';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
-import type { BreedingSessionState } from '@/domains/breeding/types';
+import type { BreedingSessionState, DiscoveredPeer, NearbyConnectionStatus } from '@/domains/breeding/types';
 import { BreedingService } from '@/domains/breeding/application/breeding-service';
-import { BroadcastChannelP2PAdapter } from '@/domains/breeding/infrastructure/p2p-channel-adapter';
-import { hatchBredEggUseCase } from '@/domains/persistence/application/game-session-service';
+import { NearbyConnectionsP2PAdapter } from '@/domains/breeding/infrastructure/nearby-connections-adapter';
+import { hatchBredEggUseCase, recordBreedingResultUseCase } from '@/domains/persistence/application/game-session-service';
 import BreedingAnimationCanvas from './BreedingAnimationCanvas.vue';
 
 const props = withDefaults(
@@ -488,9 +524,21 @@ const theme = computed<CreatureTheme>(() => props.creatureTheme ?? fallbackTheme
 const activeTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
 const roomChannelCode = ref('SALA-777');
 
-const transport = new BroadcastChannelP2PAdapter();
+const transport = new NearbyConnectionsP2PAdapter({
+  playerName: 'Treinador Pixel'
+});
 const breedingService = new BreedingService(transport);
 const sessionState = ref<BreedingSessionState>(breedingService.getState());
+const nearbyStatus = ref<NearbyConnectionStatus>(transport.getConnectionStatus());
+const discoveredPeers = ref<readonly DiscoveredPeer[]>([]);
+const hasPersistedResult = ref(false);
+
+const unsubscribeStatus = transport.onStatusChange((s) => {
+  nearbyStatus.value = s;
+});
+const unsubscribePeers = transport.onPeersChange((peers) => {
+  discoveredPeers.value = peers;
+});
 
 const unsubscribeService = breedingService.subscribe((state) => {
   sessionState.value = state;
@@ -629,10 +677,31 @@ const canConfirmBreeding = computed(() => {
 });
 
 const connectionStatusLabel = computed(() => {
-  if (sessionState.value.phase === 'discovering') return 'Procurando parceiro...';
-  if (sessionState.value.phase === 'pairing' || isConnected.value) return 'Parceiro Conectado!';
+  if (sessionState.value.phase === 'discovering' || nearbyStatus.value === 'discovering') {
+    return 'Procurando parceiros próximos (Nearby)...';
+  }
+  if (nearbyStatus.value === 'player_found') {
+    return 'Jogador encontrado!';
+  }
+  if (
+    nearbyStatus.value === 'connecting' ||
+    nearbyStatus.value === 'connection_requested' ||
+    nearbyStatus.value === 'connection_pending'
+  ) {
+    return 'Conectando ao dispositivo...';
+  }
+  if (nearbyStatus.value === 'authenticating') {
+    return 'Autenticando sessão segura...';
+  }
+  if (
+    sessionState.value.phase === 'pairing' ||
+    isConnected.value ||
+    nearbyStatus.value === 'connected'
+  ) {
+    return 'Parceiro Conectado!';
+  }
   if (sessionState.value.phase === 'cancelled') return 'Cancelado';
-  if (sessionState.value.phase === 'failed') return 'Falha na conexão';
+  if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') return 'Falha na conexão';
   return 'Aguardando conexão';
 });
 
@@ -643,6 +712,15 @@ async function handleConnect(): Promise<void> {
   await breedingService.openDiscovery(roomChannelCode.value);
   if (localCreature.value) {
     breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+  }
+}
+
+async function handleConnectToPeer(endpointId: string): Promise<void> {
+  if (transport.connectToPeer) {
+    await transport.connectToPeer(endpointId);
+    if (localCreature.value) {
+      breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+    }
   }
 }
 
@@ -662,6 +740,22 @@ function handleHatchEgg(eggId: string): void {
   emit('update-save', nextSnapshot);
 }
 
+watch(
+  () => sessionState.value.phase,
+  (phase) => {
+    if (phase === 'completed' && !hasPersistedResult.value && sessionState.value.historyRecord) {
+      hasPersistedResult.value = true;
+      const updated = recordBreedingResultUseCase(
+        props.saveSnapshot,
+        sessionState.value.historyRecord,
+        sessionState.value.producedEgg,
+        Date.now()
+      );
+      emit('update-save', updated);
+    }
+  }
+);
+
 onMounted(() => {
   if (!selectedLocalSpeciesId.value) {
     selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
@@ -672,7 +766,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  unsubscribeStatus();
+  unsubscribePeers();
   unsubscribeService();
   breedingService.dispose();
+  transport.disconnect();
 });
 </script>
