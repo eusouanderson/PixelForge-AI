@@ -67,6 +67,7 @@ let apkSha256 = '000000000000000000000000000000000000000000000000000000000000000
 let apkSizeBytes = 0;
 const possibleApkPaths = [
   join(ROOT_DIR, 'release-apk', `pixelforge-virtual-creatures-v${version}.apk`),
+  join(ROOT_DIR, 'android', 'app', 'build', 'outputs', 'apk', 'debug', `pixelforge-virtual-creatures-v${version}.apk`),
   join(ROOT_DIR, 'release-apk', 'app-debug.apk'),
   join(ROOT_DIR, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
 ];
