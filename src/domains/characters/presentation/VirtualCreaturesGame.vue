@@ -461,22 +461,6 @@ onUnmounted(() => {
           </div>
 
           <div class="flex items-center gap-2">
-            <button
-              type="button"
-              data-testid="header-open-genetics-btn"
-              class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm transition-all active:scale-95 hover:brightness-110"
-              :style="{
-                backgroundColor: creatureTheme.cardBackground,
-                borderColor: creatureTheme.borderColor,
-                color: creatureTheme.primaryColor
-              }"
-              title="Abrir PixelForge Genetics & Reprodução"
-              @click="activeMobileTab = 'genetics'"
-            >
-              <span>🧬</span>
-              <span class="hidden sm:inline">Genética</span>
-            </button>
-
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm"
@@ -1382,7 +1366,7 @@ onUnmounted(() => {
           class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
           :class="
             activeMobileTab === 'genetics'
-              ? 'border-t-2'
+              ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
               : 'text-slate-400 hover:text-slate-200'
           "
           :style="

@@ -69,14 +69,6 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     expect(dinoSelect.findAll('option').length).toBeGreaterThan(0);
     expect((dinoSelect.element as HTMLSelectElement).value).toBeTruthy();
 
-    // Clicking header genetics button also activates genetics tab
-    await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
-    await wrapper.get('[data-testid="header-open-genetics-btn"]').trigger('click');
-    await flushPromises();
-    expect(wrapper.get('[data-testid="tab-content-genetics"]').text()).toContain(
-      'PixelForge Genetics & Reprodução'
-    );
-
     // Switch to Character Sheet tab (Ficha Individual)
     await wrapper.get('[data-testid="nav-tab-sheet"]').trigger('click');
     expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Ficha Oficial');
