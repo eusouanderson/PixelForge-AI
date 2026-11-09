@@ -192,11 +192,13 @@
                 </div>
                 <button
                   type="button"
-                  class="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-sm transition hover:brightness-110 active:scale-95"
+                  data-testid="peer-pair-btn"
+                  class="px-2.5 py-1 rounded-lg text-xs font-bold text-white shadow-sm transition hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   :style="{ backgroundColor: theme.primaryColor }"
+                  :disabled="isPairingWithPeer(peer.endpointId)"
                   @click="handleConnectToPeer(peer.endpointId)"
                 >
-                  Parear
+                  {{ isPairingWithPeer(peer.endpointId) ? 'Pareando...' : 'Parear' }}
                 </button>
               </div>
             </div>
@@ -565,9 +567,25 @@ const sessionState = ref<BreedingSessionState>(breedingService.getState());
 const nearbyStatus = ref<NearbyConnectionStatus>(transport.getConnectionStatus());
 const discoveredPeers = ref<readonly DiscoveredPeer[]>([]);
 const hasPersistedResult = ref(false);
+const pendingPeerEndpointId = ref<string | null>(null);
+
+const isPairingWithPeer = (endpointId: string) => {
+  return (
+    pendingPeerEndpointId.value === endpointId ||
+    transport.getActiveEndpointId() === endpointId ||
+    nearbyStatus.value === 'connection_requested' ||
+    nearbyStatus.value === 'connection_pending' ||
+    nearbyStatus.value === 'connecting' ||
+    nearbyStatus.value === 'authenticating' ||
+    nearbyStatus.value === 'connected'
+  );
+};
 
 const unsubscribeStatus = transport.onStatusChange((s) => {
   nearbyStatus.value = s;
+  if (s === 'connected' || s === 'failed' || s === 'disconnected' || s === 'idle') {
+    pendingPeerEndpointId.value = null;
+  }
 });
 const unsubscribePeers = transport.onPeersChange((peers) => {
   discoveredPeers.value = peers;
@@ -749,10 +767,18 @@ async function handleConnect(): Promise<void> {
 }
 
 async function handleConnectToPeer(endpointId: string): Promise<void> {
+  if (isPairingWithPeer(endpointId)) return;
+  pendingPeerEndpointId.value = endpointId;
   if (transport.connectToPeer) {
-    await transport.connectToPeer(endpointId);
-    if (localCreature.value) {
-      breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+    try {
+      await transport.connectToPeer(endpointId);
+      if (localCreature.value) {
+        breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+      }
+    } finally {
+      if (nearbyStatus.value !== 'connection_requested' && nearbyStatus.value !== 'connecting') {
+        pendingPeerEndpointId.value = null;
+      }
     }
   }
 }

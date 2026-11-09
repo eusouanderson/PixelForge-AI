@@ -255,7 +255,7 @@ describe('NearbyConnectionsP2PAdapter', () => {
     it('discovers peers with matching and non-matching channels, including updates and endpoint lost', async () => {
       const mockPlugin = createMockPlugin();
       const adapter = new NearbyConnectionsP2PAdapter({
-        localPeerId: 'local-peer-1',
+        localPeerId: 'z-local-peer-1',
         isNativeOverride: true,
         pluginOverride: mockPlugin
       });
@@ -266,14 +266,14 @@ describe('NearbyConnectionsP2PAdapter', () => {
       mockPlugin.trigger('onEndpointFound', {
         endpointId: 'ep-self',
         endpointName: JSON.stringify({
-          peerId: 'local-peer-1',
+          peerId: 'z-local-peer-1',
           playerName: 'Self',
           version: PROTOCOL_VERSION
         })
       });
       expect(adapter.getDiscoveredPeers()).toHaveLength(0);
 
-      // Discovery of another peer with matching channel -> auto-connect
+      // Discovery of peer with matching channel where localId > remoteId -> initiates connection
       mockPlugin.trigger('onEndpointFound', {
         endpointId: 'ep-remote-1',
         endpointName: JSON.stringify({
@@ -289,6 +289,21 @@ describe('NearbyConnectionsP2PAdapter', () => {
       expect(mockPlugin.requestConnection).toHaveBeenCalledWith(
         expect.objectContaining({ endpointId: 'ep-remote-1' })
       );
+
+      // Discovery of peer with matching channel where localId < remoteId -> tie breaker avoids clash
+      mockPlugin.trigger('onEndpointFound', {
+        endpointId: 'ep-remote-alpha',
+        endpointName: JSON.stringify({
+          peerId: 'zz-larger-peer',
+          playerName: 'Red',
+          version: PROTOCOL_VERSION,
+          channel: 'room-match-1'
+        })
+      });
+      expect(adapter.getDiscoveredPeers()).toHaveLength(2);
+
+      // Early return if already connecting or connected to endpoint
+      await adapter.connectToPeer('ep-remote-1');
 
       // Update existing peer record
       mockPlugin.trigger('onEndpointFound', {
@@ -335,11 +350,11 @@ describe('NearbyConnectionsP2PAdapter', () => {
         endpointId: 'ep-legacy-2',
         endpointName: 'Legacy Dino Player'
       });
-      expect(adapter.getDiscoveredPeers()).toHaveLength(4);
+      expect(adapter.getDiscoveredPeers()).toHaveLength(5);
 
       // Endpoint lost
       mockPlugin.trigger('onEndpointLost', { endpointId: 'ep-legacy-2' });
-      expect(adapter.getDiscoveredPeers()).toHaveLength(3);
+      expect(adapter.getDiscoveredPeers()).toHaveLength(4);
     });
 
     it('performs mutual session challenge-response authentication and message payload exchange', async () => {
@@ -469,6 +484,12 @@ describe('NearbyConnectionsP2PAdapter', () => {
         })
       });
       expect(adapter.isSessionAuthenticated()).toBe(true);
+      expect(mockPlugin.sendPayload).toHaveBeenCalledWith(
+        expect.objectContaining({
+          endpointId: 'ep-100',
+          payload: expect.stringContaining('MUTUAL_AUTH_ACK')
+        })
+      );
 
       // Handles application messages
       const appMsgSpy = vi.fn();
@@ -503,6 +524,15 @@ describe('NearbyConnectionsP2PAdapter', () => {
       // Disconnect event
       mockPlugin.trigger('onDisconnected', { endpointId: 'ep-100' });
       expect(adapter.getActiveEndpointId()).toBeNull();
+      expect(adapter.getConnectionStatus()).toBe('disconnected');
+
+      // Pending connecting endpoint tracking and reset on disconnect
+      expect(adapter.getPendingConnectingEndpointId()).toBeNull();
+      mockPlugin.requestConnection = vi.fn().mockImplementation(() => new Promise(() => {}));
+      void adapter.connectToPeer('ep-pending-disc');
+      expect(adapter.getPendingConnectingEndpointId()).toBe('ep-pending-disc');
+      mockPlugin.trigger('onDisconnected', { endpointId: 'ep-pending-disc' });
+      expect(adapter.getPendingConnectingEndpointId()).toBeNull();
       expect(adapter.getConnectionStatus()).toBe('disconnected');
 
       // Native disconnect method test
@@ -547,9 +577,17 @@ describe('NearbyConnectionsP2PAdapter', () => {
       await adapter.connectToPeer('ep-1');
       expect(errSpy).toHaveBeenCalledWith(expect.any(Error));
 
+      // STATUS_ALREADY_CONNECTED_TO_ENDPOINT (8003) is caught and handled gracefully without error
+      mockPlugin.requestConnection = vi.fn().mockRejectedValueOnce(new Error('8003: STATUS_ALREADY_CONNECTED_TO_ENDPOINT'));
+      await adapter.connectToPeer('ep-2');
+      expect(errSpy).not.toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('8003') }));
+
       mockPlugin.acceptConnection = vi.fn().mockRejectedValueOnce(new Error('Erro ao aceitar'));
       await adapter.acceptConnection('ep-1');
       expect(errSpy).toHaveBeenCalledWith(expect.any(Error));
+
+      mockPlugin.acceptConnection = vi.fn().mockRejectedValueOnce(new Error('8003: STATUS_ALREADY_CONNECTED_TO_ENDPOINT'));
+      await adapter.acceptConnection('ep-2');
 
       mockPlugin.rejectConnection = vi.fn().mockRejectedValueOnce(new Error('Erro ao rejeitar'));
       await adapter.rejectConnection('ep-1');
