@@ -1369,15 +1369,7 @@ onUnmounted(() => {
               ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
               : 'text-slate-400 hover:text-slate-200'
           "
-          :style="
-            activeMobileTab === 'genetics'
-              ? {
-                borderTopColor: creatureTheme.primaryColor,
-                color: creatureTheme.primaryColor,
-                backgroundColor: creatureTheme.cardBackground
-              }
-              : {}
-          "
+          
           @click="activeMobileTab = 'genetics'"
         >
           <span class="text-sm leading-none">🧬</span>
