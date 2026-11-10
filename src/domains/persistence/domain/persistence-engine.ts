@@ -216,7 +216,10 @@ export function validateAndMigrateSaveSnapshot(
     characters: mergedCharacters,
     inventory: candidate.inventory ?? fresh.inventory,
     wallet: candidate.wallet ?? fresh.wallet,
-    settings: candidate.settings ?? fresh.settings,
+    settings:
+      candidate.settings && typeof candidate.settings === 'object'
+        ? { ...fresh.settings, ...candidate.settings }
+        : fresh.settings,
     incubator: Array.isArray(candidate.incubator) ? candidate.incubator : [],
     genealogyArchive: Array.isArray(candidate.genealogyArchive) ? candidate.genealogyArchive : []
   };

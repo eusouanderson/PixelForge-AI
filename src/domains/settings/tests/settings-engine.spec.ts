@@ -9,14 +9,17 @@ describe('settings domain engine', () => {
     const defaults = createDefaultSettings();
     expect(defaults.graphicsQuality).toBe('high');
     expect(defaults.autoSaveEnabled).toBe(true);
+    expect(defaults.notificationsEnabled).toBe(true);
 
     const updated = updateGameSettings(defaults, {
       graphicsQuality: 'battery-saver',
-      showPixelGrid: true
+      showPixelGrid: true,
+      notificationsEnabled: false
     });
     expect(updated.graphicsQuality).toBe('battery-saver');
     expect(updated.showPixelGrid).toBe(true);
     expect(updated.soundEnabled).toBe(true);
+    expect(updated.notificationsEnabled).toBe(false);
   });
 });
 

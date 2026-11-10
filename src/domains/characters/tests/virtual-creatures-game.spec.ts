@@ -93,6 +93,29 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await wrapper.get('[data-testid="quality-btn-balanced"]').trigger('click');
     await wrapper.get('[data-testid="toggle-grid-btn"]').trigger('click');
 
+    // Toggle critical-care notifications off/on and test notification trigger in Settings
+    const toggleNotifBtn = wrapper.get('[data-testid="toggle-notifications-btn"]');
+    expect(toggleNotifBtn.text()).toContain('Desativar Alertas');
+    await toggleNotifBtn.trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="toggle-notifications-btn"]').text()).toContain(
+      'Ativar Alertas'
+    );
+    await wrapper.get('[data-testid="toggle-notifications-btn"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-testid="test-notification-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('notifica');
+
+    // Advance another +6h offline (12h total) so needs drop near/below critical and surface care-alert-banner
+    await wrapper.get('[data-testid="sim-offline-6h"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="care-alert-banner"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="care-alert-action-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="tab-content-settings"]').exists()).toBe(false);
+
+    await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
     await wrapper.get('[data-testid="reset-save-btn"]').trigger('click');
     await flushPromises();
     const nextRandomName = wrapper.get('[data-testid="active-character-name"]').text();

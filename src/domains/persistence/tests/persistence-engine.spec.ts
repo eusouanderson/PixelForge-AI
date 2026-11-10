@@ -144,11 +144,12 @@ describe('persistence domain engine, offline simulation, and save repository', (
     expect(fallback.lastSavedAtMs).toBe(5000);
 
     const invalidActiveId = validateAndMigrateSaveSnapshot(
-      { schemaVersion: 1, activeCharacterId: 'invalid-dino', lastSavedAtMs: -50 },
+      { schemaVersion: 1, activeCharacterId: 'invalid-dino', lastSavedAtMs: -50, settings: 'bad' },
       6000
     );
     expect(invalidActiveId.activeCharacterId).toBe('ignisauro');
     expect(invalidActiveId.lastSavedAtMs).toBe(6000);
+    expect(invalidActiveId.settings.notificationsEnabled).toBe(true);
   });
 
   it('persists, loads, recovers from corrupted JSON, and clears snapshots in LocalStorageGameSaveRepository', async () => {
