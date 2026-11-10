@@ -9,10 +9,13 @@ import {
   Coins as CoinsIcon,
   Clock as ClockIcon,
   RotateCcw as RotateCcwIcon,
-  RefreshCw as RefreshCwIcon
+  RefreshCw as RefreshCwIcon,
+  Bell as BellIcon
 } from 'lucide-vue-next';
 import { UpdateManagerService } from '@/domains/updater/application/update-manager-service';
 import type { UpdaterState } from '@/domains/updater/types';
+import { CareNotificationService } from '@/domains/notifications/application/care-notification-service';
+import type { CareNotificationManagerState } from '@/domains/notifications/types';
 import { Canvas2dRenderer } from '@/infrastructure/renderer/canvas-2d-renderer';
 import { BabylonCreatureSceneController } from '@/game-engine/babylon/scene-controller';
 import type {
@@ -84,6 +87,10 @@ const updaterState = ref<UpdaterState>(updaterService.getState());
 const isChangelogOpen = ref<boolean>(false);
 let unsubscribeUpdater: (() => void) | null = null;
 
+const careNotificationService = new CareNotificationService();
+const notificationState = ref<CareNotificationManagerState>(careNotificationService.getState());
+let unsubscribeNotifications: (() => void) | null = null;
+
 const allFoods = listAllFoods();
 const allActivities = listAllActivities();
 
@@ -153,6 +160,7 @@ async function persistCurrentState(): Promise<void> {
   if (saveState.value.settings.autoSaveEnabled) {
     await saveRepo.saveSnapshot(saveState.value);
   }
+  await careNotificationService.syncFromSnapshot(saveState.value, Date.now());
 }
 
 function renderCurrentSpriteToOverlay(): void {
@@ -263,6 +271,37 @@ async function handleTogglePixelGrid(): Promise<void> {
   await persistCurrentState();
 }
 
+async function handleToggleNotifications(): Promise<void> {
+  const nextEnabled = !saveState.value.settings.notificationsEnabled;
+  saveState.value = updateSettingsUseCase(
+    saveState.value,
+    { notificationsEnabled: nextEnabled },
+    Date.now()
+  );
+  if (nextEnabled && notificationState.value.permission === 'prompt') {
+    await careNotificationService.requestPermissionAndSync(saveState.value, Date.now());
+  }
+  feedbackBanner.value = nextEnabled
+    ? 'Notificações de cuidado crítico ativadas!'
+    : 'Notificações de cuidado crítico desativadas.';
+  await persistCurrentState();
+}
+
+async function handleRequestNotificationPermission(): Promise<void> {
+  const state = await careNotificationService.requestPermissionAndSync(saveState.value, Date.now());
+  feedbackBanner.value =
+    state.permission === 'granted'
+      ? 'Permissão de notificações concedida com sucesso!'
+      : 'Permissão de notificações não concedida. Verifique as permissões do aplicativo.';
+}
+
+async function handleSendTestNotification(): Promise<void> {
+  const sent = await careNotificationService.sendTestNotification(saveState.value, Date.now());
+  feedbackBanner.value = sent
+    ? 'Notificação de teste enviada para a barra do sistema!'
+    : 'Não foi possível exibir a notificação (verifique a permissão do sistema).';
+}
+
 async function handleResetSave(): Promise<void> {
   await saveRepo.clearSave();
   manualAnimOverride.value = null;
@@ -333,6 +372,9 @@ onMounted(async () => {
   unsubscribeUpdater = updaterService.subscribe((state) => {
     updaterState.value = state;
   });
+  unsubscribeNotifications = careNotificationService.subscribe((state) => {
+    notificationState.value = state;
+  });
   await updaterService.initialize();
   void updaterService.checkForUpdates(false);
 
@@ -341,6 +383,14 @@ onMounted(async () => {
     saveState.value = simulateOfflineProgressOnSnapshot(loaded, Date.now());
   } else {
     await persistCurrentState();
+  }
+
+  await careNotificationService.initialize(saveState.value, Date.now());
+  if (
+    saveState.value.settings.notificationsEnabled &&
+    notificationState.value.permission === 'prompt'
+  ) {
+    await careNotificationService.requestPermissionAndSync(saveState.value, Date.now());
   }
 
   await nextTick();
@@ -373,6 +423,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   if (unsubscribeUpdater) unsubscribeUpdater();
+  if (unsubscribeNotifications) unsubscribeNotifications();
+  careNotificationService.dispose();
   if (spriteTimer) clearInterval(spriteTimer);
   if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
@@ -644,6 +696,38 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Discreet Urgent Care Banner When Near or At Critical Level -->
+      <div
+        v-if="notificationState.activeBannerText"
+        data-testid="care-alert-banner"
+        class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
+        :class="
+          notificationState.evaluation.activeCriticalCount > 0
+            ? 'bg-rose-950/90 border-rose-700 text-rose-200'
+            : 'bg-amber-950/85 border-amber-700 text-amber-200'
+        "
+      >
+        <div class="flex items-center gap-1.5 min-w-0">
+          <bell-icon class="w-3.5 h-3.5 shrink-0" />
+          <span class="text-[11px] font-medium truncate">{{ notificationState.activeBannerText }}</span>
+        </div>
+        <button
+          type="button"
+          data-testid="care-alert-action-btn"
+          class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
+          @click="
+            activeMobileTab =
+              notificationState.evaluation.immediateAlerts[0]?.reason === 'energy' ||
+              notificationState.evaluation.immediateAlerts[0]?.reason === 'happiness' ||
+              notificationState.evaluation.immediateAlerts[0]?.reason === 'hygiene'
+                ? 'activities'
+                : 'feed'
+          "
+        >
+          Cuidar
+        </button>
+      </div>
+
       <!-- 6 Normalized Need Bars (0 to 100) -->
       <section
         aria-label="Indicadores de Necessidades"
@@ -665,14 +749,22 @@ onUnmounted(() => {
         >
           <div class="flex items-center justify-between text-[11px] font-semibold mb-1">
             <span class="text-slate-300">{{ need.label }}</span>
-            <span :class="need.value <= 20 ? 'text-rose-400 font-bold' : 'text-emerald-300'">
+            <span
+              :class="
+                need.value <= 15
+                  ? 'text-rose-400 font-bold'
+                  : need.value <= 25
+                    ? 'text-amber-300 font-bold'
+                    : 'text-emerald-300'
+              "
+            >
               {{ need.value }}%
             </span>
           </div>
           <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
             <div
               class="h-full rounded-full transition-all duration-300"
-              :class="need.value <= 20 ? 'bg-rose-600' : need.color"
+              :class="need.value <= 15 ? 'bg-rose-600' : need.value <= 25 ? 'bg-amber-500' : need.color"
               :style="{ width: `${need.value}%` }"
             />
           </div>
@@ -1208,6 +1300,70 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
+          <!-- Notificações de Cuidados Críticos -->
+          <div
+            data-testid="notifications-settings-card"
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between">
+              <h2
+                class="text-xs font-bold uppercase flex items-center gap-1.5"
+                :style="{ color: creatureTheme.primaryColor }"
+              >
+                <bell-icon class="w-3.5 h-3.5" />
+                <span>Notificações de Cuidados</span>
+              </h2>
+              <span
+                class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border"
+                :class="
+                  saveState.settings.notificationsEnabled
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                    : 'bg-slate-950 text-slate-400 border-slate-700'
+                "
+              >
+                {{ saveState.settings.notificationsEnabled ? 'Ativadas' : 'Desativadas' }}
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Envia alertas no aparelho quando fome, sede, energia, felicidade, higiene ou saúde se aproximarem do nível crítico.
+            </p>
+            <div class="text-[10px] text-slate-400 flex items-center justify-between font-mono">
+              <span>Permissão: {{ notificationState.permission }}</span>
+              <span>Agendados: {{ notificationState.evaluation.scheduledAlerts.length }}</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap pt-0.5">
+              <button
+                type="button"
+                data-testid="toggle-notifications-btn"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-emerald-300 transition"
+                @click="handleToggleNotifications"
+              >
+                {{ saveState.settings.notificationsEnabled ? 'Desativar Alertas' : 'Ativar Alertas' }}
+              </button>
+              <button
+                v-if="notificationState.permission !== 'granted'"
+                type="button"
+                data-testid="request-notifications-permission-btn"
+                class="px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white transition"
+                @click="handleRequestNotificationPermission"
+              >
+                Autorizar Notificações
+              </button>
+              <button
+                type="button"
+                data-testid="test-notification-btn"
+                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
+                @click="handleSendTestNotification"
+              >
+                Testar Alerta
+              </button>
+            </div>
+          </div>
+
           <div
             class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
             :style="{

@@ -34,6 +34,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <receiver
+            android:name=".PetCareNotificationReceiver"
+            android:exported="false" />
     </application>
 
     <!-- Hardware features declaration (optional to maintain maximum device compatibility) -->
@@ -45,6 +49,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Google Nearby Connections P2P Permissions -->
     <!-- Android 12+ (API 31+) Bluetooth permissions -->
