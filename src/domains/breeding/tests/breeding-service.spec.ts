@@ -319,4 +319,36 @@ describe('Breeding: Application Service & Protocol', () => {
     testService.dispose();
     service.dispose();
   });
+
+  it('reverts from awaiting_confirmation to compatibility_check when switching to incompatible creature and preserves pre-selection on openDiscovery', async () => {
+    const transportA = new DirectLinkedMockP2PAdapter('peer-swap-a');
+    const transportB = new DirectLinkedMockP2PAdapter('peer-swap-b');
+    transportA.link(transportB);
+
+    const serviceA = new BreedingService(transportA, 'swap-session');
+    const serviceB = new BreedingService(transportB, 'swap-session');
+
+    // syncLocalParticipant with null localParticipant returns gracefully
+    serviceA.syncLocalParticipant();
+
+    // Compatible selection -> awaiting_confirmation
+    serviceA.selectLocalCreature('ignisauro', maleIgnis);
+    serviceB.selectLocalCreature('terrassauro', femaleTerras);
+    expect(serviceA.getState().phase).toBe('awaiting_confirmation');
+
+    // Swap serviceB to incompatible male -> reverts to compatibility_check!
+    const maleTerras = createGenesisGenome('terrassauro', 'male', 1000, 'male-terras-swap');
+    serviceB.selectLocalCreature('terrassauro', maleTerras);
+    expect(serviceA.getState().phase).toBe('compatibility_check');
+    expect(serviceA.getState().compatibility?.compatible).toBe(false);
+
+    // Calling openDiscovery with pre-selected localParticipant resets remote state & resets isReady
+    await serviceA.openDiscovery('new-room-after-preselect');
+    expect(serviceA.getState().phase).toBe('discovering');
+    expect(serviceA.getState().localParticipant?.characterId).toBe('ignisauro');
+    expect(serviceA.getState().remoteParticipant).toBeNull();
+
+    serviceA.dispose();
+    serviceB.dispose();
+  });
 });

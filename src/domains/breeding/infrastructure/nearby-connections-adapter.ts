@@ -2,6 +2,8 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type {
   DiscoveredPeer,
   NearbyConnectionStatus,
+  NearbyDiagnosticLogEntry,
+  NearbyLogLevel,
   P2PMessage,
   P2PTransportPort
 } from '../types';
@@ -54,11 +56,14 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
   private errorHandlers: Array<(err: Error) => void> = [];
   private statusHandlers: Array<(status: NearbyConnectionStatus) => void> = [];
   private peersHandlers: Array<(peers: readonly DiscoveredPeer[]) => void> = [];
+  private diagnosticLogs: NearbyDiagnosticLogEntry[] = [];
+  private logHandlers: Array<(logs: readonly NearbyDiagnosticLogEntry[]) => void> = [];
 
   private sequenceCounter = 0;
   private currentSessionId = '';
   private authNonce = '';
   private isAuthenticated = false;
+  private hasSentPostAuthHandshake = false;
 
   private readonly isNative: boolean;
   private readonly plugin: NearbyConnectionsPluginInterface;
@@ -101,15 +106,41 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     return this.isAuthenticated;
   }
 
+  public getDiagnosticLogs(): readonly NearbyDiagnosticLogEntry[] {
+    return [...this.diagnosticLogs];
+  }
+
+  public onDiagnosticLog(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void {
+    this.logHandlers.push(handler);
+    handler(this.diagnosticLogs);
+    return () => {
+      this.logHandlers = this.logHandlers.filter((h) => h !== handler);
+    };
+  }
+
+  private addLog(level: NearbyLogLevel, message: string): void {
+    const entry: NearbyDiagnosticLogEntry = {
+      timestampMs: Date.now(),
+      level,
+      message
+    };
+    this.diagnosticLogs = [...this.diagnosticLogs.slice(-79), entry];
+    for (const handler of this.logHandlers) {
+      handler(this.diagnosticLogs);
+    }
+  }
+
   private setStatus(nextStatus: NearbyConnectionStatus): void {
     if (this.status === nextStatus) return;
     this.status = transitionConnectionStatus(this.status, nextStatus);
+    this.addLog('info', `[status] ${this.status}`);
     for (const handler of this.statusHandlers) {
       handler(this.status);
     }
   }
 
   private emitError(err: Error): void {
+    this.addLog('error', err.message);
     this.setStatus('failed');
     for (const handler of this.errorHandlers) {
       handler(err);
@@ -154,6 +185,11 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     this.currentSessionId = channelId;
     this.authNonce = Math.random().toString(36).slice(2, 10);
     this.isAuthenticated = false;
+    this.hasSentPostAuthHandshake = false;
+    this.activeEndpointId = null;
+    this.pendingConnectingEndpointId = null;
+    this.discoveredPeers = [];
+    this.addLog('info', `[connect] Sala: ${channelId} (${this.isNative ? 'Android Nearby' : 'Web BroadcastChannel'})`);
 
     if (!this.isNative) {
       this.setStatus('discovering');
@@ -177,16 +213,19 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
 
     try {
       this.setStatus('starting_discovery');
+      await this.plugin.stopAllEndpoints();
       const advertisedName = JSON.stringify({
         peerId: this.localPeerId,
-        playerName: this.playerName,
+        playerName: this.playerName.slice(0, 20),
         version: PROTOCOL_VERSION,
-        channel: channelId
+        channel: channelId.slice(0, 20)
       });
 
       await this.plugin.startAdvertising({ endpointName: advertisedName });
       await this.plugin.startDiscovery();
-      this.setStatus('discovering');
+      if (this.status === 'starting_discovery') {
+        this.setStatus('discovering');
+      }
     } catch (e) {
       const err = normalizeNearbyError(e);
       this.emitError(err);
@@ -199,9 +238,10 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     }
     this.pendingConnectingEndpointId = endpointId;
     this.setStatus('connection_requested');
+    this.addLog('info', `[requestConnection] -> ${endpointId}`);
     const localInfo = JSON.stringify({
       peerId: this.localPeerId,
-      playerName: this.playerName,
+      playerName: this.playerName.slice(0, 20),
       version: PROTOCOL_VERSION
     });
 
@@ -210,6 +250,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     } catch (e) {
       const err = normalizeNearbyError(e);
       if (err.message.includes('STATUS_ALREADY_CONNECTED_TO_ENDPOINT') || err.message.includes('8003')) {
+        this.addLog('warn', `[requestConnection] ${endpointId} já conectado/pendente (8003).`);
         return;
       }
       this.pendingConnectingEndpointId = null;
@@ -218,12 +259,16 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
   }
 
   public async acceptConnection(endpointId: string): Promise<void> {
-    this.setStatus('connecting');
+    if (this.status !== 'authenticating' && this.status !== 'connected') {
+      this.setStatus('connecting');
+    }
+    this.addLog('info', `[acceptConnection] <- ${endpointId}`);
     try {
       await this.plugin.acceptConnection({ endpointId });
     } catch (e) {
       const err = normalizeNearbyError(e);
       if (err.message.includes('STATUS_ALREADY_CONNECTED_TO_ENDPOINT') || err.message.includes('8003')) {
+        this.addLog('warn', `[acceptConnection] ${endpointId} já aceito/conectado (8003).`);
         return;
       }
       this.emitError(err);
@@ -250,6 +295,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     this.pendingConnectingEndpointId = null;
     this.discoveredPeers = [];
     this.isAuthenticated = false;
+    this.hasSentPostAuthHandshake = false;
     this.setStatus('idle');
   }
 
@@ -261,15 +307,26 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
       ...message
     };
 
-    if (this.isNative && this.activeEndpointId) {
+    if (this.isNative) {
+      if (!this.activeEndpointId) {
+        this.addLog('warn', `[send:${message.type}] Aguardando conexão P2P ativa (sem endpoint).`);
+        return;
+      }
       const payloadString = JSON.stringify(enrichedMessage);
-      void this.plugin.sendPayload({
-        endpointId: this.activeEndpointId,
-        payload: payloadString
-      });
-    } else {
-      this.fallbackAdapter.send(enrichedMessage);
+      this.addLog('info', `[sendPayload:${message.type}] -> ${this.activeEndpointId} (${payloadString.length} bytes)`);
+      void this.plugin
+        .sendPayload({
+          endpointId: this.activeEndpointId,
+          payload: payloadString
+        })
+        .catch((e) => {
+          const err = normalizeNearbyError(e);
+          this.addLog('error', `[sendPayload:${message.type}] Falha: ${err.message}`);
+        });
+      return;
     }
+
+    this.fallbackAdapter.send(enrichedMessage);
   }
 
   public onMessage(handler: (msg: P2PMessage) => void): () => void {
@@ -302,6 +359,16 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     };
   }
 
+  private setPlayerFoundIfDiscovering(): void {
+    if (
+      this.status === 'starting_discovery' ||
+      this.status === 'discovering' ||
+      this.status === 'player_found'
+    ) {
+      this.setStatus('player_found');
+    }
+  }
+
   private async setupNativeListeners(): Promise<void> {
     this.cleanupNativeListeners();
 
@@ -313,27 +380,45 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
 
     const hLost = await this.plugin.addListener('onEndpointLost', (raw) => {
       const data = raw as { endpointId: string };
+      this.addLog('info', `[onEndpointLost] ${data.endpointId}`);
       this.updateDiscoveredPeers(this.discoveredPeers.filter((p) => p.endpointId !== data.endpointId));
     });
     this.pluginListeners.push(hLost);
 
     const hInit = await this.plugin.addListener('onConnectionInitiated', (raw) => {
       const data = raw as { endpointId: string; endpointName: string; isIncoming: boolean };
-      this.setStatus('connection_pending');
-      // Automatically accept mutual point-to-point connection
-      void this.acceptConnection(data.endpointId);
+      this.addLog('info', `[onConnectionInitiated] ${data.endpointId} (incoming=${String(data.isIncoming)})`);
+      if (this.status !== 'connecting' && this.status !== 'authenticating' && this.status !== 'connected') {
+        this.setStatus('connection_pending');
+      }
+      // Automatically accept mutual point-to-point connection unless already connected to it
+      if (this.activeEndpointId !== data.endpointId) {
+        void this.acceptConnection(data.endpointId);
+      }
     });
     this.pluginListeners.push(hInit);
 
     const hResult = await this.plugin.addListener('onConnectionResult', (raw) => {
-      const data = raw as { endpointId: string; success: boolean };
+      const data = raw as {
+        endpointId: string;
+        success: boolean;
+        statusCode?: number;
+        statusCodeName?: string;
+        statusMessage?: string;
+      };
       this.pendingConnectingEndpointId = null;
       if (data.success) {
         this.activeEndpointId = data.endpointId;
-        this.setStatus('authenticating');
+        this.addLog('info', `[onConnectionResult] Canal ativo com ${data.endpointId}`);
+        if (this.status !== 'connected') {
+          this.setStatus('authenticating');
+        }
         this.initiateAuthentication();
       } else {
-        this.emitError(new Error('Conexão P2P rejeitada ou falhou no emparelhamento.'));
+        const detail = data.statusCode !== undefined
+          ? ` (${data.statusCode}: ${data.statusCodeName ?? data.statusMessage ?? 'ERROR'})`
+          : '';
+        this.emitError(new Error(`Conexão P2P rejeitada ou falhou no emparelhamento${detail}.`));
       }
     });
     this.pluginListeners.push(hResult);
@@ -341,9 +426,11 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     const hDisc = await this.plugin.addListener('onDisconnected', (raw) => {
       const data = raw as { endpointId: string };
       if (this.activeEndpointId === data.endpointId || this.pendingConnectingEndpointId === data.endpointId) {
+        this.addLog('warn', `[onDisconnected] ${data.endpointId}`);
         this.activeEndpointId = null;
         this.pendingConnectingEndpointId = null;
         this.isAuthenticated = false;
+        this.hasSentPostAuthHandshake = false;
         this.setStatus('disconnected');
       }
     });
@@ -351,8 +438,14 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
 
     const hPayload = await this.plugin.addListener('onPayloadReceived', (raw) => {
       const data = raw as { endpointId: string; payload: string };
+      if (!this.activeEndpointId && data.endpointId) {
+        // Guard against out-of-order bridge delivery where payload arrives just before onConnectionResult
+        this.activeEndpointId = data.endpointId;
+        this.pendingConnectingEndpointId = null;
+      }
       try {
         const msg = JSON.parse(data.payload) as P2PMessage;
+        this.addLog('info', `[onPayloadReceived:${msg.type}] <- ${data.endpointId}`);
         this.handleIncomingMessage(msg);
       } catch {
         this.emitError(new Error('Falha ao decodificar pacote de dados Nearby.'));
@@ -395,13 +488,22 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
         }
 
         this.updateDiscoveredPeers(updated);
-        this.setStatus('player_found');
+        this.setPlayerFoundIfDiscovering();
+        this.addLog('info', `[onEndpointFound] ${peer.playerName} (${endpointId}, canal=${parsed.channel ?? 'N/A'})`);
 
         // If the channel matches, deterministic tie-breaker ensures only ONE device calls requestConnection
         // to prevent simultaneous socket collisions (connection clash) in Google Nearby Connections.
-        if (parsed.channel && parsed.channel === this.currentSessionId) {
-          if (this.localPeerId > parsed.peerId && !this.activeEndpointId && !this.pendingConnectingEndpointId) {
+        if (
+          parsed.channel &&
+          parsed.channel === this.currentSessionId &&
+          !this.activeEndpointId &&
+          !this.pendingConnectingEndpointId
+        ) {
+          if (this.localPeerId > parsed.peerId) {
+            this.addLog('info', `[tie-breaker] Iniciando conexão automática para ${peer.playerName}`);
             void this.connectToPeer(endpointId);
+          } else {
+            this.addLog('info', `[tie-breaker] Aguardando solicitação de ${peer.playerName}`);
           }
         }
       }
@@ -415,7 +517,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
         discoveredAtMs: Date.now()
       };
       this.updateDiscoveredPeers([...this.discoveredPeers, peer]);
-      this.setStatus('player_found');
+      this.setPlayerFoundIfDiscovering();
     }
   }
 
@@ -429,6 +531,18 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
         protocolVersion: PROTOCOL_VERSION,
         challengeNonce: this.authNonce
       },
+      timestampMs: Date.now()
+    });
+  }
+
+  private emitPostAuthHandshakeOnce(action: 'MUTUAL_AUTH_COMPLETED' | 'MUTUAL_AUTH_ACK'): void {
+    if (this.hasSentPostAuthHandshake) return;
+    this.hasSentPostAuthHandshake = true;
+    this.send({
+      type: 'HANDSHAKE',
+      senderId: this.localPeerId,
+      sessionId: this.currentSessionId,
+      payload: { action },
       timestampMs: Date.now()
     });
   }
@@ -475,14 +589,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
           payload: { success: true },
           timestampMs: Date.now()
         });
-        // Send initial handshake to trigger breeding session
-        this.send({
-          type: 'HANDSHAKE',
-          senderId: this.localPeerId,
-          sessionId: this.currentSessionId,
-          payload: { action: 'MUTUAL_AUTH_COMPLETED' },
-          timestampMs: Date.now()
-        });
+        this.emitPostAuthHandshakeOnce('MUTUAL_AUTH_COMPLETED');
       }
       return;
     }
@@ -490,13 +597,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     if (msg.type === 'SESSION_AUTHENTICATED') {
       this.isAuthenticated = true;
       this.setStatus('connected');
-      this.send({
-        type: 'HANDSHAKE',
-        senderId: this.localPeerId,
-        sessionId: this.currentSessionId,
-        payload: { action: 'MUTUAL_AUTH_ACK' },
-        timestampMs: Date.now()
-      });
+      this.emitPostAuthHandshakeOnce('MUTUAL_AUTH_ACK');
       return;
     }
 
