@@ -139,6 +139,61 @@
               >
                 {{ (sessionState.phase === 'failed' || nearbyStatus === 'failed') ? 'Tentar Novamente' : 'Conectar' }}
               </button>
+              <button
+                type="button"
+                data-testid="p2p-logs-toggle-btn"
+                class="px-2 py-1 rounded-lg border text-[11px] font-mono text-slate-300 hover:text-white transition"
+                :style="{
+                  backgroundColor: theme.cardBackground,
+                  borderColor: showDiagnosticLogs ? theme.primaryColor : theme.borderSubtleColor
+                }"
+                @click="showDiagnosticLogs = !showDiagnosticLogs"
+              >
+                📋 Logs ({{ diagnosticLogs.length }})
+              </button>
+            </div>
+          </div>
+
+          <!-- Collapsible P2P Live Diagnostic Logs -->
+          <div
+            v-if="showDiagnosticLogs"
+            data-testid="p2p-diagnostic-logs"
+            class="p-3 rounded-2xl border text-[10px] font-mono space-y-2 transition-colors"
+            :style="{
+              backgroundColor: theme.cardDarkBackground,
+              borderColor: theme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="font-bold text-slate-200">
+                🔍 Telemetria P2P ({{ transport.localPeerId.slice(0, 12) }} · fase: {{ sessionState.phase }})
+              </span>
+              <button
+                type="button"
+                data-testid="p2p-copy-logs-btn"
+                class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                @click="handleCopyLogs"
+              >
+                {{ copiedLogs ? '✓ Copiado' : 'Copiar' }}
+              </button>
+            </div>
+            <div class="max-h-36 overflow-y-auto space-y-1 bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+              <div v-if="diagnosticLogs.length === 0" class="text-slate-500 italic">
+                Nenhum evento P2P registrado ainda. Toque em Conectar.
+              </div>
+              <div
+                v-for="(entry, idx) in diagnosticLogs"
+                :key="idx"
+                :class="
+                  entry.level === 'error'
+                    ? 'text-rose-400'
+                    : entry.level === 'warn'
+                      ? 'text-amber-300'
+                      : 'text-emerald-300'
+                "
+              >
+                [{{ formatLogTime(entry.timestampMs) }}] {{ entry.message }}
+              </div>
             </div>
           </div>
 
@@ -522,7 +577,13 @@ import type { CharacterId, CharacterLifeStage, CreatureTheme } from '@/domains/c
 import { CHARACTER_SPECIES_REGISTRY } from '@/domains/characters/domain/character-registry';
 import { generateCreatureTheme } from '@/domains/characters/domain/creature-theme-engine';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
-import type { BreedingSessionState, DiscoveredPeer, NearbyConnectionStatus } from '@/domains/breeding/types';
+import type {
+  BreedingSessionState,
+  DiscoveredPeer,
+  NearbyConnectionStatus,
+  NearbyDiagnosticLogEntry,
+  P2PTransportPort
+} from '@/domains/breeding/types';
 import { BreedingService } from '@/domains/breeding/application/breeding-service';
 import { NearbyConnectionsP2PAdapter } from '@/domains/breeding/infrastructure/nearby-connections-adapter';
 import { hatchBredEggUseCase, recordBreedingResultUseCase } from '@/domains/persistence/application/game-session-service';
@@ -532,9 +593,11 @@ const props = withDefaults(
   defineProps<{
     saveSnapshot: GameSaveSnapshot;
     creatureTheme?: CreatureTheme;
+    transportOverride?: P2PTransportPort;
   }>(),
   {
-    creatureTheme: undefined
+    creatureTheme: undefined,
+    transportOverride: undefined
   }
 );
 
@@ -559,20 +622,25 @@ const theme = computed<CreatureTheme>(() => props.creatureTheme ?? fallbackTheme
 const activeTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
 const roomChannelCode = ref('SALA-777');
 
-const transport = new NearbyConnectionsP2PAdapter({
-  playerName: 'Treinador Pixel'
-});
+const transport: P2PTransportPort =
+  props.transportOverride ??
+  new NearbyConnectionsP2PAdapter({
+    playerName: 'Treinador Pixel'
+  });
 const breedingService = new BreedingService(transport);
 const sessionState = ref<BreedingSessionState>(breedingService.getState());
-const nearbyStatus = ref<NearbyConnectionStatus>(transport.getConnectionStatus());
+const nearbyStatus = ref<NearbyConnectionStatus>(transport.getConnectionStatus?.() ?? 'idle');
 const discoveredPeers = ref<readonly DiscoveredPeer[]>([]);
+const diagnosticLogs = ref<readonly NearbyDiagnosticLogEntry[]>(transport.getDiagnosticLogs?.() ?? []);
+const showDiagnosticLogs = ref(false);
+const copiedLogs = ref(false);
 const hasPersistedResult = ref(false);
 const pendingPeerEndpointId = ref<string | null>(null);
 
 const isPairingWithPeer = (endpointId: string) => {
   return (
     pendingPeerEndpointId.value === endpointId ||
-    transport.getActiveEndpointId() === endpointId ||
+    transport.getActiveEndpointId?.() === endpointId ||
     nearbyStatus.value === 'connection_requested' ||
     nearbyStatus.value === 'connection_pending' ||
     nearbyStatus.value === 'connecting' ||
@@ -581,14 +649,17 @@ const isPairingWithPeer = (endpointId: string) => {
   );
 };
 
-const unsubscribeStatus = transport.onStatusChange((s) => {
+const unsubscribeStatus = transport.onStatusChange?.((s) => {
   nearbyStatus.value = s;
   if (s === 'connected' || s === 'failed' || s === 'disconnected' || s === 'idle') {
     pendingPeerEndpointId.value = null;
   }
 });
-const unsubscribePeers = transport.onPeersChange((peers) => {
+const unsubscribePeers = transport.onPeersChange?.((peers) => {
   discoveredPeers.value = peers;
+});
+const unsubscribeLogs = transport.onDiagnosticLog?.((logs) => {
+  diagnosticLogs.value = logs;
 });
 
 const unsubscribeService = breedingService.subscribe((state) => {
@@ -674,7 +745,11 @@ const localCreature = computed(() => {
 
 function handleSelectLocalCreature(): void {
   if (localCreature.value) {
-    breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
+    breedingService.selectLocalCreature(
+      localCreature.value.speciesId,
+      localCreature.value.genetics,
+      localCreature.value.name
+    );
   }
 }
 
@@ -699,6 +774,22 @@ watch(
   },
   { immediate: true }
 );
+
+watch(nearbyStatus, (status) => {
+  if (status === 'connected' && localCreature.value) {
+    breedingService.selectLocalCreature(
+      localCreature.value.speciesId,
+      localCreature.value.genetics,
+      localCreature.value.name
+    );
+  }
+});
+
+watch(isConnected, (connected) => {
+  if (connected && localCreature.value) {
+    breedingService.syncLocalParticipant();
+  }
+});
 
 const selectedSire = computed(() => {
   const local = sessionState.value.localParticipant;
@@ -728,11 +819,21 @@ const canConfirmBreeding = computed(() => {
 });
 
 const connectionStatusLabel = computed(() => {
-  if (sessionState.value.phase === 'discovering' || nearbyStatus.value === 'discovering') {
-    return 'Procurando parceiros próximos (Nearby)...';
+  if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') {
+    return 'Falha na conexão';
   }
-  if (nearbyStatus.value === 'player_found') {
-    return 'Jogador encontrado!';
+  if (sessionState.value.phase === 'cancelled') {
+    return 'Cancelado';
+  }
+  if (
+    nearbyStatus.value === 'connected' ||
+    isConnected.value ||
+    sessionState.value.phase === 'pairing'
+  ) {
+    return 'Parceiro Conectado!';
+  }
+  if (nearbyStatus.value === 'authenticating') {
+    return 'Autenticando sessão segura...';
   }
   if (
     nearbyStatus.value === 'connecting' ||
@@ -741,29 +842,50 @@ const connectionStatusLabel = computed(() => {
   ) {
     return 'Conectando ao dispositivo...';
   }
-  if (nearbyStatus.value === 'authenticating') {
-    return 'Autenticando sessão segura...';
+  if (nearbyStatus.value === 'player_found') {
+    return 'Jogador encontrado!';
   }
   if (
-    sessionState.value.phase === 'pairing' ||
-    isConnected.value ||
-    nearbyStatus.value === 'connected'
+    nearbyStatus.value === 'discovering' ||
+    nearbyStatus.value === 'starting_discovery' ||
+    nearbyStatus.value === 'checking_environment' ||
+    nearbyStatus.value === 'requesting_permissions' ||
+    sessionState.value.phase === 'discovering'
   ) {
-    return 'Parceiro Conectado!';
+    return 'Procurando parceiros próximos (Nearby)...';
   }
-  if (sessionState.value.phase === 'cancelled') return 'Cancelado';
-  if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') return 'Falha na conexão';
   return 'Aguardando conexão';
 });
 
+function formatLogTime(timestampMs: number): string {
+  const date = new Date(timestampMs);
+  return date.toTimeString().slice(0, 8);
+}
+
+async function handleCopyLogs(): Promise<void> {
+  const text = diagnosticLogs.value
+    .map((entry) => `[${formatLogTime(entry.timestampMs)}] [${entry.level}] ${entry.message}`)
+    .join('\n');
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    }
+    copiedLogs.value = true;
+    setTimeout(() => {
+      copiedLogs.value = false;
+    }, 2000);
+  } catch {
+    copiedLogs.value = false;
+  }
+}
+
 async function handleConnect(): Promise<void> {
+  pendingPeerEndpointId.value = null;
   if (!selectedLocalSpeciesId.value) {
     selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
   }
   await breedingService.openDiscovery(roomChannelCode.value);
-  if (localCreature.value) {
-    breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
-  }
+  handleSelectLocalCreature();
 }
 
 async function handleConnectToPeer(endpointId: string): Promise<void> {
@@ -772,9 +894,7 @@ async function handleConnectToPeer(endpointId: string): Promise<void> {
   if (transport.connectToPeer) {
     try {
       await transport.connectToPeer(endpointId);
-      if (localCreature.value) {
-        breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
-      }
+      handleSelectLocalCreature();
     } finally {
       if (nearbyStatus.value !== 'connection_requested' && nearbyStatus.value !== 'connecting') {
         pendingPeerEndpointId.value = null;
@@ -819,14 +939,13 @@ onMounted(() => {
   if (!selectedLocalSpeciesId.value) {
     selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
   }
-  if (localCreature.value) {
-    breedingService.selectLocalCreature(localCreature.value.speciesId, localCreature.value.genetics);
-  }
+  handleSelectLocalCreature();
 });
 
 onBeforeUnmount(() => {
-  unsubscribeStatus();
-  unsubscribePeers();
+  unsubscribeStatus?.();
+  unsubscribePeers?.();
+  unsubscribeLogs?.();
   unsubscribeService();
   breedingService.dispose();
   transport.disconnect();

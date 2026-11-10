@@ -34,6 +34,7 @@ export class BreedingService {
   private localSalt = '';
   private hasSentCommitment = false;
   private remoteCommitment: CommitmentPayload | null = null;
+  private lastAutoSyncedPeerId: string | null = null;
 
   constructor(
     public readonly transport: P2PTransportPort,
@@ -98,8 +99,25 @@ export class BreedingService {
   public async openDiscovery(channelCode: string): Promise<void> {
     if (this.state.phase === 'failed') {
       this.setPhase('idle');
-      this.updateState(() => ({ errorMessage: null }));
     }
+    this.localSeed = '';
+    this.localSalt = '';
+    this.hasSentCommitment = false;
+    this.remoteCommitment = null;
+    this.lastAutoSyncedPeerId = null;
+    this.updateState((prev) => ({
+      remotePeerId: null,
+      remoteParticipant: null,
+      compatibility: null,
+      producedEgg: null,
+      ownership: null,
+      historyRecord: null,
+      errorMessage: null,
+      localParticipant: prev.localParticipant
+        ? { ...prev.localParticipant, isReady: false }
+        : null
+    }));
+
     await this.transport.connect(channelCode);
     this.setPhase('discovering');
     this.transport.send({
@@ -109,6 +127,23 @@ export class BreedingService {
       payload: { action: 'DISCOVERY_PING' },
       timestampMs: Date.now()
     });
+  }
+
+  public syncLocalParticipant(): void {
+    if (!this.state.localParticipant) return;
+    this.transport.send({
+      type: 'CHARACTER_SELECT',
+      senderId: this.state.localPeerId,
+      sessionId: this.state.sessionId,
+      payload: this.state.localParticipant,
+      timestampMs: Date.now()
+    });
+  }
+
+  private autoSyncLocalParticipantForPeer(peerId: string): void {
+    if (this.lastAutoSyncedPeerId === peerId || !this.state.localParticipant) return;
+    this.lastAutoSyncedPeerId = peerId;
+    this.syncLocalParticipant();
   }
 
   public selectLocalCreature(
@@ -132,15 +167,7 @@ export class BreedingService {
     };
 
     this.updateState(() => ({ localParticipant: participant }));
-
-    this.transport.send({
-      type: 'CHARACTER_SELECT',
-      senderId: this.state.localPeerId,
-      sessionId: this.state.sessionId,
-      payload: participant,
-      timestampMs: Date.now()
-    });
-
+    this.syncLocalParticipant();
     this.recalculateCompatibility();
   }
 
@@ -248,6 +275,7 @@ export class BreedingService {
           if (this.state.phase === 'discovering') {
             this.setPhase('pairing');
           }
+          this.autoSyncLocalParticipantForPeer(msg.senderId);
         }
         break;
 
@@ -261,6 +289,7 @@ export class BreedingService {
           this.setPhase('character_selection');
         }
         this.recalculateCompatibility();
+        this.autoSyncLocalParticipantForPeer(msg.senderId);
         break;
       }
 
@@ -328,6 +357,8 @@ export class BreedingService {
     }
     if (result.compatible && this.state.phase === 'compatibility_check') {
       this.setPhase('awaiting_confirmation');
+    } else if (!result.compatible && this.state.phase === 'awaiting_confirmation') {
+      this.setPhase('compatibility_check');
     }
   }
 

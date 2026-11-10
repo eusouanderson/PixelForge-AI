@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
@@ -67,6 +68,7 @@ import java.util.List;
 )
 public class NearbyConnectionsPlugin extends Plugin {
 
+    private static final String TAG = "NearbyConnections";
     private static final String DEFAULT_SERVICE_ID = "ai.pixelforge.virtualcreatures.breeding";
     private static final Strategy STRATEGY = Strategy.P2P_POINT_TO_POINT;
 
@@ -78,11 +80,13 @@ public class NearbyConnectionsPlugin extends Plugin {
     public void load() {
         super.load();
         connectionsClient = Nearby.getConnectionsClient(getContext());
+        Log.d(TAG, "Plugin NearbyConnections inicializado.");
     }
 
     private final ConnectionLifecycleCallback connectionLifecycleCallback = new ConnectionLifecycleCallback() {
         @Override
         public void onConnectionInitiated(@NonNull String endpointId, @NonNull ConnectionInfo connectionInfo) {
+            Log.d(TAG, "onConnectionInitiated: id=" + endpointId + " incoming=" + connectionInfo.isIncomingConnection());
             JSObject data = new JSObject();
             data.put("endpointId", endpointId);
             data.put("endpointName", connectionInfo.getEndpointName());
@@ -94,11 +98,26 @@ public class NearbyConnectionsPlugin extends Plugin {
         @Override
         public void onConnectionResult(@NonNull String endpointId, @NonNull ConnectionResolution resolution) {
             int statusCode = resolution.getStatus().getStatusCode();
+            String statusCodeName = ConnectionsStatusCodes.getStatusCodeString(statusCode);
             boolean success = statusCode == ConnectionsStatusCodes.STATUS_OK;
+
+            Log.d(TAG, "onConnectionResult: id=" + endpointId + " status=" + statusCode + " (" + statusCodeName + ") success=" + success);
+
+            if (success) {
+                if (isAdvertising) {
+                    connectionsClient.stopAdvertising();
+                    isAdvertising = false;
+                }
+                if (isDiscovering) {
+                    connectionsClient.stopDiscovery();
+                    isDiscovering = false;
+                }
+            }
 
             JSObject data = new JSObject();
             data.put("endpointId", endpointId);
             data.put("statusCode", statusCode);
+            data.put("statusCodeName", statusCodeName);
             data.put("success", success);
             data.put("statusMessage", resolution.getStatus().getStatusMessage());
             notifyListeners("onConnectionResult", data);
@@ -106,6 +125,7 @@ public class NearbyConnectionsPlugin extends Plugin {
 
         @Override
         public void onDisconnected(@NonNull String endpointId) {
+            Log.d(TAG, "onDisconnected: id=" + endpointId);
             JSObject data = new JSObject();
             data.put("endpointId", endpointId);
             notifyListeners("onDisconnected", data);
@@ -115,6 +135,7 @@ public class NearbyConnectionsPlugin extends Plugin {
     private final EndpointDiscoveryCallback endpointDiscoveryCallback = new EndpointDiscoveryCallback() {
         @Override
         public void onEndpointFound(@NonNull String endpointId, @NonNull DiscoveredEndpointInfo info) {
+            Log.d(TAG, "onEndpointFound: id=" + endpointId + " name=" + info.getEndpointName());
             JSObject data = new JSObject();
             data.put("endpointId", endpointId);
             data.put("endpointName", info.getEndpointName());
@@ -124,6 +145,7 @@ public class NearbyConnectionsPlugin extends Plugin {
 
         @Override
         public void onEndpointLost(@NonNull String endpointId) {
+            Log.d(TAG, "onEndpointLost: id=" + endpointId);
             JSObject data = new JSObject();
             data.put("endpointId", endpointId);
             notifyListeners("onEndpointLost", data);
@@ -136,6 +158,7 @@ public class NearbyConnectionsPlugin extends Plugin {
             if (payload.getType() == Payload.Type.BYTES) {
                 byte[] bytes = payload.asBytes();
                 String message = bytes != null ? new String(bytes, StandardCharsets.UTF_8) : "";
+                Log.d(TAG, "onPayloadReceived: from=" + endpointId + " bytes=" + (bytes != null ? bytes.length : 0));
                 JSObject data = new JSObject();
                 data.put("endpointId", endpointId);
                 data.put("payload", message);
@@ -414,6 +437,7 @@ public class NearbyConnectionsPlugin extends Plugin {
 
         byte[] bytes = payloadStr.getBytes(StandardCharsets.UTF_8);
         Payload payload = Payload.fromBytes(bytes);
+        Log.d(TAG, "sendPayload: to=" + endpointId + " bytes=" + bytes.length);
 
         connectionsClient.sendPayload(endpointId, payload)
                 .addOnSuccessListener(unused -> {
@@ -421,7 +445,10 @@ public class NearbyConnectionsPlugin extends Plugin {
                     ret.put("success", true);
                     call.resolve(ret);
                 })
-                .addOnFailureListener(e -> call.reject("Falha ao enviar dados Nearby: " + e.getMessage(), e));
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "sendPayload falhou para " + endpointId + ": " + e.getMessage(), e);
+                    call.reject("Falha ao enviar dados Nearby: " + e.getMessage(), e);
+                });
     }
 
     @PluginMethod
@@ -444,14 +471,10 @@ public class NearbyConnectionsPlugin extends Plugin {
     @PluginMethod
     public void stopAllEndpoints(PluginCall call) {
         try {
-            if (isAdvertising) {
-                connectionsClient.stopAdvertising();
-                isAdvertising = false;
-            }
-            if (isDiscovering) {
-                connectionsClient.stopDiscovery();
-                isDiscovering = false;
-            }
+            connectionsClient.stopAdvertising();
+            isAdvertising = false;
+            connectionsClient.stopDiscovery();
+            isDiscovering = false;
             connectionsClient.stopAllEndpoints();
 
             JSObject ret = new JSObject();
@@ -471,10 +494,11 @@ public class NearbyConnectionsPlugin extends Plugin {
         } else {
             permissions.add(Manifest.permission.BLUETOOTH);
             permissions.add(Manifest.permission.BLUETOOTH_ADMIN);
-            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        } else {
             permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES);
         }
 

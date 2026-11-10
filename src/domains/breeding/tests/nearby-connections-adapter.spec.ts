@@ -447,6 +447,12 @@ describe('NearbyConnectionsP2PAdapter', () => {
 
       expect(adapter.isSessionAuthenticated()).toBe(true);
       expect(adapter.getConnectionStatus()).toBe('connected');
+      expect(mockPlugin.sendPayload).toHaveBeenCalledWith(
+        expect.objectContaining({
+          endpointId: 'ep-100',
+          payload: expect.stringContaining('MUTUAL_AUTH_COMPLETED')
+        })
+      );
 
       // Simulate incoming remote challenge to which local must respond
       mockPlugin.trigger('onPayloadReceived', {
@@ -472,7 +478,7 @@ describe('NearbyConnectionsP2PAdapter', () => {
         })
       );
 
-      // Handles SESSION_AUTHENTICATED confirmation
+      // Handles SESSION_AUTHENTICATED confirmation (deduplicates redundant post-auth handshake)
       mockPlugin.trigger('onPayloadReceived', {
         endpointId: 'ep-100',
         payload: JSON.stringify({
@@ -484,12 +490,6 @@ describe('NearbyConnectionsP2PAdapter', () => {
         })
       });
       expect(adapter.isSessionAuthenticated()).toBe(true);
-      expect(mockPlugin.sendPayload).toHaveBeenCalledWith(
-        expect.objectContaining({
-          endpointId: 'ep-100',
-          payload: expect.stringContaining('MUTUAL_AUTH_ACK')
-        })
-      );
 
       // Handles application messages
       const appMsgSpy = vi.fn();
@@ -592,6 +592,107 @@ describe('NearbyConnectionsP2PAdapter', () => {
       mockPlugin.rejectConnection = vi.fn().mockRejectedValueOnce(new Error('Erro ao rejeitar'));
       await adapter.rejectConnection('ep-1');
       expect(errSpy).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('tracks diagnostic logs and handles out-of-order discovery, connection, and sendPayload errors', async () => {
+      const mockPlugin = createMockPlugin();
+      const adapter = new NearbyConnectionsP2PAdapter({
+        localPeerId: 'local-diag-1',
+        isNativeOverride: true,
+        pluginOverride: mockPlugin
+      });
+
+      const logSnapshots: number[] = [];
+      const unsubLogs = adapter.onDiagnosticLog((entries) => {
+        logSnapshots.push(entries.length);
+      });
+
+      // Trigger discovery right during startDiscovery() so status leaves 'starting_discovery' early
+      mockPlugin.startDiscovery = vi.fn().mockImplementation(async () => {
+        mockPlugin.trigger('onEndpointFound', {
+          endpointId: 'ep-early',
+          endpointName: JSON.stringify({
+            peerId: 'early-peer-without-channel',
+            playerName: 'Early Dino'
+          })
+        });
+        return { success: true };
+      });
+
+      await adapter.connect('room-diag');
+      expect(adapter.getConnectionStatus()).toBe('player_found');
+      expect(adapter.getDiagnosticLogs().some((l) => l.message.includes('canal=N/A'))).toBe(true);
+
+      // sendPayload rejects cleanly into diagnostic error log
+      mockPlugin.sendPayload = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('8012: IO_ERROR'))
+        .mockResolvedValue({ success: true });
+      mockPlugin.trigger('onConnectionResult', {
+        endpointId: 'ep-early',
+        success: true
+      });
+      await new Promise((r) => setTimeout(r, 10));
+      expect(adapter.getDiagnosticLogs().some((l) => l.message.includes('8012: IO_ERROR'))).toBe(true);
+
+      // Duplicate onConnectionInitiated while active & connected skips re-accepting
+      mockPlugin.trigger('onPayloadReceived', {
+        endpointId: 'ep-early',
+        payload: JSON.stringify({
+          type: 'SESSION_AUTHENTICATED',
+          senderId: 'early-peer-without-channel',
+          sessionId: 'room-diag',
+          payload: { success: true },
+          timestampMs: Date.now()
+        })
+      });
+      expect(adapter.getConnectionStatus()).toBe('connected');
+      mockPlugin.trigger('onConnectionInitiated', {
+        endpointId: 'ep-early',
+        endpointName: 'Early Dino',
+        isIncoming: true
+      });
+
+      // onConnectionResult while already connected keeps status 'connected' and re-initiates auth
+      mockPlugin.trigger('onConnectionResult', {
+        endpointId: 'ep-early',
+        success: true
+      });
+      await adapter.acceptConnection('ep-early');
+
+      // Late onEndpointFound while connected skips status downgrade
+      mockPlugin.trigger('onEndpointFound', {
+        endpointId: 'ep-late',
+        endpointName: JSON.stringify({ peerId: 'late-peer', playerName: 'Late' })
+      });
+      expect(adapter.getConnectionStatus()).toBe('connected');
+
+      // onConnectionResult failures with statusCodeName, statusMessage, and default ERROR fallback
+      const errors: string[] = [];
+      adapter.onError((e) => errors.push(e.message));
+      mockPlugin.trigger('onConnectionResult', {
+        endpointId: 'ep-f1',
+        success: false,
+        statusCode: 8012,
+        statusCodeName: 'STATUS_ENDPOINT_IO_ERROR'
+      });
+      mockPlugin.trigger('onConnectionResult', {
+        endpointId: 'ep-f2',
+        success: false,
+        statusCode: 8004,
+        statusMessage: 'Rejected by peer'
+      });
+      mockPlugin.trigger('onConnectionResult', {
+        endpointId: 'ep-f3',
+        success: false,
+        statusCode: 13
+      });
+      expect(errors.some((m) => m.includes('STATUS_ENDPOINT_IO_ERROR'))).toBe(true);
+      expect(errors.some((m) => m.includes('Rejected by peer'))).toBe(true);
+      expect(errors.some((m) => m.includes('13: ERROR'))).toBe(true);
+
+      unsubLogs();
+      expect(logSnapshots.length).toBeGreaterThan(1);
     });
   });
 });

@@ -149,6 +149,14 @@ export type NearbyConnectionStatus =
   | 'disconnected'
   | 'failed';
 
+export type NearbyLogLevel = 'info' | 'warn' | 'error';
+
+export interface NearbyDiagnosticLogEntry {
+  readonly timestampMs: number;
+  readonly level: NearbyLogLevel;
+  readonly message: string;
+}
+
 export interface DiscoveredPeer {
   readonly endpointId: string;
   readonly peerId: string;
@@ -167,6 +175,9 @@ export interface P2PTransportPort {
   onError(handler: (err: Error) => void): () => void;
   getConnectionStatus?(): NearbyConnectionStatus;
   getDiscoveredPeers?(): readonly DiscoveredPeer[];
+  getActiveEndpointId?(): string | null;
+  getDiagnosticLogs?(): readonly NearbyDiagnosticLogEntry[];
+  onDiagnosticLog?(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void;
   connectToPeer?(endpointId: string): Promise<void>;
   acceptConnection?(endpointId: string): Promise<void>;
   rejectConnection?(endpointId: string): Promise<void>;
