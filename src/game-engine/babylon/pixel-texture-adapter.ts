@@ -1,11 +1,15 @@
-import type { DeclarativePixelArt } from '@/core/domain/pixel-art/interfaces';
+import type {
+  DeclarativePixelArt,
+  UpscaleRenderOptions
+} from '@/core/domain/pixel-art/interfaces';
 import type { ElementAffinity } from '@/domains/characters/types';
 import type { EnvironmentBackdropConfig } from '@/domains/environments/types';
 import type { PixelParticleTexturePattern } from '@/domains/particles/types';
 import { Canvas2dRenderer } from '@/infrastructure/renderer/canvas-2d-renderer';
 import { parseHexColor, uint32ToRgba } from '@/core/domain/canvas/color';
+import { APP_CONFIG } from '@/shared/constants/app-config';
 
-const sharedRenderer = new Canvas2dRenderer();
+export const sharedBabylonSpriteRenderer = new Canvas2dRenderer();
 
 export interface RawRgbaTextureData {
   readonly width: number;
@@ -13,43 +17,54 @@ export interface RawRgbaTextureData {
   readonly data: Uint8Array;
 }
 
+/**
+ * Expands declarative pixel art through PixelArtUpscaler and flips Y coordinates
+ * into WebGL-upright RGBA bytes for Babylon.js RawTexture consumption.
+ */
 export function rasterizeSpriteToRgbaBytes(
   art: DeclarativePixelArt,
-  scaleFactor: number = 8,
-  showGrid: boolean = false
+  scaleFactor: number = APP_CONFIG.rendering.surfaceScales.texture3d,
+  showGrid: boolean = false,
+  upscaleOptions: UpscaleRenderOptions = {}
 ): RawRgbaTextureData {
-  const logicalBuffer = sharedRenderer.renderToBuffer(art);
-  const scale = Math.max(1, Math.floor(scaleFactor));
-  const outWidth = logicalBuffer.width * scale;
-  const outHeight = logicalBuffer.height * scale;
+  const scale = Math.max(1, Math.floor(upscaleOptions.scale ?? scaleFactor));
+  const expandedBuffer = sharedBabylonSpriteRenderer.renderUpscaledBuffer(art, {
+    ...upscaleOptions,
+    scale
+  });
+
+  const outWidth = expandedBuffer.width;
+  const outHeight = expandedBuffer.height;
   const data = new Uint8Array(outWidth * outHeight * 4);
+  const srcView = expandedBuffer.uint32View;
 
-  for (let ly = 0; ly < logicalBuffer.height; ly++) {
+  const cellW = Math.max(1, Math.floor(outWidth / art.logicalDimensions.width));
+  const cellH = Math.max(1, Math.floor(outHeight / art.logicalDimensions.height));
+
+  for (let outY = 0; outY < outHeight; outY++) {
     // Flip Y for WebGL RawTexture coordinates so the sprite stands upright
-    const flippedLy = logicalBuffer.height - 1 - ly;
-    for (let lx = 0; lx < logicalBuffer.width; lx++) {
-      const pixelUint32 = logicalBuffer.getPixel(lx, flippedLy);
+    const flippedY = outHeight - 1 - outY;
+    const srcRowOffset = flippedY * outWidth;
+    const dstRowOffset = outY * outWidth;
+    const isGridRow = showGrid && outY % cellH === 0;
+
+    for (let outX = 0; outX < outWidth; outX++) {
+      const pixelUint32 = srcView[srcRowOffset + outX];
+      if ((pixelUint32 >>> 24) === 0) continue;
+
       const rgba = uint32ToRgba(pixelUint32);
+      const idx = (dstRowOffset + outX) * 4;
 
-      for (let sy = 0; sy < scale; sy++) {
-        for (let sx = 0; sx < scale; sx++) {
-          const outX = lx * scale + sx;
-          const outY = ly * scale + sy;
-          const idx = (outY * outWidth + outX) * 4;
-
-          const isGridBorder = showGrid && (sx === 0 || sy === 0);
-          if (isGridBorder && rgba.a > 0) {
-            data[idx] = Math.min(255, rgba.r + 25);
-            data[idx + 1] = Math.min(255, rgba.g + 25);
-            data[idx + 2] = Math.min(255, rgba.b + 25);
-            data[idx + 3] = rgba.a;
-          } else {
-            data[idx] = rgba.r;
-            data[idx + 1] = rgba.g;
-            data[idx + 2] = rgba.b;
-            data[idx + 3] = rgba.a;
-          }
-        }
+      if (isGridRow || (showGrid && outX % cellW === 0)) {
+        data[idx] = Math.min(255, rgba.r + 25);
+        data[idx + 1] = Math.min(255, rgba.g + 25);
+        data[idx + 2] = Math.min(255, rgba.b + 25);
+        data[idx + 3] = rgba.a;
+      } else {
+        data[idx] = rgba.r;
+        data[idx + 1] = rgba.g;
+        data[idx + 2] = rgba.b;
+        data[idx + 3] = rgba.a;
       }
     }
   }

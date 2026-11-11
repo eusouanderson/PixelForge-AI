@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import {
   Pause as PauseIcon,
   Download as DownloadIcon,
@@ -18,19 +18,28 @@ import {
   Thermometer as ThermometerIcon,
   Skull as SkullIcon
 } from 'lucide-vue-next';
-import { APP_CONFIG } from '@/shared/constants/app-config';
+import { APP_CONFIG, resolveOutputDimensions } from '@/shared/constants/app-config';
 import { PRESETS, type PresetItem } from '@/shared/constants/presets';
 import { Canvas2dRenderer } from '@/infrastructure/renderer/canvas-2d-renderer';
 import { validatePixelArt } from '@/core/domain/validation/pixel-art-schema';
-import type { DeclarativePixelArt } from '@/core/domain/pixel-art/interfaces';
+import type {
+  DeclarativePixelArt,
+  UpscalingAlgorithm
+} from '@/core/domain/pixel-art/interfaces';
 import type { AnimationMode } from './interfaces';
 
 const renderer = new Canvas2dRenderer();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+const compareOriginalCanvasRef = ref<HTMLCanvasElement | null>(null);
+const compareNnCanvasRef = ref<HTMLCanvasElement | null>(null);
+const compareSmartCanvasRef = ref<HTMLCanvasElement | null>(null);
 
 const currentArt = ref<DeclarativePixelArt>(JSON.parse(JSON.stringify(PRESETS[0].data)) as DeclarativePixelArt);
 const selectedPresetId = ref<string>(PRESETS[0].id);
-const zoomLevel = ref<number>(APP_CONFIG.defaultScale);
+const zoomLevel = ref<number>(APP_CONFIG.rendering.surfaceScales.studioPreview);
+const upscalingAlgorithm = ref<UpscalingAlgorithm>(APP_CONFIG.rendering.upscalingAlgorithm);
+const detailEnhancementEnabled = ref<boolean>(APP_CONFIG.rendering.detailEnhancement.enabled);
+const compareMode = ref<boolean>(false);
 const showGrid = ref<boolean>(false);
 const animationMode = ref<AnimationMode>('none');
 const animationSpeedMs = ref<number>(500);
@@ -41,21 +50,75 @@ const fileInputRef = ref<HTMLInputElement | null>(null);
 let animInterval: ReturnType<typeof setInterval> | null = null;
 let currentFrameIndex = 0;
 
-const displayWidth = computed(() => currentArt.value.logicalDimensions.width * zoomLevel.value);
-const displayHeight = computed(() => currentArt.value.logicalDimensions.height * zoomLevel.value);
+const studioScaleChoices = [2, 3, 4, 6, 8, 16] as const;
+const outputDims = computed(() =>
+  resolveOutputDimensions(currentArt.value.logicalDimensions, zoomLevel.value)
+);
+const displayWidth = computed(() => outputDims.value.width);
+const displayHeight = computed(() => outputDims.value.height);
+const pngExportDims = computed(() =>
+  resolveOutputDimensions(
+    currentArt.value.logicalDimensions,
+    APP_CONFIG.rendering.surfaceScales.pngExport
+  )
+);
+const compareSmartAlgorithm = computed<UpscalingAlgorithm>(() =>
+  upscalingAlgorithm.value === 'nearest-neighbor' ? 'intelligent' : upscalingAlgorithm.value
+);
 
 const paletteEntries = computed(() => {
   return Object.entries(currentArt.value.palette).filter(([key]) => key !== 'transparent');
 });
 
 function draw(): void {
+  if (compareMode.value) {
+    if (compareOriginalCanvasRef.value) {
+      renderer.renderToCanvas(
+        compareOriginalCanvasRef.value,
+        currentArt.value,
+        currentArt.value.logicalDimensions.width,
+        currentArt.value.logicalDimensions.height,
+        showGrid.value,
+        { algorithm: 'nearest-neighbor', detailEnhancement: { enabled: false } }
+      );
+    }
+    if (compareNnCanvasRef.value) {
+      renderer.renderToCanvas(
+        compareNnCanvasRef.value,
+        currentArt.value,
+        displayWidth.value,
+        displayHeight.value,
+        showGrid.value,
+        { algorithm: 'nearest-neighbor', detailEnhancement: { enabled: false } }
+      );
+    }
+    if (compareSmartCanvasRef.value) {
+      renderer.renderToCanvas(
+        compareSmartCanvasRef.value,
+        currentArt.value,
+        displayWidth.value,
+        displayHeight.value,
+        showGrid.value,
+        {
+          algorithm: compareSmartAlgorithm.value,
+          detailEnhancement: { enabled: detailEnhancementEnabled.value }
+        }
+      );
+    }
+    return;
+  }
+
   if (!canvasRef.value) return;
   renderer.renderToCanvas(
     canvasRef.value,
     currentArt.value,
     displayWidth.value,
     displayHeight.value,
-    showGrid.value
+    showGrid.value,
+    {
+      algorithm: upscalingAlgorithm.value,
+      detailEnhancement: { enabled: detailEnhancementEnabled.value }
+    }
   );
 }
 
@@ -107,8 +170,16 @@ function toggleGrid(): void {
 }
 
 function setZoom(newZoom: number): void {
-  zoomLevel.value = Math.max(2, Math.min(24, newZoom));
+  zoomLevel.value = Math.max(2, Math.min(32, newZoom));
   draw();
+}
+
+function toggleDetailEnhancement(): void {
+  detailEnhancementEnabled.value = !detailEnhancementEnabled.value;
+}
+
+function toggleCompareMode(): void {
+  compareMode.value = !compareMode.value;
 }
 
 function stopAnimation(): void {
@@ -255,13 +326,17 @@ async function exportPng(): Promise<void> {
   try {
     const blob = await renderer.exportPngBlob(
       currentArt.value,
-      APP_CONFIG.defaultOutputDimensions.width,
-      APP_CONFIG.defaultOutputDimensions.height
+      pngExportDims.value.width,
+      pngExportDims.value.height,
+      {
+        algorithm: upscalingAlgorithm.value,
+        detailEnhancement: { enabled: detailEnhancementEnabled.value }
+      }
     );
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${currentArt.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-1024x1024.png`;
+    a.download = `${currentArt.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${pngExportDims.value.width}x${pngExportDims.value.height}.png`;
     a.click();
     URL.revokeObjectURL(url);
   } catch (err: unknown) {
@@ -311,9 +386,12 @@ async function handleFileSelected(event: Event): Promise<void> {
   }
 }
 
-watch([displayWidth, displayHeight, showGrid], () => {
-  draw();
-});
+watch(
+  [displayWidth, displayHeight, showGrid, upscalingAlgorithm, detailEnhancementEnabled, compareMode],
+  () => {
+    void nextTick().then(draw);
+  }
+);
 
 onMounted(() => {
   draw();
@@ -323,6 +401,7 @@ onUnmounted(() => {
   if (animInterval) {
     clearInterval(animInterval);
   }
+  renderer.clearCaches();
 });
 </script>
 
@@ -465,7 +544,7 @@ onUnmounted(() => {
           @click="exportPng"
         >
           <download-icon class="w-3.5 h-3.5" />
-          <span>PNG Transparente (1024×1024)</span>
+          <span>PNG Transparente ({{ pngExportDims.width }}×{{ pngExportDims.height }})</span>
         </button>
       </div>
     </header>
@@ -507,14 +586,45 @@ onUnmounted(() => {
 
     <div class="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
       <main class="flex-1 min-h-0 flex flex-col bg-slate-950 overflow-hidden relative">
-        <div class="p-3 px-6 border-b border-slate-850 flex items-center justify-between gap-4 bg-slate-900/40 flex-shrink-0">
-          <div class="flex items-center gap-4 text-xs">
-            <span class="text-slate-400">Resolução Lógica: <strong class="text-slate-200 font-mono">{{ currentArt.logicalDimensions.width }}×{{ currentArt.logicalDimensions.height }}</strong></span>
+        <div class="p-3 px-6 border-b border-slate-850 flex flex-wrap items-center justify-between gap-3 bg-slate-900/40 flex-shrink-0">
+          <div class="flex flex-wrap items-center gap-4 text-xs">
+            <span class="text-slate-400">Lógica: <strong class="text-slate-200 font-mono">{{ currentArt.logicalDimensions.width }}×{{ currentArt.logicalDimensions.height }}</strong></span>
+            <span class="text-slate-400">Saída: <strong class="text-cyan-300 font-mono">{{ displayWidth }}×{{ displayHeight }}</strong></span>
             <span class="text-slate-400">Fundo: <strong class="text-emerald-400 font-mono">Transparente (Alpha 0)</strong></span>
             <span class="text-slate-400">Escala: <strong class="text-emerald-400 font-mono">{{ zoomLevel }}x</strong></span>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              v-model="upscalingAlgorithm"
+              data-testid="studio-algorithm-select"
+              aria-label="Algoritmo de Super-Resolution"
+              class="px-2 py-1 rounded text-xs font-medium bg-slate-800 border border-slate-700 text-slate-200 cursor-pointer"
+            >
+              <option value="nearest-neighbor">Nearest-Neighbor</option>
+              <option value="scale2x">Scale2x (EPX)</option>
+              <option value="scale3x">Scale3x</option>
+              <option value="intelligent">Inteligente (Adaptativo)</option>
+            </select>
+
+            <button
+              data-testid="studio-enhance-btn"
+              class="px-2.5 py-1 rounded text-xs font-medium border transition cursor-pointer"
+              :class="detailEnhancementEnabled ? 'bg-amber-600/30 border-amber-500 text-amber-200' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'"
+              @click="toggleDetailEnhancement"
+            >
+              Refinar Detalhes
+            </button>
+
+            <button
+              data-testid="studio-compare-btn"
+              class="px-2.5 py-1 rounded text-xs font-medium border transition cursor-pointer"
+              :class="compareMode ? 'bg-indigo-600/40 border-indigo-400 text-indigo-200' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'"
+              @click="toggleCompareMode"
+            >
+              Comparar
+            </button>
+
             <button
               class="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border transition cursor-pointer"
               :class="showGrid ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-300 hover:text-white'"
@@ -526,8 +636,9 @@ onUnmounted(() => {
 
             <div class="flex items-center bg-slate-800 rounded border border-slate-700 p-0.5">
               <button
-                v-for="zoom in [4, 8, 12, 16]"
+                v-for="zoom in studioScaleChoices"
                 :key="zoom"
+                :data-testid="`studio-scale-btn-${zoom}`"
                 class="px-2 py-0.5 rounded text-[11px] font-mono transition cursor-pointer"
                 :class="zoomLevel === zoom ? 'bg-emerald-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'"
                 @click="setZoom(zoom)"
@@ -539,14 +650,69 @@ onUnmounted(() => {
         </div>
 
         <div class="flex-1 min-h-0 flex items-center justify-center p-4 sm:p-8 overflow-auto">
-          <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 shadow-2xl relative flex-shrink-0">
+          <div
+            v-if="compareMode"
+            data-testid="studio-compare-grid"
+            class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full"
+          >
+            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col items-center gap-2">
+              <span class="text-[11px] font-bold uppercase text-slate-300">
+                Original ({{ currentArt.logicalDimensions.width }}×{{ currentArt.logicalDimensions.height }})
+              </span>
+              <div class="rounded overflow-hidden bg-checkerboard border border-white/10 p-2 flex items-center justify-center">
+                <canvas
+                  ref="compareOriginalCanvasRef"
+                  data-testid="compare-original-canvas"
+                  :width="currentArt.logicalDimensions.width"
+                  :height="currentArt.logicalDimensions.height"
+                  class="block w-48 h-48"
+                  style="image-rendering: pixelated"
+                ></canvas>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 flex flex-col items-center gap-2">
+              <span class="text-[11px] font-bold uppercase text-emerald-300">
+                Nearest-Neighbor ({{ zoomLevel }}× · {{ displayWidth }}×{{ displayHeight }})
+              </span>
+              <div class="rounded overflow-hidden bg-checkerboard border border-white/10 p-2 flex items-center justify-center">
+                <canvas
+                  ref="compareNnCanvasRef"
+                  data-testid="compare-nn-canvas"
+                  :width="displayWidth"
+                  :height="displayHeight"
+                  class="block w-48 h-48"
+                  style="image-rendering: pixelated"
+                ></canvas>
+              </div>
+            </div>
+
+            <div class="p-3 bg-slate-900/80 rounded-xl border border-indigo-700/70 flex flex-col items-center gap-2">
+              <span class="text-[11px] font-bold uppercase text-indigo-300">
+                {{ compareSmartAlgorithm }} ({{ zoomLevel }}×{{ detailEnhancementEnabled ? ' + Refino' : '' }})
+              </span>
+              <div class="rounded overflow-hidden bg-checkerboard border border-white/10 p-2 flex items-center justify-center">
+                <canvas
+                  ref="compareSmartCanvasRef"
+                  data-testid="compare-smart-canvas"
+                  :width="displayWidth"
+                  :height="displayHeight"
+                  class="block w-48 h-48"
+                  style="image-rendering: pixelated"
+                ></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 shadow-2xl relative flex-shrink-0">
             <div class="rounded overflow-hidden bg-checkerboard shadow-inner border border-white/5">
               <canvas
                 ref="canvasRef"
+                data-testid="studio-main-canvas"
                 :width="displayWidth"
                 :height="displayHeight"
                 class="block cursor-crosshair"
-                :style="{ width: `${displayWidth}px`, height: `${displayHeight}px` }"
+                :style="{ width: `${displayWidth}px`, height: `${displayHeight}px`, imageRendering: 'pixelated' }"
               ></canvas>
             </div>
           </div>

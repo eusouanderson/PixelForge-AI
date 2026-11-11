@@ -9,13 +9,51 @@ import type {
   PointsOperation,
   PixelOperation,
   FillOperation,
-  SymmetryHorizontalOperation
+  SymmetryHorizontalOperation,
+  UpscaleRenderOptions
 } from '@/core/domain/pixel-art/interfaces';
 import { PixelBuffer } from '@/core/domain/canvas/pixel-buffer';
+import { hashPixelBuffer, PixelArtUpscaler } from '@/core/domain/canvas/pixel-art-upscaler';
 import { hexToUint32, blendUint32Colors } from '@/core/domain/canvas/color';
+import { APP_CONFIG } from '@/shared/constants/app-config';
+
+export const sharedPixelArtUpscaler = new PixelArtUpscaler();
+let sharedLogicalBufferCache = new WeakMap<
+  DeclarativePixelArt,
+  { readonly signature: string; readonly buffer: PixelBuffer }
+>();
+
+function buildArtSignature(art: DeclarativePixelArt): string {
+  const paletteSig = Object.values(art.palette).join(',');
+  const layersSig = art.layers
+    .map((l) => `${l.id}:${l.visible}:${l.opacity}:${l.zIndex}:${l.operations.length}`)
+    .join(';');
+  return `${art.logicalDimensions.width}x${art.logicalDimensions.height}|${paletteSig}|${layersSig}`;
+}
 
 export class Canvas2dRenderer {
+  private readonly upscaler: PixelArtUpscaler;
+
+  constructor(upscaler: PixelArtUpscaler = sharedPixelArtUpscaler) {
+    this.upscaler = upscaler;
+  }
+
+  public clearCaches(): void {
+    sharedLogicalBufferCache = new WeakMap();
+    this.upscaler.clearCache();
+  }
+
+  public getUpscaleCacheSize(): number {
+    return this.upscaler.getCacheSize();
+  }
+
   public renderToBuffer(art: DeclarativePixelArt): PixelBuffer {
+    const signature = buildArtSignature(art);
+    const cached = sharedLogicalBufferCache.get(art);
+    if (cached && cached.signature === signature) {
+      return cached.buffer;
+    }
+
     const width = art.logicalDimensions.width;
     const height = art.logicalDimensions.height;
     const compositeBuffer = new PixelBuffer(width, height);
@@ -29,7 +67,31 @@ export class Canvas2dRenderer {
       this.compositeLayer(compositeBuffer, layerBuffer, layer.opacity);
     }
 
+    sharedLogicalBufferCache.set(art, { signature, buffer: compositeBuffer });
     return compositeBuffer;
+  }
+
+  /**
+   * Renders the declarative pixel art to its logical buffer and applies super-resolution upscaling
+   * through the shared PixelArtUpscaler, hitting LRU cache for recurring animation frames.
+   */
+  public renderUpscaledBuffer(
+    art: DeclarativePixelArt,
+    options: UpscaleRenderOptions = {}
+  ): PixelBuffer {
+    const logicalBuffer = this.renderToBuffer(art);
+    const cacheKey = hashPixelBuffer(logicalBuffer);
+    return this.upscaler.upscale(
+      logicalBuffer,
+      {
+        algorithm: options.algorithm ?? APP_CONFIG.rendering.upscalingAlgorithm,
+        detailEnhancement: options.detailEnhancement ?? APP_CONFIG.rendering.detailEnhancement,
+        scale: options.scale ?? APP_CONFIG.rendering.renderScale,
+        targetWidth: options.targetWidth,
+        targetHeight: options.targetHeight
+      },
+      cacheKey
+    );
   }
 
   public rasterizeLayer(
@@ -295,9 +357,14 @@ export class Canvas2dRenderer {
     art: DeclarativePixelArt,
     targetWidth: number,
     targetHeight: number,
-    showGrid: boolean = false
+    showGrid: boolean = false,
+    upscaleOptions?: UpscaleRenderOptions
   ): void {
-    const buffer = this.renderToBuffer(art);
+    const buffer = this.renderUpscaledBuffer(art, {
+      ...upscaleOptions,
+      targetWidth,
+      targetHeight
+    });
     targetCanvas.width = targetWidth;
     targetCanvas.height = targetHeight;
 
@@ -322,19 +389,21 @@ export class Canvas2dRenderer {
     ctx.drawImage(offscreen, 0, 0, targetWidth, targetHeight);
 
     if (showGrid) {
-      const stepX = targetWidth / buffer.width;
-      const stepY = targetHeight / buffer.height;
+      const logicalW = art.logicalDimensions.width;
+      const logicalH = art.logicalDimensions.height;
+      const stepX = targetWidth / logicalW;
+      const stepY = targetHeight / logicalH;
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
       ctx.lineWidth = 1;
 
-      for (let x = 0; x <= buffer.width; x++) {
+      for (let x = 0; x <= logicalW; x++) {
         ctx.beginPath();
         ctx.moveTo(x * stepX, 0);
         ctx.lineTo(x * stepX, targetHeight);
         ctx.stroke();
       }
 
-      for (let y = 0; y <= buffer.height; y++) {
+      for (let y = 0; y <= logicalH; y++) {
         ctx.beginPath();
         ctx.moveTo(0, y * stepY);
         ctx.lineTo(targetWidth, y * stepY);
@@ -345,11 +414,12 @@ export class Canvas2dRenderer {
 
   public async exportPngBlob(
     art: DeclarativePixelArt,
-    width: number = 1024,
-    height: number = 1024
+    width: number = art.logicalDimensions.width * APP_CONFIG.rendering.surfaceScales.pngExport,
+    height: number = art.logicalDimensions.height * APP_CONFIG.rendering.surfaceScales.pngExport,
+    upscaleOptions?: UpscaleRenderOptions
   ): Promise<Blob> {
     const canvas = document.createElement('canvas');
-    this.renderToCanvas(canvas, art, width, height, false);
+    this.renderToCanvas(canvas, art, width, height, false, upscaleOptions);
 
     return new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => {
