@@ -5,6 +5,7 @@ import type {
 } from '../types';
 
 export const MAX_NATURAL_LIFESPAN_HOURS = 720; // 30 real days (1 month)
+export const EGG_INCUBATION_DURATION_MS = 2 * 60 * 1000; // 2 real minutes before animated hatching
 
 const STANDARD_EVOLUTION_RULES: readonly CharacterEvolutionRule[] = [
   {

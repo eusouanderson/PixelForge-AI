@@ -1,13 +1,16 @@
 package ai.pixelforge.virtualcreatures;
 
 import android.Manifest;
+import android.app.ActivityManager;
 import android.app.AlarmManager;
+import android.app.KeyguardManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.PowerManager;
 import androidx.core.app.NotificationManagerCompat;
 
 import com.getcapacitor.JSArray;
@@ -23,6 +26,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 import org.json.JSONObject;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @CapacitorPlugin(
@@ -38,6 +42,80 @@ public class PetCareNotificationsPlugin extends Plugin {
 
     private static final String PREFS_NAME = "PixelForgePetNotifications";
     private static final String KEY_SCHEDULED_IDS = "scheduled_ids";
+    private static volatile boolean pluginForegroundActive = false;
+
+    @Override
+    public void load() {
+        pluginForegroundActive = true;
+    }
+
+    @Override
+    protected void handleOnStart() {
+        pluginForegroundActive = true;
+    }
+
+    @Override
+    protected void handleOnResume() {
+        pluginForegroundActive = true;
+        Context context = getContext();
+        if (context != null) {
+            NotificationManager notificationManager =
+                (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.cancelAll();
+            }
+        }
+    }
+
+    @Override
+    protected void handleOnPause() {
+        pluginForegroundActive = false;
+    }
+
+    @Override
+    protected void handleOnStop() {
+        pluginForegroundActive = false;
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        pluginForegroundActive = false;
+    }
+
+    public static boolean isAppInForeground(Context context) {
+        if (pluginForegroundActive) {
+            return true;
+        }
+        if (context == null) {
+            return false;
+        }
+        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        if (powerManager != null && !powerManager.isInteractive()) {
+            return false;
+        }
+        KeyguardManager keyguardManager =
+            (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+        if (keyguardManager != null && keyguardManager.isKeyguardLocked()) {
+            return false;
+        }
+        ActivityManager activityManager =
+            (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        if (activityManager == null) {
+            return false;
+        }
+        List<ActivityManager.RunningAppProcessInfo> processes = activityManager.getRunningAppProcesses();
+        if (processes == null) {
+            return false;
+        }
+        String packageName = context.getPackageName();
+        for (ActivityManager.RunningAppProcessInfo process : processes) {
+            if (process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+                && packageName.equals(process.processName)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private String resolvePermissionString() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -79,6 +157,14 @@ public class PetCareNotificationsPlugin extends Plugin {
 
     @PluginMethod
     public void showNow(PluginCall call) {
+        boolean allowInForeground = Boolean.TRUE.equals(call.getBoolean("allowInForeground", false));
+        if (!allowInForeground && isAppInForeground(getContext())) {
+            JSObject ret = new JSObject();
+            ret.put("displayed", false);
+            call.resolve(ret);
+            return;
+        }
+
         int id = call.getInt("id", 1001);
         String title = call.getString("title", "PixelForge: Alerta de Cuidado");
         String body = call.getString("body", "Seu dinossauro precisa de cuidados!");

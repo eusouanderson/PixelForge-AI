@@ -36,6 +36,17 @@ describe('persistence domain engine, offline simulation, and save repository', (
       snapshot.characters.ignisauro.needs.hunger
     );
 
+    // 1 minute later (< 2 min incubation) keeps ovo intact with full needs
+    const after1Min = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 60_000);
+    expect(after1Min.characters.ignisauro.runtime.currentStage).toBe('ovo');
+    expect(after1Min.characters.ignisauro.needs.hunger).toBe(snapshot.characters.ignisauro.needs.hunger);
+
+    // Deferring active egg hatch in live foreground loop preserves ovo until UI plays opening animation
+    const deferred = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 10_800_000, {
+      deferActiveEggHatch: true
+    });
+    expect(deferred.characters.ignisauro.runtime.currentStage).toBe('ovo');
+
     // 3 hours later (3 * 3600 * 1000 = 10_800_000 ms) -> hatches ovo -> baby
     const after3Hours = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 10_800_000);
     expect(after3Hours.characters.ignisauro.runtime.ageHours).toBe(3);

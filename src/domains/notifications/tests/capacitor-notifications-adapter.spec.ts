@@ -75,13 +75,24 @@ describe('capacitor-notifications-adapter', () => {
     const adapter = new CapacitorNotificationsAdapter({
       isNativeOverride: true,
       nativePluginOverride: nativePlugin,
-      webNotificationApiOverride: null
+      webNotificationApiOverride: null,
+      isForegroundOverride: () => false
     });
 
     expect(adapter.isSupported()).toBe(true);
     expect(await adapter.checkPermission()).toBe('granted');
     expect(await adapter.requestPermission()).toBe('prompt');
     expect(await adapter.showNow(SAMPLE_PAYLOAD)).toBe(true);
+
+    // Foreground suppression blocks automatic OS alerts unless allowInForeground is true
+    const fgNativeAdapter = new CapacitorNotificationsAdapter({
+      isNativeOverride: true,
+      nativePluginOverride: nativePlugin,
+      webNotificationApiOverride: null,
+      isForegroundOverride: () => true
+    });
+    expect(await fgNativeAdapter.showNow(SAMPLE_PAYLOAD)).toBe(false);
+    expect(await fgNativeAdapter.showNow(SAMPLE_PAYLOAD, { allowInForeground: true })).toBe(true);
     await adapter.schedulePending([SAMPLE_PAYLOAD]);
     expect(nativePlugin.schedulePending).toHaveBeenCalledTimes(1);
     await adapter.cancelAll();
@@ -110,7 +121,8 @@ describe('capacitor-notifications-adapter', () => {
     const adapter = new CapacitorNotificationsAdapter({
       isNativeOverride: true,
       nativePluginOverride: failingNative,
-      webNotificationApiOverride: null
+      webNotificationApiOverride: null,
+      isForegroundOverride: () => false
     });
 
     expect(await adapter.checkPermission()).toBe('denied');
@@ -121,9 +133,17 @@ describe('capacitor-notifications-adapter', () => {
   });
 
   it('handles unsupported environment when web Notification API is missing', async () => {
+    const unsupportedFg = new CapacitorNotificationsAdapter({
+      isNativeOverride: false,
+      webNotificationApiOverride: null,
+      isForegroundOverride: () => false
+    });
+    expect(await unsupportedFg.showNow(SAMPLE_PAYLOAD)).toBe(false);
+
     const adapter = new CapacitorNotificationsAdapter({
       isNativeOverride: false,
-      webNotificationApiOverride: null
+      webNotificationApiOverride: null,
+      isForegroundOverride: () => false
     });
 
     expect(adapter.isSupported()).toBe(false);
@@ -160,7 +180,8 @@ describe('capacitor-notifications-adapter', () => {
 
     const adapter = new CapacitorNotificationsAdapter({
       isNativeOverride: false,
-      webNotificationApiOverride: webApi
+      webNotificationApiOverride: webApi,
+      isForegroundOverride: () => false
     });
 
     expect(adapter.isSupported()).toBe(true);

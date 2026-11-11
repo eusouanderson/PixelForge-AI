@@ -18,10 +18,19 @@ if (!existsSync(PKG_PATH)) {
 const pkg = JSON.parse(readFileSync(PKG_PATH, 'utf-8'));
 const version = pkg.version || '1.0.0';
 
-// Parse semver into numeric build fallback
+// Parse semver into numeric build fallback and synchronize with Android versionCode
 const [major = 1, minor = 0, patch = 0] = version.split('.').map((p) => parseInt(p, 10) || 0);
 const calculatedBuild = major * 10000 + minor * 100 + patch;
-const buildNumber = parseInt(process.env.BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || String(calculatedBuild), 10);
+let gradleVersionCode = 0;
+const buildGradlePath = join(ROOT_DIR, 'android', 'app', 'build.gradle');
+if (existsSync(buildGradlePath)) {
+  const gradleMatch = readFileSync(buildGradlePath, 'utf-8').match(/versionCode\s+(\d+)/);
+  if (gradleMatch) {
+    gradleVersionCode = parseInt(gradleMatch[1], 10) || 0;
+  }
+}
+const envBuild = parseInt(process.env.BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || '0', 10) || 0;
+const buildNumber = Math.max(gradleVersionCode, calculatedBuild, envBuild);
 
 if (!existsSync(DIST_DIR)) {
   console.error('❌ Diretório dist/ não encontrado. Execute o build web antes de gerar o pacote de atualização.');
@@ -67,7 +76,9 @@ let apkSha256 = '000000000000000000000000000000000000000000000000000000000000000
 let apkSizeBytes = 0;
 const possibleApkPaths = [
   join(ROOT_DIR, 'release-apk', `pixelforge-virtual-creatures-v${version}.apk`),
+  join(ROOT_DIR, 'android', 'app', 'build', 'outputs', 'apk', 'release', `pixelforge-virtual-creatures-v${version}.apk`),
   join(ROOT_DIR, 'android', 'app', 'build', 'outputs', 'apk', 'debug', `pixelforge-virtual-creatures-v${version}.apk`),
+  join(ROOT_DIR, 'release-apk', 'app-release.apk'),
   join(ROOT_DIR, 'release-apk', 'app-debug.apk'),
   join(ROOT_DIR, 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk')
 ];

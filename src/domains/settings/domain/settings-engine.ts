@@ -8,7 +8,8 @@ export function createDefaultSettings(): GameSettingsState {
     graphicsQuality: 'high',
     showPixelGrid: false,
     reducedMotion: false,
-    autoSaveEnabled: true
+    autoSaveEnabled: true,
+    developerModeEnabled: false
   };
 }
 

@@ -2,7 +2,8 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import type {
   NotificationPermissionState,
   NotificationsPort,
-  PetCareNotificationPayload
+  PetCareNotificationPayload,
+  ShowNotificationOptions
 } from '../types';
 
 export interface PetCareNotificationsNativePlugin {
@@ -13,6 +14,7 @@ export interface PetCareNotificationsNativePlugin {
     title: string;
     body: string;
     severity: string;
+    allowInForeground?: boolean;
   }): Promise<{ displayed: boolean }>;
   schedulePending(options: {
     notifications: ReadonlyArray<{
@@ -40,6 +42,11 @@ export interface CapacitorNotificationsAdapterOptions {
   readonly isNativeOverride?: boolean;
   readonly nativePluginOverride?: PetCareNotificationsNativePlugin;
   readonly webNotificationApiOverride?: WebNotificationApiLike | null;
+  readonly isForegroundOverride?: () => boolean;
+}
+
+export function resolveDefaultForegroundCheck(): boolean {
+  return typeof document !== 'undefined' && document.visibilityState === 'visible';
 }
 
 export function resolveWebNotificationApi(): WebNotificationApiLike | null {
@@ -70,6 +77,7 @@ export class CapacitorNotificationsAdapter implements NotificationsPort {
   private readonly isNative: boolean;
   private readonly nativePlugin: PetCareNotificationsNativePlugin;
   private readonly webApi: WebNotificationApiLike | null;
+  private readonly isForegroundCheck: () => boolean;
   private webTimers: Array<ReturnType<typeof setTimeout>> = [];
 
   constructor(options: CapacitorNotificationsAdapterOptions = {}) {
@@ -79,6 +87,7 @@ export class CapacitorNotificationsAdapter implements NotificationsPort {
       options.webNotificationApiOverride !== undefined
         ? options.webNotificationApiOverride
         : resolveWebNotificationApi();
+    this.isForegroundCheck = options.isForegroundOverride ?? resolveDefaultForegroundCheck;
   }
 
   public isSupported(): boolean {
@@ -116,14 +125,23 @@ export class CapacitorNotificationsAdapter implements NotificationsPort {
     }
   }
 
-  public async showNow(notification: PetCareNotificationPayload): Promise<boolean> {
+  public async showNow(
+    notification: PetCareNotificationPayload,
+    options: ShowNotificationOptions = {}
+  ): Promise<boolean> {
+    const allowInForeground = Boolean(options.allowInForeground);
+    if (!allowInForeground && this.isForegroundCheck()) {
+      return false;
+    }
+
     if (this.isNative) {
       try {
         const res = await this.nativePlugin.showNow({
           id: notification.id,
           title: notification.title,
           body: notification.body,
-          severity: notification.severity
+          severity: notification.severity,
+          allowInForeground
         });
         return res.displayed;
       } catch {

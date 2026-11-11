@@ -1,6 +1,7 @@
 import type { CharacterId } from '@/domains/characters/types';
 import {
   CHARACTER_SPECIES_REGISTRY,
+  EGG_INCUBATION_DURATION_MS,
   MAX_NATURAL_LIFESPAN_HOURS,
   listAllCharacterSpecies,
   pickRandomCharacterId
@@ -79,9 +80,14 @@ export function createNewGameSaveSnapshot(
   };
 }
 
+export interface OfflineSimulationOptions {
+  readonly deferActiveEggHatch?: boolean;
+}
+
 export function simulateOfflineProgressOnSnapshot(
   snapshot: GameSaveSnapshot,
-  nowMs: number
+  nowMs: number,
+  options: OfflineSimulationOptions = {}
 ): GameSaveSnapshot {
   const elapsedMs = Math.max(0, nowMs - snapshot.lastSavedAtMs);
   const elapsedMinutes = Math.floor(elapsedMs / 60000);
@@ -94,11 +100,35 @@ export function simulateOfflineProgressOnSnapshot(
   }
 
   const elapsedHours = Math.round((elapsedMinutes / 60) * 10) / 10;
+  const eggMinutes = Math.floor(EGG_INCUBATION_DURATION_MS / 60000);
   const updatedCharacters = {} as Record<CharacterId, CharacterSaveRecord>;
 
   for (const species of listAllCharacterSpecies()) {
     const prevRecord = snapshot.characters[species.id];
-    const sim = simulateNeedsOverTime(prevRecord.needs, elapsedMinutes);
+    const isEgg = prevRecord.runtime.currentStage === 'ovo';
+    if (isEgg) {
+      const eggElapsedMs = Math.max(0, nowMs - prevRecord.runtime.createdAtMs);
+      const shouldDefer = Boolean(
+        options.deferActiveEggHatch && species.id === snapshot.activeCharacterId
+      );
+      if (eggElapsedMs < EGG_INCUBATION_DURATION_MS || shouldDefer) {
+        updatedCharacters[species.id] = {
+          ...prevRecord,
+          runtime: {
+            ...prevRecord.runtime,
+            lastUpdatedAtMs: nowMs
+          }
+        };
+        continue;
+      }
+    }
+
+    const effectiveMinutes = isEgg ? Math.max(1, elapsedMinutes - eggMinutes) : elapsedMinutes;
+    const baseProgression = isEgg
+      ? { ...prevRecord.progression, currentStage: 'baby' as const }
+      : prevRecord.progression;
+
+    const sim = simulateNeedsOverTime(prevRecord.needs, effectiveMinutes);
     const nextAgeHours = Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10;
     const nextDiseases = diagnoseNeedsTriggeredDiseases(
       sim.currentNeeds,
@@ -109,14 +139,14 @@ export function simulateOfflineProgressOnSnapshot(
     const evolvedStage =
       nextDiseases.length === 0 && !reachedOldAge
         ? resolveEligibleEvolutionStage(
-            prevRecord.progression,
+            baseProgression,
             nextAgeHours,
             sim.currentNeeds.health,
             sim.currentNeeds.happiness,
             species.evolutionRules
           )
         : null;
-    const nextStage = evolvedStage ?? prevRecord.runtime.currentStage;
+    const nextStage = evolvedStage ?? baseProgression.currentStage;
     const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(
       sim.currentNeeds,
       nextDiseases.length,

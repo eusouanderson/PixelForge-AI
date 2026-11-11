@@ -692,7 +692,13 @@ const availableCreatures = computed(() => {
     adulto: 'Adulto'
   };
 
+  const showAllSpecies = Boolean(props.saveSnapshot.settings?.developerModeEnabled);
+  const activeId = props.saveSnapshot.activeCharacterId;
+
   for (const [id, record] of Object.entries(props.saveSnapshot.characters)) {
+    if (!showAllSpecies && id !== activeId) {
+      continue;
+    }
     if (record.runtime.healthCondition !== 'deceased' && record.genetics) {
       const species = CHARACTER_SPECIES_REGISTRY[id as CharacterId];
       const displayName = record.runtime.customNickname || species?.displayName || id;
@@ -707,7 +713,6 @@ const availableCreatures = computed(() => {
   }
 
   // Ensure active character is first
-  const activeId = props.saveSnapshot.activeCharacterId;
   result.sort((a, b) => {
     if (a.speciesId === activeId) return -1;
     if (b.speciesId === activeId) return 1;

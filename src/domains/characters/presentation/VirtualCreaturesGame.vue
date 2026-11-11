@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import {
   Utensils as UtensilsIcon,
   Dumbbell as DumbbellIcon,
@@ -10,7 +12,8 @@ import {
   Clock as ClockIcon,
   RotateCcw as RotateCcwIcon,
   RefreshCw as RefreshCwIcon,
-  Bell as BellIcon
+  Bell as BellIcon,
+  Code2 as CodeIcon
 } from 'lucide-vue-next';
 import { UpdateManagerService } from '@/domains/updater/application/update-manager-service';
 import type { UpdaterState } from '@/domains/updater/types';
@@ -25,6 +28,7 @@ import type {
   CharacterLifeStage
 } from '@/domains/characters/types';
 import {
+  EGG_INCUBATION_DURATION_MS,
   MAX_NATURAL_LIFESPAN_HOURS,
   getCharacterSpeciesById,
   listAllCharacterSpecies
@@ -72,16 +76,20 @@ const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
 const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings' | 'genetics'>('feed');
 const showGenealogyModal = ref<boolean>(false);
 const feedbackBanner = ref<string>(
-  'O ovo ancestral está rachando no Santuário Elemental! Aguarde o nascimento ou toque em Eclodir.'
+  '🥚 Um ovo ancestral misterioso surgiu no Santuário Elemental! Aguarde alguns minutos para vê-lo rachar e abrir.'
 );
 const babylonCanvasRef = ref<HTMLCanvasElement | null>(null);
 const spriteOverlayCanvasRef = ref<HTMLCanvasElement | null>(null);
 const frameToggle = ref<1 | 2 | 3 | 4>(1);
 const manualAnimOverride = ref<CharacterAnimationName | null>(null);
+const nowClockMs = ref<number>(Date.now());
+const isHatchAnimationPlaying = ref<boolean>(false);
 
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
+let incubationClockTimer: ReturnType<typeof setInterval> | null = null;
 let realTimeDecayTimer: ReturnType<typeof setInterval> | null = null;
 let animResetTimeout: ReturnType<typeof setTimeout> | null = null;
+let nativeAppStateListener: PluginListenerHandle | null = null;
 
 const updaterService = new UpdateManagerService();
 const updaterState = ref<UpdaterState>(updaterService.getState());
@@ -112,6 +120,19 @@ const totalPower = computed(() => computeTotalPowerRating(activeRecord.value.att
 const displayedStage = computed<CharacterLifeStage>(
   () => activeRecord.value.runtime.currentStage
 );
+
+const eggRemainingMs = computed<number>(() => {
+  if (displayedStage.value !== 'ovo') return 0;
+  const hatchAt = activeRecord.value.runtime.createdAtMs + EGG_INCUBATION_DURATION_MS;
+  return Math.max(0, hatchAt - nowClockMs.value);
+});
+
+const eggCountdownLabel = computed<string>(() => {
+  const totalSeconds = Math.ceil(eggRemainingMs.value / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+});
 
 const nextEvolutionRule = computed(() =>
   activeSpecies.value.evolutionRules.find((r) => r.fromStage === displayedStage.value) ?? null
@@ -261,14 +282,26 @@ async function handleReviveCharacter(): Promise<void> {
 }
 
 async function handleHatchEgg(): Promise<void> {
+  isHatchAnimationPlaying.value = false;
+  frameToggle.value = 1;
   saveState.value = hatchCharacterEggUseCase(saveState.value, Date.now());
-  feedbackBanner.value = `O ovo de ${activeSpecies.value.displayName} eclodiu!`;
+  feedbackBanner.value = `🐣 O ovo de ${activeSpecies.value.displayName} eclodiu!`;
   sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
   await persistCurrentState();
 }
 
+function startEggHatchSequence(): void {
+  if (displayedStage.value !== 'ovo' || isHatchAnimationPlaying.value) return;
+  isHatchAnimationPlaying.value = true;
+  frameToggle.value = 1;
+  feedbackBanner.value = `✨ O ovo ancestral de ${activeSpecies.value.displayName} está rachando e abrindo!`;
+  sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
+}
+
 async function handleSimulateOfflineHours(hours: number): Promise<void> {
+  isHatchAnimationPlaying.value = false;
   const simulatedNow = saveState.value.lastSavedAtMs + hours * 3600 * 1000;
+  nowClockMs.value = simulatedNow;
   saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, simulatedNow);
   feedbackBanner.value = `Simuladas +${hours}h offline! As necessidades e evolução avançaram conforme o tempo.`;
   renderCurrentSpriteToOverlay();
@@ -290,6 +323,19 @@ async function handleTogglePixelGrid(): Promise<void> {
     Date.now()
   );
   renderCurrentSpriteToOverlay();
+  await persistCurrentState();
+}
+
+async function handleToggleDeveloperMode(): Promise<void> {
+  const nextDevMode = !saveState.value.settings.developerModeEnabled;
+  saveState.value = updateSettingsUseCase(
+    saveState.value,
+    { developerModeEnabled: nextDevMode },
+    Date.now()
+  );
+  feedbackBanner.value = nextDevMode
+    ? 'Modo de Desenvolvimento ativado em Ajustes.'
+    : 'Modo de Desenvolvimento desativado.';
   await persistCurrentState();
 }
 
@@ -325,12 +371,17 @@ async function handleSendTestNotification(): Promise<void> {
 }
 
 async function handleResetSave(): Promise<void> {
+  const keepDevMode = saveState.value.settings.developerModeEnabled;
   await saveRepo.clearSave();
   manualAnimOverride.value = null;
+  isHatchAnimationPlaying.value = false;
   frameToggle.value = 1;
-  saveState.value = createNewGameSaveSnapshot(Date.now());
+  const now = Date.now();
+  nowClockMs.value = now;
+  const fresh = createNewGameSaveSnapshot(now);
+  saveState.value = updateSettingsUseCase(fresh, { developerModeEnabled: keepDevMode }, now);
   syncBabylonEnvironment();
-  feedbackBanner.value = `Novo ovo sorteado de ${activeSpecies.value.displayName}! Ele já está rachando para nascer.`;
+  feedbackBanner.value = `🥚 Novo ovo sorteado de ${activeSpecies.value.displayName}! Aguarde alguns minutos para vê-lo abrir com animação.`;
   await persistCurrentState();
 }
 
@@ -390,6 +441,31 @@ watch([currentSpriteArt, () => saveState.value.settings.showPixelGrid], () => {
   renderCurrentSpriteToOverlay();
 });
 
+async function handleVisibilityOrAppStateChange(isForeground: boolean): Promise<void> {
+  const now = Date.now();
+  nowClockMs.value = now;
+  if (isForeground) {
+    const activeWasEgg = saveState.value.characters[saveState.value.activeCharacterId]?.runtime.currentStage === 'ovo';
+    saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, now, {
+      deferActiveEggHatch: activeWasEgg
+    });
+    await careNotificationService.setAppForeground(true, saveState.value, now);
+    if (
+      displayedStage.value === 'ovo' &&
+      !isHatchAnimationPlaying.value &&
+      eggRemainingMs.value <= 0
+    ) {
+      startEggHatchSequence();
+    }
+    return;
+  }
+  await careNotificationService.setAppForeground(false, saveState.value, now);
+}
+
+function handleDocumentVisibilityChange(): void {
+  void handleVisibilityOrAppStateChange(document.visibilityState !== 'hidden');
+}
+
 onMounted(async () => {
   unsubscribeUpdater = updaterService.subscribe((state) => {
     updaterState.value = state;
@@ -400,9 +476,19 @@ onMounted(async () => {
   await updaterService.initialize();
   void updaterService.checkForUpdates(false);
 
+  const initialForeground =
+    typeof document === 'undefined' ? true : document.visibilityState !== 'hidden';
+  await careNotificationService.setAppForeground(initialForeground);
+
+  const nowOnMount = Date.now();
+  nowClockMs.value = nowOnMount;
   const loaded = await saveRepo.loadSave();
   if (loaded) {
-    saveState.value = simulateOfflineProgressOnSnapshot(loaded, Date.now());
+    const wasEgg = loaded.characters[loaded.activeCharacterId]?.runtime.currentStage === 'ovo';
+    const offlineElapsed = Math.max(0, nowOnMount - loaded.lastSavedAtMs);
+    saveState.value = simulateOfflineProgressOnSnapshot(loaded, nowOnMount, {
+      deferActiveEggHatch: wasEgg && offlineElapsed < 30 * 60 * 1000
+    });
   } else {
     await persistCurrentState();
   }
@@ -415,6 +501,15 @@ onMounted(async () => {
     await careNotificationService.requestPermissionAndSync(saveState.value, Date.now());
   }
 
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
+  }
+  if (Capacitor.isNativePlatform()) {
+    nativeAppStateListener = await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      void handleVisibilityOrAppStateChange(isActive);
+    });
+  }
+
   await nextTick();
   if (babylonCanvasRef.value) {
     sceneController.initialize({
@@ -424,11 +519,38 @@ onMounted(async () => {
     syncBabylonEnvironment();
   }
 
+  if (displayedStage.value === 'ovo' && eggRemainingMs.value <= 0) {
+    startEggHatchSequence();
+  }
+
+  incubationClockTimer = setInterval(() => {
+    nowClockMs.value = Date.now();
+    if (
+      displayedStage.value === 'ovo' &&
+      !isHatchAnimationPlaying.value &&
+      eggRemainingMs.value <= 0
+    ) {
+      startEggHatchSequence();
+    }
+  }, 1000);
+
   spriteTimer = setInterval(() => {
     /* v8 ignore start */
-    if (displayedStage.value === 'ovo' && frameToggle.value === 4) {
-      frameToggle.value = 1;
-      void handleHatchEgg();
+    if (displayedStage.value === 'ovo') {
+      if (isHatchAnimationPlaying.value) {
+        if (frameToggle.value >= 4) {
+          void handleHatchEgg();
+          return;
+        }
+        frameToggle.value = (frameToggle.value + 1) as 1 | 2 | 3 | 4;
+        return;
+      }
+      if (eggRemainingMs.value <= 0) {
+        startEggHatchSequence();
+        return;
+      }
+      frameToggle.value =
+        eggRemainingMs.value <= 20_000 ? (frameToggle.value === 1 ? 2 : 1) : 1;
       return;
     }
     frameToggle.value = frameToggle.value === 4 ? 1 : ((frameToggle.value + 1) as 1 | 2 | 3 | 4);
@@ -437,16 +559,28 @@ onMounted(async () => {
 
   realTimeDecayTimer = setInterval(() => {
     /* v8 ignore start */
-    saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, Date.now());
+    const tickNow = Date.now();
+    nowClockMs.value = tickNow;
+    saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, tickNow, {
+      deferActiveEggHatch: true
+    });
     void persistCurrentState();
     /* v8 ignore stop */
   }, 60000);
 });
 
 onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleDocumentVisibilityChange);
+  }
+  if (nativeAppStateListener) {
+    void nativeAppStateListener.remove();
+    nativeAppStateListener = null;
+  }
   if (unsubscribeUpdater) unsubscribeUpdater();
   if (unsubscribeNotifications) unsubscribeNotifications();
   careNotificationService.dispose();
+  if (incubationClockTimer) clearInterval(incubationClockTimer);
   if (spriteTimer) clearInterval(spriteTimer);
   if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
@@ -616,7 +750,10 @@ onUnmounted(() => {
               {{ activeRecord.progression.currentXp }}/{{ activeRecord.progression.nextLevelXp }}
             </strong>
           </span>
-          <span v-if="nextEvolutionRule" class="text-emerald-300 font-semibold">
+          <span v-if="displayedStage === 'ovo'" data-testid="egg-countdown-label" class="text-amber-300 font-semibold">
+            {{ isHatchAnimationPlaying ? '🥚 Eclosão em andamento...' : `🥚 Abre com animação em ${eggCountdownLabel}` }}
+          </span>
+          <span v-else-if="nextEvolutionRule" class="text-emerald-300 font-semibold">
             Próx. fase ({{ nextEvolutionRule.toStage }}): Nv.{{ nextEvolutionRule.requiredLevel }} e
             {{ nextEvolutionRule.requiredAgeHours }}h
           </span>
@@ -686,13 +823,13 @@ onUnmounted(() => {
           Reviver
         </button>
         <button
-          v-else-if="activeRecord.runtime.currentStage === 'ovo'"
+          v-else-if="activeRecord.runtime.currentStage === 'ovo' && saveState.settings.developerModeEnabled"
           type="button"
           data-testid="hatch-egg-btn"
           class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
           @click="handleHatchEgg"
         >
-          Eclodir Ovo
+          Eclodir Agora (Dev)
         </button>
       </div>
 
@@ -967,64 +1104,6 @@ onUnmounted(() => {
           data-testid="tab-content-sheet"
           class="space-y-3"
         >
-          <!-- Creature Companion Switcher & Active Animal Theme Indicator -->
-          <div
-            data-testid="companion-selector-card"
-            class="p-3 rounded-xl border space-y-2.5 transition-colors duration-500"
-            :style="{
-              backgroundColor: creatureTheme.cardBackground,
-              borderColor: creatureTheme.borderSubtleColor
-            }"
-          >
-            <div class="flex items-center justify-between">
-              <h2
-                class="text-xs font-bold uppercase flex items-center gap-1.5"
-                :style="{ color: creatureTheme.primaryColor }"
-              >
-                <sparkles-icon class="w-3.5 h-3.5" />
-                <span>Trocar Criatura Companheira</span>
-              </h2>
-              <span
-                data-testid="active-companion-badge"
-                class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border"
-                :style="{
-                  backgroundColor: creatureTheme.cardDarkBackground,
-                  color: creatureTheme.primaryColor,
-                  borderColor: creatureTheme.borderColor
-                }"
-              >
-                {{ activeSpecies.displayName }}
-              </span>
-            </div>
-            <p class="text-[11px] text-slate-300">
-              Escolha seu companheiro. O tema e as cores de todo o APK se adaptam automaticamente à cor principal do animal:
-            </p>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-              <button
-                v-for="species in allAvailableSpecies"
-                :key="species.id"
-                type="button"
-                :data-testid="`select-species-${species.id}`"
-                class="p-2 rounded-lg border text-left flex items-center gap-2 transition-all duration-200"
-                :style="{
-                  backgroundColor: activeCharacterId === species.id ? creatureTheme.cardDarkBackground : 'transparent',
-                  borderColor: activeCharacterId === species.id ? creatureTheme.primaryColor : creatureTheme.borderSubtleColor,
-                  boxShadow: activeCharacterId === species.id ? creatureTheme.accentGlow : 'none'
-                }"
-                @click="handleSelectActiveSpecies(species.id)"
-              >
-                <div
-                  class="w-4 h-4 rounded-full shrink-0 border border-white/20"
-                  :style="{ backgroundColor: species.visualTraits.primaryColors.base }"
-                />
-                <div class="truncate">
-                  <span class="block text-xs font-bold text-white truncate">{{ species.displayName }}</span>
-                  <span class="block text-[9px] text-slate-400 capitalize truncate">{{ species.element }}</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
           <div
             class="p-3 rounded-xl border space-y-1.5 transition-colors duration-500"
             :style="{
@@ -1352,7 +1431,7 @@ onUnmounted(() => {
               </span>
             </div>
             <p class="text-[11px] text-slate-400">
-              Envia alertas no aparelho quando fome, sede, energia, felicidade, higiene ou saúde se aproximarem do nível crítico.
+              Envia alertas no aparelho quando fome, sede, energia, felicidade, higiene ou saúde se aproximarem do nível crítico (somente com o APK fechado ou minimizado).
             </p>
             <div class="text-[10px] text-slate-400 flex items-center justify-between font-mono">
               <span>Permissão: {{ notificationState.permission }}</span>
@@ -1383,48 +1462,6 @@ onUnmounted(() => {
                 @click="handleSendTestNotification"
               >
                 Testar Alerta
-              </button>
-            </div>
-          </div>
-
-          <div
-            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
-            :style="{
-              backgroundColor: creatureTheme.cardBackground,
-              borderColor: creatureTheme.borderSubtleColor
-            }"
-          >
-            <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
-              <clock-icon class="w-3.5 h-3.5 text-emerald-400" />
-              Simulador de Passagem de Tempo Offline
-            </h2>
-            <p class="text-[11px] text-slate-400">
-              Teste deterministicamente o cálculo de tempo decorrido com o app fechado:
-            </p>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                data-testid="sim-offline-1h"
-                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
-                @click="handleSimulateOfflineHours(1)"
-              >
-                +1 Hora
-              </button>
-              <button
-                type="button"
-                data-testid="sim-offline-6h"
-                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
-                @click="handleSimulateOfflineHours(6)"
-              >
-                +6 Horas
-              </button>
-              <button
-                type="button"
-                data-testid="sim-offline-24h"
-                class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
-                @click="handleSimulateOfflineHours(24)"
-              >
-                +24 Horas
               </button>
             </div>
           </div>
@@ -1470,16 +1507,157 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex items-center justify-between pt-1">
-            <button
-              type="button"
-              data-testid="reset-save-btn"
-              class="px-3 py-1.5 rounded-md bg-rose-950 hover:bg-rose-900 border border-rose-700 text-rose-200 text-xs font-bold uppercase flex items-center gap-1"
-              @click="handleResetSave"
+          <!-- Modo de Desenvolvimento -->
+          <div
+            data-testid="developer-mode-card"
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <h2 class="text-xs font-bold uppercase text-amber-300 flex items-center gap-1.5">
+                  <code-icon class="w-3.5 h-3.5 text-amber-400" />
+                  <span>Modo de Desenvolvimento</span>
+                </h2>
+                <p class="text-[11px] text-slate-400 mt-0.5">
+                  Libera troca de criatura companheira, simulador de tempo offline, eclosão imediata e sorteio de novo bichinho.
+                </p>
+              </div>
+              <button
+                type="button"
+                data-testid="toggle-dev-mode-btn"
+                class="px-2.5 py-1 rounded-md border text-xs font-bold shrink-0 transition"
+                :class="
+                  saveState.settings.developerModeEnabled
+                    ? 'bg-amber-600 text-white border-amber-400'
+                    : 'bg-slate-800 text-slate-300 border-slate-700'
+                "
+                @click="handleToggleDeveloperMode"
+              >
+                {{ saveState.settings.developerModeEnabled ? 'Ativado' : 'Desativado' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Opções exclusivas do Modo de Desenvolvimento -->
+          <div
+            v-if="saveState.settings.developerModeEnabled"
+            data-testid="developer-tools-section"
+            class="space-y-3"
+          >
+            <div
+              data-testid="companion-selector-card"
+              class="p-3 rounded-xl border space-y-2.5 transition-colors duration-500"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderSubtleColor
+              }"
             >
-              <rotate-ccw-icon class="w-3.5 h-3.5" />
-              Sortear Novo Bichinho (Resetar Save)
-            </button>
+              <div class="flex items-center justify-between">
+                <h2
+                  class="text-xs font-bold uppercase flex items-center gap-1.5"
+                  :style="{ color: creatureTheme.primaryColor }"
+                >
+                  <sparkles-icon class="w-3.5 h-3.5" />
+                  <span>Trocar Criatura Companheira</span>
+                </h2>
+                <span
+                  data-testid="active-companion-badge"
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border"
+                  :style="{
+                    backgroundColor: creatureTheme.cardDarkBackground,
+                    color: creatureTheme.primaryColor,
+                    borderColor: creatureTheme.borderColor
+                  }"
+                >
+                  {{ activeSpecies.displayName }}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-300">
+                Ferramenta dev: escolha outro companheiro para testar temas, sprites e atributos:
+              </p>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+                <button
+                  v-for="species in allAvailableSpecies"
+                  :key="species.id"
+                  type="button"
+                  :data-testid="`select-species-${species.id}`"
+                  class="p-2 rounded-lg border text-left flex items-center gap-2 transition-all duration-200"
+                  :style="{
+                    backgroundColor: activeCharacterId === species.id ? creatureTheme.cardDarkBackground : 'transparent',
+                    borderColor: activeCharacterId === species.id ? creatureTheme.primaryColor : creatureTheme.borderSubtleColor,
+                    boxShadow: activeCharacterId === species.id ? creatureTheme.accentGlow : 'none'
+                  }"
+                  @click="handleSelectActiveSpecies(species.id)"
+                >
+                  <div
+                    class="w-4 h-4 rounded-full shrink-0 border border-white/20"
+                    :style="{ backgroundColor: species.visualTraits.primaryColors.base }"
+                  />
+                  <div class="truncate">
+                    <span class="block text-xs font-bold text-white truncate">{{ species.displayName }}</span>
+                    <span class="block text-[9px] text-slate-400 capitalize truncate">{{ species.element }}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderSubtleColor
+              }"
+            >
+              <h2 class="text-xs font-bold uppercase text-emerald-400 flex items-center gap-1.5">
+                <clock-icon class="w-3.5 h-3.5 text-emerald-400" />
+                Simulador de Passagem de Tempo Offline
+              </h2>
+              <p class="text-[11px] text-slate-400">
+                Teste deterministicamente o cálculo de tempo decorrido com o app fechado:
+              </p>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="sim-offline-1h"
+                  class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
+                  @click="handleSimulateOfflineHours(1)"
+                >
+                  +1 Hora
+                </button>
+                <button
+                  type="button"
+                  data-testid="sim-offline-6h"
+                  class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
+                  @click="handleSimulateOfflineHours(6)"
+                >
+                  +6 Horas
+                </button>
+                <button
+                  type="button"
+                  data-testid="sim-offline-24h"
+                  class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition"
+                  @click="handleSimulateOfflineHours(24)"
+                >
+                  +24 Horas
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                data-testid="reset-save-btn"
+                class="px-3 py-1.5 rounded-md bg-rose-950 hover:bg-rose-900 border border-rose-700 text-rose-200 text-xs font-bold uppercase flex items-center gap-1"
+                @click="handleResetSave"
+              >
+                <rotate-ccw-icon class="w-3.5 h-3.5" />
+                Sortear Novo Bichinho (Resetar Save)
+              </button>
+            </div>
           </div>
         </div>
       </main>
