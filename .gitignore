@@ -10,5 +10,6 @@ coverage
 *.p12
 android/keystore.properties
 pixelforge-virtual-creatures-debug-apk/
+built-apk/
 release-apk/
 web-dist/
