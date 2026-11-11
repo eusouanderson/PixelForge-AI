@@ -8,5 +8,6 @@ export interface GameSettingsState {
   readonly showPixelGrid: boolean;
   readonly reducedMotion: boolean;
   readonly autoSaveEnabled: boolean;
+  readonly developerModeEnabled: boolean;
 }
 

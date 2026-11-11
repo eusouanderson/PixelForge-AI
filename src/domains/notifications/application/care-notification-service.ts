@@ -3,7 +3,10 @@ import {
   evaluateCharacterCareAlerts,
   formatCareSummaryBanner
 } from '../domain/care-notification-engine';
-import { CapacitorNotificationsAdapter } from '../infrastructure/capacitor-notifications-adapter';
+import {
+  CapacitorNotificationsAdapter,
+  resolveDefaultForegroundCheck
+} from '../infrastructure/capacitor-notifications-adapter';
 import type {
   CareNotificationManagerState,
   NotificationsPort
@@ -11,22 +14,30 @@ import type {
 
 export const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
+export interface CareNotificationServiceOptions {
+  readonly initialAppInForeground?: boolean;
+}
+
 export class CareNotificationService {
   private readonly port: NotificationsPort;
   private readonly cooldownMs: number;
   private readonly lastNotifiedByKey = new Map<string, number>();
   private listeners: Array<(state: CareNotificationManagerState) => void> = [];
+  private appInForeground: boolean;
   private state: CareNotificationManagerState;
 
   constructor(
     port: NotificationsPort = new CapacitorNotificationsAdapter(),
-    cooldownMs: number = DEFAULT_NOTIFICATION_COOLDOWN_MS
+    cooldownMs: number = DEFAULT_NOTIFICATION_COOLDOWN_MS,
+    options: CareNotificationServiceOptions = {}
   ) {
     this.port = port;
     this.cooldownMs = cooldownMs;
+    this.appInForeground = options.initialAppInForeground ?? resolveDefaultForegroundCheck();
     this.state = {
       enabled: true,
       supported: port.isSupported(),
+      appInForeground: this.appInForeground,
       permission: 'prompt',
       evaluation: {
         immediateAlerts: [],
@@ -75,6 +86,22 @@ export class CareNotificationService {
     return this.state;
   }
 
+  public async setAppForeground(
+    inForeground: boolean,
+    snapshot?: GameSaveSnapshot,
+    nowMs: number = Date.now()
+  ): Promise<void> {
+    this.appInForeground = inForeground;
+    if (snapshot) {
+      await this.syncFromSnapshot(snapshot, nowMs);
+      return;
+    }
+    if (inForeground) {
+      await this.port.cancelAll();
+    }
+    this.updateState({ appInForeground: inForeground });
+  }
+
   public async syncFromSnapshot(
     snapshot: GameSaveSnapshot,
     nowMs: number = Date.now()
@@ -82,11 +109,14 @@ export class CareNotificationService {
     const evaluation = evaluateCharacterCareAlerts(snapshot, nowMs);
     const activeBannerText = formatCareSummaryBanner(evaluation);
     const enabled = snapshot.settings.notificationsEnabled;
+    const permission = await this.port.checkPermission();
 
-    if (!enabled) {
+    if (!enabled || this.appInForeground) {
       await this.port.cancelAll();
       this.updateState({
-        enabled: false,
+        enabled,
+        permission,
+        appInForeground: this.appInForeground,
         evaluation,
         activeBannerText,
         lastSyncedAtMs: nowMs
@@ -94,7 +124,6 @@ export class CareNotificationService {
       return;
     }
 
-    const permission = await this.port.checkPermission();
     const activeKeys = new Set<string>();
     for (const alert of evaluation.immediateAlerts) {
       activeKeys.add(`${alert.characterId}:${alert.reason}:${alert.severity}`);
@@ -114,7 +143,7 @@ export class CareNotificationService {
         const lastSentAt = this.lastNotifiedByKey.get(key);
         const onCooldown = lastSentAt !== undefined && nowMs - lastSentAt < this.cooldownMs;
         if (!onCooldown) {
-          const displayed = await this.port.showNow(alert);
+          const displayed = await this.port.showNow(alert, { allowInForeground: false });
           if (displayed) {
             this.lastNotifiedByKey.set(key, nowMs);
             dispatchedNow++;
@@ -127,6 +156,7 @@ export class CareNotificationService {
     this.updateState({
       enabled: true,
       permission,
+      appInForeground: this.appInForeground,
       evaluation,
       activeBannerText,
       dispatchedCount: this.state.dispatchedCount + dispatchedNow,
@@ -149,18 +179,21 @@ export class CareNotificationService {
 
     const activeRecord = snapshot.characters[snapshot.activeCharacterId];
     const name = activeRecord.runtime.customNickname || snapshot.activeCharacterId;
-    const sent = await this.port.showNow({
-      id: 1999,
-      reason: 'hunger',
-      severity: 'warning',
-      characterId: snapshot.activeCharacterId,
-      characterName: name,
-      title: `🔔 PixelForge: Alertas ativos para ${name}!`,
-      body: 'Você será avisado automaticamente quando uma necessidade se aproximar do nível crítico.',
-      currentValue: activeRecord.needs.hunger,
-      threshold: 25,
-      triggerAtMs: nowMs
-    });
+    const sent = await this.port.showNow(
+      {
+        id: 1999,
+        reason: 'hunger',
+        severity: 'warning',
+        characterId: snapshot.activeCharacterId,
+        characterName: name,
+        title: `🔔 PixelForge: Alertas ativos para ${name}!`,
+        body: 'Você será avisado automaticamente com o app fechado ou minimizado quando uma necessidade se aproximar do nível crítico.',
+        currentValue: activeRecord.needs.hunger,
+        threshold: 25,
+        triggerAtMs: nowMs
+      },
+      { allowInForeground: true }
+    );
 
     if (sent) {
       this.updateState({ dispatchedCount: this.state.dispatchedCount + 1 });

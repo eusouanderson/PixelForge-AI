@@ -5,5 +5,10 @@ coverage
 *.local
 .vite
 *.apk
+*.jks
+*.keystore
+*.p12
+android/keystore.properties
 pixelforge-virtual-creatures-debug-apk/
+release-apk/
 web-dist/

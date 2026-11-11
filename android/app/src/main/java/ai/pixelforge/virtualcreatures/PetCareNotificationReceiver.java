@@ -24,7 +24,7 @@ public class PetCareNotificationReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent == null) {
+        if (intent == null || PetCareNotificationsPlugin.isAppInForeground(context)) {
             return;
         }
         int id = intent.getIntExtra(EXTRA_ID, 1001);

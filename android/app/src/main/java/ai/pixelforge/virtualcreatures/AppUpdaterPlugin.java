@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.Signature;
+import android.content.pm.SigningInfo;
 import android.net.Uri;
 import android.os.Build;
 import androidx.core.content.FileProvider;
@@ -23,6 +25,9 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -148,6 +153,13 @@ public class AppUpdaterPlugin extends Plugin {
                 if (!actualChecksum.equalsIgnoreCase(expectedChecksum.trim())) {
                     if (apkFile.exists()) apkFile.delete();
                     call.reject("Integridade do APK corrompida: checksum divergente.");
+                    return;
+                }
+
+                String conflictReason = detectPackageConflictReason(context, apkFile);
+                if (conflictReason != null) {
+                    if (apkFile.exists()) apkFile.delete();
+                    call.reject(conflictReason);
                     return;
                 }
 
@@ -293,5 +305,86 @@ public class AppUpdaterPlugin extends Plugin {
 
     private String sanitizeDirName(String raw) {
         return raw.replaceAll("[^a-zA-Z0-9.-]", "_");
+    }
+
+    @SuppressWarnings("deprecation")
+    private String detectPackageConflictReason(Context context, File apkFile) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                ? PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES
+                : PackageManager.GET_SIGNATURES;
+
+            PackageInfo installedInfo = pm.getPackageInfo(context.getPackageName(), flags);
+            PackageInfo archiveInfo = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), flags);
+            if (archiveInfo == null) {
+                return null;
+            }
+
+            if (archiveInfo.packageName != null && !context.getPackageName().equals(archiveInfo.packageName)) {
+                return "Conflito de pacote: o APK baixado pertence ao pacote '" + archiveInfo.packageName + "' em vez de '" + context.getPackageName() + "'.";
+            }
+
+            Set<String> installedCerts = extractSignerHashes(installedInfo);
+            Set<String> archiveCerts = extractSignerHashes(archiveInfo);
+            if (!installedCerts.isEmpty() && !archiveCerts.isEmpty() && Collections.disjoint(installedCerts, archiveCerts)) {
+                String shortInstalled = installedCerts.iterator().next().substring(0, 11);
+                String shortArchive = archiveCerts.iterator().next().substring(0, 11);
+                return "Conflito de assinatura digital (" + shortInstalled + "… ≠ " + shortArchive + "…): o APK instalado foi assinado com outra chave. Desinstale a versão atual manualmente antes de instalar este novo APK.";
+            }
+
+            long installedCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                ? installedInfo.getLongVersionCode()
+                : installedInfo.versionCode;
+            long archiveCode = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                ? archiveInfo.getLongVersionCode()
+                : archiveInfo.versionCode;
+            if (archiveCode > 0 && archiveCode < installedCode) {
+                return "Conflito de versão: o APK baixado (build " + archiveCode + ") é anterior à versão instalada (build " + installedCode + ").";
+            }
+        } catch (Exception ignored) {
+            // Fall through to system PackageInstaller when archive inspection is restricted on OEM ROMs
+        }
+        return null;
+    }
+
+    @SuppressWarnings("deprecation")
+    private Set<String> extractSignerHashes(PackageInfo info) {
+        Set<String> hashes = new HashSet<>();
+        if (info == null) {
+            return hashes;
+        }
+        Signature[] rawSigners = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            SigningInfo signingInfo = info.signingInfo;
+            if (signingInfo != null) {
+                rawSigners = signingInfo.hasMultipleSigners()
+                    ? signingInfo.getApkContentsSigners()
+                    : signingInfo.getSigningCertificateHistory();
+            }
+        }
+        if ((rawSigners == null || rawSigners.length == 0) && info.signatures != null) {
+            rawSigners = info.signatures;
+        }
+        if (rawSigners == null) {
+            return hashes;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            for (Signature sig : rawSigners) {
+                if (sig == null) continue;
+                byte[] bytes = digest.digest(sig.toByteArray());
+                digest.reset();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < bytes.length; i++) {
+                    if (i > 0) sb.append(':');
+                    sb.append(String.format("%02X", bytes[i]));
+                }
+                hashes.add(sb.toString());
+            }
+        } catch (Exception ignored) {
+            // Ignore digest errors safely
+        }
+        return hashes;
     }
 }

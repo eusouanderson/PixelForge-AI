@@ -100,9 +100,18 @@ try {
 } catch {
   commitCount = 0;
 }
+let currentGradleVersionCode = 0;
+if (existsSync(BUILD_GRADLE_PATH)) {
+  const gradleText = readFileSync(BUILD_GRADLE_PATH, 'utf-8');
+  const match = gradleText.match(/versionCode\s+(\d+)/);
+  if (match) {
+    currentGradleVersionCode = parseInt(match[1], 10) || 0;
+  }
+}
+const envRunNumber = parseInt(process.env.BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || '0', 10) || 0;
 const nextBuild = explicitBuildArg
   ? parseInt(explicitBuildArg, 10)
-  : parseInt(process.env.BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || String(Math.max(calculatedBuild, commitCount)), 10);
+  : Math.max(currentGradleVersionCode + 1, calculatedBuild, commitCount, envRunNumber);
 
 const apkFilename = `pixelforge-virtual-creatures-v${nextVersion}.apk`;
 const tagName = `v${nextVersion}`;

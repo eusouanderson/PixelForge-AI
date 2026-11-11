@@ -1,10 +1,21 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import VirtualCreaturesGame from '../presentation/VirtualCreaturesGame.vue';
-import { listAllCharacterSpecies } from '../domain/character-registry';
+import {
+  EGG_INCUBATION_DURATION_MS,
+  listAllCharacterSpecies
+} from '../domain/character-registry';
 
 describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () => {
-  it('assigns a random dinosaur, forbids manual character/stage/animation selection, feeds, cares, inspects sheet, and simulates offline evolution', async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('starts with one random egg, waits minutes to play hatch animation, removes switcher from Ficha, and gates dev tools behind developer mode', async () => {
+    vi.useFakeTimers();
+    const startMs = new Date('2026-11-11T12:00:00Z').getTime();
+    vi.setSystemTime(startMs);
+
     const wrapper = mount(VirtualCreaturesGame);
     await flushPromises();
 
@@ -12,32 +23,80 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     const activeName = wrapper.get('[data-testid="active-character-name"]').text();
     expect(allDisplayNames).toContain(activeName);
 
-    // Always starts as an egg (ovo) cracking and hatching into baby!
+    // Always starts as an intact egg (ovo) with countdown before opening animation
     expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('ovo');
-    await wrapper.get('[data-testid="hatch-egg-btn"]').trigger('click');
+    expect(wrapper.get('[data-testid="egg-countdown-label"]').text()).toContain('02:00');
+    expect(wrapper.find('[data-testid="hatch-egg-btn"]').exists()).toBe(false);
+
+    // Feeding is disabled while incubating in the egg
+    expect(
+      (wrapper.get('[data-testid="feed-btn-thermal-spring-water"]').element as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+
+    // After ~1 minute (< 2 min incubation), egg is STILL incubating as 'ovo'
+    vi.setSystemTime(startMs + 60_000);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('ovo');
+    expect(wrapper.get('[data-testid="egg-countdown-label"]').text()).toContain('00:59');
+
+    // Check Ficha tab: companion switcher MUST NOT exist in Ficha!
+    await wrapper.get('[data-testid="nav-tab-sheet"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Ficha Oficial');
+    expect(wrapper.find('[data-testid="companion-selector-card"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="select-species-rosassauro"]').exists()).toBe(false);
+
+    // Check Ajustes tab while Developer Mode is OFF: dev tools MUST be hidden!
+    await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="toggle-dev-mode-btn"]').text()).toContain('Desativado');
+    expect(wrapper.find('[data-testid="developer-tools-section"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="companion-selector-card"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="sim-offline-6h"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="reset-save-btn"]').exists()).toBe(false);
+
+    // Check Genetics tab in normal mode: only the single active animal is available
+    await wrapper.get('[data-testid="nav-tab-genetics"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="tab-content-genetics"]').text()).toContain(
+      'PixelForge Genetics & Reprodução'
+    );
+    const dinoSelectNormal = wrapper.get('[data-testid="local-dinosaur-select"]');
+    expect(dinoSelectNormal.findAll('option').length).toBe(1);
+
+    // Reach full 2-minute incubation -> triggers automatic opening animation sequence
+    vi.setSystemTime(startMs + EGG_INCUBATION_DURATION_MS);
+    await vi.advanceTimersByTimeAsync(1_000);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('rachando e abrindo');
+
+    // Step through the 4-frame hatching animation (frames 1 -> 2 -> 3 -> 4 -> baby)
+    await vi.advanceTimersByTimeAsync(4 * 700);
     await flushPromises();
     expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('baby');
 
-    // Ensure 90s virtual pet rules: NO manual dinosaur selector, NO manual stage buttons, NO manual animation buttons
+    // Ensure 90s virtual pet rules: NO manual roster/stage/animation buttons
     expect(wrapper.find('[data-testid="nav-tab-roster"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="stage-btn-adulto"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="anim-btn-comendo"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="evolution-status-bar"]').exists()).toBe(true);
 
-    // Verify navigation bar is always sticky at the bottom
+    // Sticky mobile navigation bar
     const navBar = wrapper.get('[data-testid="bottom-navigation-bar"]');
     expect(navBar.classes()).toContain('sticky');
     expect(navBar.classes()).toContain('bottom-0');
     expect(navBar.classes()).toContain('z-50');
 
-    // Feed universal spring water
+    // Switch back to Feed tab & feed/buy now that baby hatched
+    await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
     await wrapper.get('[data-testid="feed-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain(
       'Água Cristalina da Nascente'
     );
 
-    // Buy +1 food item
     await wrapper.get('[data-testid="buy-food-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('Comprou');
@@ -50,42 +109,29 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
       'Banho Termal Purificador'
     );
 
-    // Verify biological sex symbol (♂ or ♀) is displayed on top of dinosaur image
+    // Biological sex symbol on viewport overlay
     const sexBadge = wrapper.get('[data-testid="active-sex-badge"]');
     expect(['♂', '♀']).toContain(sexBadge.text().trim());
-    // Verify text "Macho" or "Fêmea" is not present in header
     const headerEl = wrapper.get('header');
     expect(headerEl.text()).not.toContain('Macho');
     expect(headerEl.text()).not.toContain('Fêmea');
 
-    // Switch to Genetics tab and verify it modifies the view div directly
-    await wrapper.get('[data-testid="nav-tab-genetics"]').trigger('click');
+    // Enable Developer Mode in Ajustes -> companion switcher, offline simulator & reset save unlock!
+    await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
+    await wrapper.get('[data-testid="toggle-dev-mode-btn"]').trigger('click');
     await flushPromises();
-    expect(wrapper.get('[data-testid="tab-content-genetics"]').text()).toContain(
-      'PixelForge Genetics & Reprodução'
-    );
-    // Verify local dinosaur select dropdown exists, lists dinosaurs, and selects active creature
-    const dinoSelect = wrapper.get('[data-testid="local-dinosaur-select"]');
-    expect(dinoSelect.findAll('option').length).toBeGreaterThan(0);
-    expect((dinoSelect.element as HTMLSelectElement).value).toBeTruthy();
+    expect(wrapper.get('[data-testid="toggle-dev-mode-btn"]').text()).toContain('Ativado');
+    expect(wrapper.find('[data-testid="developer-tools-section"]').exists()).toBe(true);
 
-    // Switch to Character Sheet tab (Ficha Individual)
-    await wrapper.get('[data-testid="nav-tab-sheet"]').trigger('click');
-    expect(wrapper.get('[data-testid="tab-content-sheet"]').text()).toContain('Ficha Oficial');
-
-    // Switch to Rosassauro and verify whole APK background adopts Rosassauro's primary color (pink)
+    // Switch companion inside Dev Tools in Ajustes
     await wrapper.get('[data-testid="select-species-rosassauro"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="active-character-name"]').text()).toBe('Rosassauro');
     expect(wrapper.get('[data-testid="active-companion-badge"]').text()).toBe('Rosassauro');
-
     const rootContainer = wrapper.get('[data-testid="game-root-container"]');
-    const rootBg = (rootContainer.element as HTMLElement).style.backgroundColor;
-    // Check that rootBg is defined and reflects dynamic theming (rgb value formatted by DOM)
-    expect(rootBg).toBeTruthy();
+    expect((rootContainer.element as HTMLElement).style.backgroundColor).toBeTruthy();
 
-    // Switch to Settings tab, test offline simulation (+6h), quality preset, grid toggle, and random reset
-    await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
+    // Simulate +6h offline via Dev Tools, test quality & grid toggle
     await wrapper.get('[data-testid="sim-offline-6h"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('+6h offline');
@@ -93,7 +139,7 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await wrapper.get('[data-testid="quality-btn-balanced"]').trigger('click');
     await wrapper.get('[data-testid="toggle-grid-btn"]').trigger('click');
 
-    // Toggle critical-care notifications off/on and test notification trigger in Settings
+    // Toggle notifications & test notification button in Settings
     const toggleNotifBtn = wrapper.get('[data-testid="toggle-notifications-btn"]');
     expect(toggleNotifBtn.text()).toContain('Desativar Alertas');
     await toggleNotifBtn.trigger('click');
@@ -107,7 +153,7 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('notifica');
 
-    // Advance another +6h offline (12h total) so needs drop near/below critical and surface care-alert-banner
+    // Advance another +6h offline (12h total) -> in-app care alert banner appears while APK is open
     await wrapper.get('[data-testid="sim-offline-6h"]').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-testid="care-alert-banner"]').exists()).toBe(true);
@@ -115,11 +161,26 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await flushPromises();
     expect(wrapper.find('[data-testid="tab-content-settings"]').exists()).toBe(false);
 
+    // Reset save in Dev Tools spawns a new random egg while keeping Dev Mode active
     await wrapper.get('[data-testid="nav-tab-settings"]').trigger('click');
     await wrapper.get('[data-testid="reset-save-btn"]').trigger('click');
     await flushPromises();
     const nextRandomName = wrapper.get('[data-testid="active-character-name"]').text();
     expect(allDisplayNames).toContain(nextRandomName);
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('ovo');
+    expect(wrapper.find('[data-testid="hatch-egg-btn"]').exists()).toBe(true);
+
+    // Exercise dev hatch button & visibilitychange background transition
+    await wrapper.get('[data-testid="hatch-egg-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="active-stage-badge"]').text()).toBe('baby');
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushPromises();
+    Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await flushPromises();
 
     wrapper.unmount();
   });

@@ -134,15 +134,35 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
-      - name: Build Debug APK with Automated Version Name
+      - name: Restore Persistent Debug Keystore Cache (Fallback when Secrets unset)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 == '' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
+      - name: Build Signed Android APK
         working-directory: ./android
-        run: ./gradlew assembleDebug --no-daemon
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/pixelforge-signing.jks"
+            export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/pixelforge-signing.jks"
+            ./gradlew assembleRelease --no-daemon
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret não configurado; usando fallback debug.keystore em cache."
+            ./gradlew assembleDebug --no-daemon
+          fi
 
       - name: Upload Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: pixelforge-virtual-creatures-debug-apk
-          path: android/app/build/outputs/apk/debug/pixelforge-virtual-creatures-*.apk
+          path: android/app/build/outputs/apk/*/pixelforge-virtual-creatures-*.apk
           if-no-files-found: error
 
   release:

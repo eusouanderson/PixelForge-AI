@@ -104,7 +104,9 @@ describe('CareNotificationService', () => {
 
   it('initializes, deduplicates within cooldown, resets when recovered, and escalates severity', async () => {
     const mock = createMemoryPort('granted');
-    const service = new CareNotificationService(mock.port, 30 * 60_000);
+    const service = new CareNotificationService(mock.port, 30 * 60_000, {
+      initialAppInForeground: false
+    });
     const states: boolean[] = [];
     const unsubscribe = service.subscribe((s) => states.push(s.enabled));
 
@@ -145,9 +147,35 @@ describe('CareNotificationService', () => {
     expect(states.length).toBeGreaterThan(1);
   });
 
-  it('cancels alarms when disabled and skips dispatch when permission is not granted', async () => {
+  it('cancels alarms when disabled, suppresses OS notifications while app is open in foreground, and dispatches only when backgrounded', async () => {
+    const fgMock = createMemoryPort('granted');
+    const fgService = new CareNotificationService(fgMock.port, 30 * 60_000, {
+      initialAppInForeground: true
+    });
+    const criticalSnap = makeSnapshot({ enabled: true, hunger: 10 });
+
+    // While app is open (foreground), OS showNow must NEVER fire, yet in-app banner & scheduled evaluation remain up-to-date
+    await fgService.initialize(criticalSnap, NOW_MS);
+    expect(fgMock.shown).toHaveLength(0);
+    expect(fgService.getState().appInForeground).toBe(true);
+    expect(fgService.getState().activeBannerText).toContain('nível crítico');
+    expect(fgMock.getCancelCount()).toBeGreaterThanOrEqual(1);
+
+    // Moving to background with snapshot dispatches alert & schedules future triggers
+    await fgService.setAppForeground(false, criticalSnap, NOW_MS + 1000);
+    expect(fgMock.shown).toHaveLength(1);
+    expect(fgService.getState().appInForeground).toBe(false);
+
+    // Transitioning foreground/background without snapshot updates flag safely
+    await fgService.setAppForeground(true);
+    expect(fgService.getState().appInForeground).toBe(true);
+    await fgService.setAppForeground(false);
+    expect(fgService.getState().appInForeground).toBe(false);
+
     const mock = createMemoryPort('denied');
-    const service = new CareNotificationService(mock.port);
+    const service = new CareNotificationService(mock.port, 30 * 60_000, {
+      initialAppInForeground: false
+    });
 
     await service.syncFromSnapshot(makeSnapshot({ enabled: true, hunger: 10 }), NOW_MS);
     expect(mock.shown).toHaveLength(0);
