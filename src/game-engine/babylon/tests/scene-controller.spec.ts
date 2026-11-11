@@ -43,6 +43,11 @@ describe('BabylonCreatureSceneController', () => {
     }
 
     controller.updateCreatureSprite(stage6BabyIdle2Preset, true);
+    controller.updateCreatureSprite(stage5BabyIdle1Preset, false, {
+      scale: 4,
+      algorithm: 'intelligent'
+    });
+    expect(controller.getActiveResourceMetrics().activeTextures).toBe(4);
     controller.triggerReactiveParticles(createReactiveParticleBurst('happy'));
     controller.triggerReactiveParticles(createReactiveParticleBurst('playing'));
     controller.setQualityPreset('battery-saver');

@@ -258,4 +258,43 @@ describe('Canvas2dRenderer', () => {
     await expect(renderer.exportPngBlob(art, 64, 64)).rejects.toThrow('Falha ao gerar Blob PNG');
     createSpy.mockRestore();
   });
+
+  it('upscales declarative sprites through shared caches and exports real configured PNG dimensions', () => {
+    renderer.clearCaches();
+    expect(renderer.getUpscaleCacheSize()).toBe(0);
+
+    const expanded = renderer.renderUpscaledBuffer(stage5BabyIdle1Preset);
+    expect(expanded.width).toBe(128);
+    expect(expanded.height).toBe(128);
+    expect(renderer.getUpscaleCacheSize()).toBe(1);
+
+    const expandedSmart = renderer.renderUpscaledBuffer(stage5BabyIdle1Preset, {
+      scale: 6,
+      algorithm: 'intelligent',
+      detailEnhancement: { enabled: true }
+    });
+    expect(expandedSmart.width).toBe(192);
+    expect(expandedSmart.height).toBe(192);
+    expect(renderer.getUpscaleCacheSize()).toBe(2);
+
+    const origCreateElement = document.createElement.bind(document);
+    let exportedCanvasSize = { w: 0, h: 0 };
+    const spy = vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const el = origCreateElement(tag) as HTMLCanvasElement;
+      if (tag === 'canvas') {
+        el.toBlob = (cb: BlobCallback) => {
+          exportedCanvasSize = { w: el.width, h: el.height };
+          cb(new Blob(['png'], { type: 'image/png' }));
+        };
+      }
+      return el;
+    });
+
+    return renderer.exportPngBlob(stage5BabyIdle1Preset).then((blob) => {
+      expect(blob.type).toBe('image/png');
+      expect(exportedCanvasSize).toEqual({ w: 1024, h: 1024 });
+      spy.mockRestore();
+      renderer.clearCaches();
+    });
+  });
 });

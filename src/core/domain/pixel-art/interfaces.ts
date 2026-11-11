@@ -8,6 +8,26 @@ export interface OutputDimensions {
   height: number;
 }
 
+export type UpscalingAlgorithm =
+  | 'nearest-neighbor'
+  | 'scale2x'
+  | 'scale3x'
+  | 'intelligent';
+
+export interface DetailEnhancementOptions {
+  readonly enabled: boolean;
+  readonly shadingStrength?: number;
+  readonly outlinePreservation?: boolean;
+}
+
+export interface UpscaleRenderOptions {
+  readonly scale?: number;
+  readonly algorithm?: UpscalingAlgorithm;
+  readonly detailEnhancement?: DetailEnhancementOptions;
+  readonly targetWidth?: number;
+  readonly targetHeight?: number;
+}
+
 export type ColorPalette = Record<string, string>;
 
 export interface RectOperation {

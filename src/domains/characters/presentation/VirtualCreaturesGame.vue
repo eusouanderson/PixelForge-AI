@@ -18,6 +18,7 @@ import { CareNotificationService } from '@/domains/notifications/application/car
 import type { CareNotificationManagerState } from '@/domains/notifications/types';
 import { Canvas2dRenderer } from '@/infrastructure/renderer/canvas-2d-renderer';
 import { BabylonCreatureSceneController } from '@/game-engine/babylon/scene-controller';
+import { APP_CONFIG, resolveOutputDimensions } from '@/shared/constants/app-config';
 import type {
   CharacterAnimationName,
   CharacterId,
@@ -163,13 +164,34 @@ async function persistCurrentState(): Promise<void> {
   await careNotificationService.syncFromSnapshot(saveState.value, Date.now());
 }
 
+const overlayDimensions = computed(() =>
+  resolveOutputDimensions(
+    currentSpriteArt.value.logicalDimensions,
+    APP_CONFIG.rendering.surfaceScales.overlay2d
+  )
+);
+
 function renderCurrentSpriteToOverlay(): void {
   const art = currentSpriteArt.value;
   const showGrid = saveState.value.settings.showPixelGrid;
+  const renderOpts = {
+    algorithm: APP_CONFIG.rendering.upscalingAlgorithm,
+    detailEnhancement: APP_CONFIG.rendering.detailEnhancement
+  };
   if (spriteOverlayCanvasRef.value) {
-    renderer2d.renderToCanvas(spriteOverlayCanvasRef.value, art, 192, 192, showGrid);
+    renderer2d.renderToCanvas(
+      spriteOverlayCanvasRef.value,
+      art,
+      overlayDimensions.value.width,
+      overlayDimensions.value.height,
+      showGrid,
+      renderOpts
+    );
   }
-  sceneController.updateCreatureSprite(art, showGrid);
+  sceneController.updateCreatureSprite(art, showGrid, {
+    ...renderOpts,
+    scale: APP_CONFIG.rendering.surfaceScales.texture3d
+  });
 }
 
 function syncBabylonEnvironment(): void {
@@ -428,6 +450,7 @@ onUnmounted(() => {
   if (spriteTimer) clearInterval(spriteTimer);
   if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
+  renderer2d.clearCaches();
   sceneController.dispose();
 });
 </script>
@@ -545,12 +568,12 @@ onUnmounted(() => {
           class="absolute inset-0 w-full h-full block"
         />
 
-        <!-- Synchronized Nearest-Neighbor 2D Sprite Canvas on Pedestal -->
+        <!-- Synchronized Expanded Pixel Art 2D Overlay Canvas on Pedestal -->
         <canvas
           ref="spriteOverlayCanvasRef"
           data-testid="creature-pixel-canvas"
-          width="192"
-          height="192"
+          :width="overlayDimensions.width"
+          :height="overlayDimensions.height"
           class="relative z-10 w-40 h-40"
           style="image-rendering: pixelated"
         />

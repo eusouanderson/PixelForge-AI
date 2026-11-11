@@ -1,4 +1,7 @@
-import type { DeclarativePixelArt } from '@/core/domain/pixel-art/interfaces';
+import type {
+  DeclarativePixelArt,
+  UpscaleRenderOptions
+} from '@/core/domain/pixel-art/interfaces';
 import type { CharacterId } from '@/domains/characters/types';
 import type { CharacterEnvironmentConfig } from '@/domains/environments/types';
 import type {
@@ -21,7 +24,11 @@ export interface CreatureSceneControllerPort {
     particleConfig: CharacterParticleConfig,
     initialSprite: DeclarativePixelArt
   ): void;
-  updateCreatureSprite(sprite: DeclarativePixelArt, showGrid?: boolean): void;
+  updateCreatureSprite(
+    sprite: DeclarativePixelArt,
+    showGrid?: boolean,
+    upscaleOptions?: UpscaleRenderOptions
+  ): void;
   triggerReactiveParticles(burst: ReactiveParticleBurstConfig): void;
   setQualityPreset(quality: GraphicsQualityPreset): void;
   pauseRendering(): void;

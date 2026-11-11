@@ -17,7 +17,11 @@ import '@babylonjs/core/Shaders/default.vertex.js';
 import '@babylonjs/core/Shaders/default.fragment.js';
 import '@babylonjs/core/Shaders/particles.vertex.js';
 import '@babylonjs/core/Shaders/particles.fragment.js';
-import type { DeclarativePixelArt } from '@/core/domain/pixel-art/interfaces';
+import type {
+  DeclarativePixelArt,
+  UpscaleRenderOptions
+} from '@/core/domain/pixel-art/interfaces';
+import { APP_CONFIG } from '@/shared/constants/app-config';
 import type { CharacterId } from '@/domains/characters/types';
 import type { CharacterEnvironmentConfig } from '@/domains/environments/types';
 import type {
@@ -31,7 +35,8 @@ import {
   rasterizeBackdropToRgbaBytes,
   rasterizeParticlePatternToRgbaBytes,
   rasterizePedestalToRgbaBytes,
-  rasterizeSpriteToRgbaBytes
+  rasterizeSpriteToRgbaBytes,
+  sharedBabylonSpriteRenderer
 } from './pixel-texture-adapter';
 
 function hexToColor3(hex: string): Color3 {
@@ -338,14 +343,35 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
     this.setupCharacterParticleSystem(particleConfig);
   }
 
-  public updateCreatureSprite(sprite: DeclarativePixelArt, showGrid: boolean = false): void {
+  public updateCreatureSprite(
+    sprite: DeclarativePixelArt,
+    showGrid: boolean = false,
+    upscaleOptions: UpscaleRenderOptions = {}
+  ): void {
     if (!this.scene || !this.creatureMaterial) return;
+
+    const rgba = rasterizeSpriteToRgbaBytes(
+      sprite,
+      upscaleOptions.scale ?? APP_CONFIG.rendering.surfaceScales.texture3d,
+      showGrid,
+      upscaleOptions
+    );
+
+    const currentSize = this.creatureTexture?.getSize();
+    if (
+      this.creatureTexture &&
+      currentSize &&
+      currentSize.width === rgba.width &&
+      currentSize.height === rgba.height
+    ) {
+      this.creatureTexture.update(rgba.data);
+      return;
+    }
 
     if (this.creatureTexture) {
       this.creatureTexture.dispose();
     }
 
-    const rgba = rasterizeSpriteToRgbaBytes(sprite, 8, showGrid);
     this.creatureTexture = RawTexture.CreateRGBATexture(
       rgba.data,
       rgba.width,
@@ -524,6 +550,7 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
 
   public dispose(): void {
     this.clearCurrentEnvironmentResources();
+    sharedBabylonSpriteRenderer.clearCaches();
     this.scene?.dispose();
     this.engine?.dispose();
     this.scene = null;

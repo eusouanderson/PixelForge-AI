@@ -10,13 +10,20 @@ import { getCharacterParticleConfig } from '@/domains/particles/domain/particle-
 import type { ElementAffinity } from '@/domains/characters/types';
 
 describe('Babylon PixelTextureAdapter', () => {
-  it('rasterizes DeclarativePixelArt into nearest-neighbor RGBA bytes with optional grid', () => {
+  it('rasterizes DeclarativePixelArt into expanded RGBA bytes with optional grid and algorithms', () => {
+    const resDefault = rasterizeSpriteToRgbaBytes(stage5BabyIdle1Preset);
+    expect(resDefault.width).toBe(256);
+    expect(resDefault.height).toBe(256);
+
     const resNoGrid = rasterizeSpriteToRgbaBytes(stage5BabyIdle1Preset, 4, false);
     expect(resNoGrid.width).toBe(128);
     expect(resNoGrid.height).toBe(128);
     expect(resNoGrid.data.length).toBe(128 * 128 * 4);
 
-    const resGrid = rasterizeSpriteToRgbaBytes(stage5BabyIdle1Preset, 4, true);
+    const resGrid = rasterizeSpriteToRgbaBytes(stage5BabyIdle1Preset, 4, true, {
+      algorithm: 'intelligent',
+      detailEnhancement: { enabled: true }
+    });
     expect(resGrid.width).toBe(128);
     expect(resGrid.height).toBe(128);
     expect(resGrid.data.length).toBe(128 * 128 * 4);

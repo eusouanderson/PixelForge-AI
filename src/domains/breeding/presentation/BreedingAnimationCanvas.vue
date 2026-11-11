@@ -72,6 +72,7 @@ import type { CreatureGenome } from '@/domains/genetics/types';
 import type { OwnershipResolution } from '@/domains/breeding/types';
 import { CharacterSpriteRepository } from '@/domains/characters/infrastructure/character-sprite-repository';
 import { Canvas2dRenderer } from '@/infrastructure/renderer/canvas-2d-renderer';
+import { APP_CONFIG, resolveOutputDimensions } from '@/shared/constants/app-config';
 
 const props = withDefaults(
   defineProps<{
@@ -146,11 +147,20 @@ const SCENES = [
 const currentSceneTitle = computed(() => SCENES[currentSceneIndex.value]?.title ?? '');
 const currentSceneDescription = computed(() => SCENES[currentSceneIndex.value]?.desc ?? '');
 
-function rasterizeSpriteToOffscreen(art: ReturnType<typeof spriteRepo.getSpriteFrame>): HTMLCanvasElement {
+function rasterizeSpriteToOffscreen(
+  art: ReturnType<typeof spriteRepo.getSpriteFrame>
+): HTMLCanvasElement {
+  const dims = resolveOutputDimensions(
+    art.logicalDimensions,
+    APP_CONFIG.rendering.surfaceScales.breeding
+  );
   const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  renderer2d.renderToCanvas(canvas, art, 64, 64, false);
+  canvas.width = dims.width;
+  canvas.height = dims.height;
+  renderer2d.renderToCanvas(canvas, art, dims.width, dims.height, false, {
+    algorithm: APP_CONFIG.rendering.upscalingAlgorithm,
+    detailEnhancement: APP_CONFIG.rendering.detailEnhancement
+  });
   return canvas;
 }
 
@@ -170,6 +180,7 @@ function renderFrame(): void {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
 
   const now = Date.now();
   const elapsed = (now - startTimeMs) / 1000;
