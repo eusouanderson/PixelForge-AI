@@ -602,6 +602,13 @@ onMounted(async () => {
     saveState.value = simulateOfflineProgressOnSnapshot(loaded, nowOnMount, {
       deferActiveEggHatch: wasEgg && offlineElapsed < 30 * 60 * 1000
     });
+    if (displayedStage.value !== 'ovo') {
+      if (activeRecord.value.runtime.healthCondition === 'deceased') {
+        feedbackBanner.value = `💀 ${activeDisplayName.value} descansou. Use o botão Reviver para despertar seu companheiro!`;
+      } else {
+        feedbackBanner.value = `✨ Cuidando de ${activeDisplayName.value} (${displayedStage.value} · Nv. ${activeRecord.value.progression.level})!`;
+      }
+    }
   } else {
     await persistCurrentState();
   }
