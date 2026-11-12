@@ -1,17 +1,17 @@
 {
-  "version": "1.11.0",
-  "build": 11100,
+  "version": "1.12.0",
+  "build": 11200,
   "minimumVersion": "1.0.0",
   "releaseDate": "2026-11-12",
   "changelog": [
-    "PixelForge AI v1.11.0 (Build 11100)",
+    "PixelForge AI v1.12.0 (Build 11200)",
     "Sistema Inteligente de Atualização Automática (OTA Web + APK Nativo)",
     "Auditoria de integridade SHA-256 e preservação integral de dados locais",
     "Exibição visual do status e versão ativa em tempo real"
   ],
   "webUpdate": {
     "available": true,
-    "version": "1.11.0",
+    "version": "1.12.0",
     "bundleUrl": "https://eusouanderson.github.io/PixelForge-AI/web-bundle.zip",
     "checksum": "bcbbafb868620dd79a09ba2c2805ed417205e9ba6d678e7940cc3f973ac0744b",
     "sizeBytes": 2465601
