@@ -5,7 +5,9 @@ import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
 import {
   Utensils as UtensilsIcon,
   Dumbbell as DumbbellIcon,
+  Swords as SwordsIcon,
   FileText as FileTextIcon,
+  Dna as DnaIcon,
   Settings as SettingsIcon,
   Sparkles as SparklesIcon,
   Coins as CoinsIcon,
@@ -62,6 +64,7 @@ import {
   hatchCharacterEggUseCase,
   performCharacterActivityUseCase,
   purchaseFoodItemUseCase,
+  recordBattleResultUseCase,
   reviveDeceasedCharacterUseCase,
   selectActiveCreatureUseCase,
   updateSettingsUseCase
@@ -70,6 +73,7 @@ import type { GameSaveSnapshot } from '@/domains/persistence/types';
 import type { GraphicsQualityPreset } from '@/domains/settings/types';
 import BreedingModal from '@/domains/breeding/presentation/BreedingModal.vue';
 import GenealogyTreeModal from '@/domains/breeding/presentation/GenealogyTreeModal.vue';
+import BattleArenaModal from '@/domains/battle/presentation/BattleArenaModal.vue';
 import FoodPixelArt from '@/domains/feeding/presentation/FoodPixelArt.vue';
 import type { FoodItemDefinition } from '@/domains/feeding/types';
 import { playSoundEffect } from '@/shared/audio/sound-effects';
@@ -81,7 +85,7 @@ const renderer2d = new Canvas2dRenderer();
 const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
-const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings' | 'genetics'>('feed');
+const activeMobileTab = ref<'feed' | 'activities' | 'arena' | 'sheet' | 'settings' | 'genetics'>('feed');
 const breedingInitialTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
 const isCollectionModalOpen = ref<boolean>(false);
 const showGenealogyModal = ref<boolean>(false);
@@ -206,6 +210,9 @@ const nextEvolutionRule = computed(() =>
 );
 
 const isSleeping = computed<boolean>(() => activeRecord.value.runtime.sleepState === 'sleeping');
+const isCreatureAlive = computed<boolean>(
+  () => activeRecord.value.runtime.healthCondition !== 'deceased' && displayedAnimation.value !== 'morte'
+);
 const sleepSession = computed(() => activeRecord.value.runtime.sleepSession);
 const sleepRemainingMs = computed<number>(() => {
   if (!sleepSession.value) return 0;
@@ -637,6 +644,26 @@ async function handleUpdateSave(newSnapshot: GameSaveSnapshot): Promise<void> {
   await persistCurrentState(prevSnapshot);
 }
 
+async function handleSettleBattle(payload: {
+  readonly historyRecord: import('@/domains/battle/types').BattleHistoryRecord;
+  readonly nextWallet: import('@/domains/economy/types').WalletState;
+}): Promise<void> {
+  const prev = saveState.value;
+  saveState.value = recordBattleResultUseCase(
+    saveState.value,
+    payload.historyRecord,
+    payload.nextWallet,
+    Date.now()
+  );
+  feedbackBanner.value =
+    payload.historyRecord.result === 'victory'
+      ? `🏆 Vitória na Arena! +${payload.historyRecord.rewardCoins} Moedas Âmbar e +${payload.historyRecord.combatXpGained} XP!`
+      : payload.historyRecord.result === 'draw'
+        ? '🤝 Empate na Arena! Aposta reembolsada.'
+        : 'Derrota na Arena. Mais sorte no próximo combate!';
+  await persistCurrentState(prev);
+}
+
 watch(
   creatureTheme,
   (theme) => {
@@ -943,26 +970,6 @@ onUnmounted(() => {
           </div>
 
           <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              data-testid="open-collection-modal-btn"
-              class="relative flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-bold shadow-sm transition active:scale-95 hover:brightness-110"
-              :style="{
-                backgroundColor: creatureTheme.cardBackground,
-                borderColor: creatureTheme.borderColor,
-                color: creatureTheme.primaryColor
-              }"
-              title="Trocar Dinossauro / Coleção"
-              @click="isCollectionModalOpen = true"
-            >
-              <span>🐉</span>
-              <span>{{ ownedCreatures.length }}</span>
-              <span
-                v-if="activeIncubatorEggs.length > 0"
-                class="w-2 h-2 rounded-full"
-                :class="hasReadyNurseryEgg ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'"
-              />
-            </button>
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm"
@@ -1155,7 +1162,7 @@ onUnmounted(() => {
             </strong>
           </span>
           <span v-if="displayedStage === 'ovo'" data-testid="egg-countdown-label" class="text-amber-300 font-semibold">
-            {{ isHatchAnimationPlaying ? '🥚 Eclosão em andamento...' : `🥚 Abre com animação em ${eggCountdownLabel}` }}
+            {{ isHatchAnimationPlaying ? '🥚 Eclosão em andamento...' : `🥚 ${eggCountdownLabel}` }}
           </span>
           <span v-else-if="nextEvolutionRule" class="text-emerald-300 font-semibold">
             Próx. fase ({{ nextEvolutionRule.toStage }}): Nv.{{ nextEvolutionRule.requiredLevel }} e
@@ -1393,9 +1400,7 @@ onUnmounted(() => {
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">
               Dieta Individual de {{ activeSpecies.displayName }}
             </h2>
-            <span class="text-[11px] text-slate-400">
-              Favorito: {{ activeSpecies.favoriteFoodIds[0] }}
-            </span>
+            
           </div>
 
           <div
@@ -1566,7 +1571,58 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- TAB 3: FICHA INDIVIDUAL COMPLETA DO PERSONAGEM -->
+        <!-- TAB 3: ARENA DE COMBATE P2P -->
+        <div
+          v-else-if="activeMobileTab === 'arena'"
+          data-testid="tab-content-arena"
+          class="space-y-3"
+        >
+          <div
+            v-if="displayedStage === 'ovo'"
+            class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs text-center flex flex-col items-center gap-2"
+          >
+            <span class="text-2xl">🥚</span>
+            <span class="font-bold uppercase tracking-wider">Ovo Ancestral em Repouso</span>
+            <p class="text-slate-400 text-[11px]">
+              Ovos não podem combater na Arena! Aguarde a eclosão para treinar e duelar.
+            </p>
+          </div>
+
+          <div
+            v-else-if="isSleeping"
+            data-testid="sleep-arena-blocked-notice"
+            class="p-4 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs text-center flex flex-col items-center gap-2"
+          >
+            <span class="text-2xl">💤</span>
+            <span class="font-bold uppercase tracking-wider">{{ activeDisplayName }} está Dormindo</span>
+            <p class="text-indigo-300/80 text-[11px]">
+              Duelos estão indisponíveis durante o sono restaurador. Aguarde o despertar.
+            </p>
+          </div>
+
+          <div
+            v-else-if="!isCreatureAlive"
+            class="p-4 rounded-xl bg-rose-950/80 border border-rose-700/60 text-rose-200 text-xs text-center flex flex-col items-center gap-2"
+          >
+            <span class="text-2xl">💀</span>
+            <span class="font-bold uppercase tracking-wider">Criatura Abatida</span>
+            <p class="text-rose-300/80 text-[11px]">
+              Recupere a saúde do seu dinossauro com cuidados antes de entrar na Arena.
+            </p>
+          </div>
+
+          <battle-arena-modal
+            v-else
+            :active-creature="activeRecord"
+            :wallet="saveState.wallet"
+            :battle-archive="saveState.battleArchive"
+            :theme="creatureTheme"
+            :embedded="true"
+            @settle-battle="handleSettleBattle"
+          />
+        </div>
+
+        <!-- TAB 4: FICHA INDIVIDUAL COMPLETA DO PERSONAGEM -->
         <div
           v-else-if="activeMobileTab === 'sheet'"
           data-testid="tab-content-sheet"
@@ -1585,9 +1641,25 @@ onUnmounted(() => {
               <h2 class="text-xs font-bold uppercase text-emerald-400">
                 Minha Coleção de Dinossauros
               </h2>
-              <span class="text-[11px] font-mono text-amber-300">
-                {{ ownedCreatures.length }} criatura(s)
-              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-mono text-amber-300">
+                  {{ ownedCreatures.length }} criatura(s)
+                </span>
+                <button
+                  type="button"
+                  data-testid="open-collection-modal-btn"
+                  class="px-2 py-0.5 rounded-lg border text-[10px] font-bold flex items-center gap-1 bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700 transition"
+                  title="Expandir Coleção Completa"
+                  @click="isCollectionModalOpen = true"
+                >
+                  <span>🐉</span>
+                  <span>{{ ownedCreatures.length }}</span>
+                  <span
+                    v-if="hasReadyNurseryEgg"
+                    class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"
+                  />
+                </button>
+              </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto pr-0.5">
               <button
@@ -2200,11 +2272,11 @@ onUnmounted(() => {
         </div>
       </main>
 
-      <!-- Bottom Mobile Navigation Bar (5 Pure Game Tabs - Always visible sticky navigation) -->
+      <!-- Bottom Mobile Navigation Bar (6 Game Tabs - Always visible sticky navigation) -->
       <nav
         aria-label="Menu principal do jogo"
         data-testid="bottom-navigation-bar"
-        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-5 backdrop-blur border-t shadow-lg transition-colors duration-500"
+        class="sticky bottom-0 z-50 shrink-0 grid grid-cols-6 backdrop-blur border-t shadow-lg transition-colors duration-500"
         :style="{
           backgroundColor: creatureTheme.headerBackground,
           borderTopColor: creatureTheme.borderColor
@@ -2242,6 +2314,21 @@ onUnmounted(() => {
 
         <button
           type="button"
+          data-testid="nav-tab-arena"
+          class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
+          :class="
+            activeMobileTab === 'arena'
+              ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
+              : 'text-slate-400 hover:text-slate-200'
+          "
+          @click="activeMobileTab = 'arena'"
+        >
+          <swords-icon class="w-4 h-4" />
+          <span>Arena</span>
+        </button>
+
+        <button
+          type="button"
           data-testid="nav-tab-sheet"
           class="py-2.5 flex flex-col items-center justify-center gap-1 text-[11px] font-bold uppercase transition"
           :class="
@@ -2264,10 +2351,9 @@ onUnmounted(() => {
               ? 'text-emerald-400 bg-emerald-500/10 border-t-2 border-emerald-500'
               : 'text-slate-400 hover:text-slate-200'
           "
-          
           @click="breedingInitialTab = 'breeding'; activeMobileTab = 'genetics'"
         >
-          <span class="text-sm leading-none">🧬</span>
+          <dna-icon class="w-4 h-4" />
           <span>Genética</span>
         </button>
 

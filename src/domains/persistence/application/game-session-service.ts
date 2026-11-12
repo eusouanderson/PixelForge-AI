@@ -27,10 +27,12 @@ import {
 } from '@/domains/inventory/domain/inventory-engine';
 import { executeCharacterActivity } from '@/domains/activities/domain/activities-engine';
 import { earnCoins, spendCoins } from '@/domains/economy/domain/economy-engine';
+import type { WalletState } from '@/domains/economy/types';
 import { updateGameSettings } from '@/domains/settings/domain/settings-engine';
 import type { GameSettingsState } from '@/domains/settings/types';
 import { startSleepSession } from '@/domains/sleep/domain/sleep-engine';
 import type { BredEggRecord, BreedingHistoryRecord } from '@/domains/breeding/types';
+import type { BattleHistoryRecord, CharacterBattleRecord } from '@/domains/battle/types';
 import {
   advanceBredEggIncubationList,
   applyActiveCreatureUpdate,
@@ -830,6 +832,84 @@ export function hatchBredEggUseCase(
   nowMs: number
 ): GameSaveSnapshot {
   return hatchBredEggAtomicUseCase(snapshot, eggId, nowMs).snapshot;
+}
+
+export function recordBattleResultUseCase(
+  snapshot: GameSaveSnapshot,
+  historyRecord: BattleHistoryRecord,
+  nextWallet: WalletState,
+  nowMs: number
+): GameSaveSnapshot {
+  const currentArchive = snapshot.battleArchive ?? [];
+  const activeChar = snapshot.characters[snapshot.activeCharacterId];
+  if (!activeChar) {
+    return {
+      ...snapshot,
+      wallet: nextWallet,
+      lastSavedAtMs: nowMs,
+      battleArchive: [historyRecord, ...currentArchive]
+    };
+  }
+
+  const prevRecord = activeChar.battleRecord ?? {
+    totalBattles: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    currentStreak: 0,
+    bestStreak: 0,
+    combatXp: 0,
+    combatLevel: 1,
+    unlockedAttacks: [],
+    recentOpponents: []
+  };
+
+  const isWin = historyRecord.result === 'victory';
+  const isLoss = historyRecord.result === 'defeat';
+  const isDraw = historyRecord.result === 'draw';
+
+  const nextStreak = isWin ? prevRecord.currentStreak + 1 : isLoss ? 0 : prevRecord.currentStreak;
+  const nextBestStreak = Math.max(prevRecord.bestStreak, nextStreak);
+  const nextXp = prevRecord.combatXp + historyRecord.combatXpGained;
+  const nextCombatLevel = Math.max(1, Math.floor(nextXp / 200) + 1);
+
+  const nextOpponents = [
+    {
+      opponentSpecies: historyRecord.opponentCreatureSpecies,
+      timestampMs: nowMs,
+      won: isWin
+    },
+    ...prevRecord.recentOpponents.slice(0, 9)
+  ];
+
+  const updatedBattleRecord: CharacterBattleRecord = {
+    totalBattles: prevRecord.totalBattles + 1,
+    wins: prevRecord.wins + (isWin ? 1 : 0),
+    losses: prevRecord.losses + (isLoss ? 1 : 0),
+    draws: prevRecord.draws + (isDraw ? 1 : 0),
+    currentStreak: nextStreak,
+    bestStreak: nextBestStreak,
+    combatXp: nextXp,
+    combatLevel: nextCombatLevel,
+    unlockedAttacks: prevRecord.unlockedAttacks,
+    recentOpponents: nextOpponents
+  };
+
+  const updatedChar: CharacterSaveRecord = {
+    ...activeChar,
+    battleRecord: updatedBattleRecord
+  };
+
+  return {
+    ...snapshot,
+    wallet: nextWallet,
+    lastSavedAtMs: nowMs,
+    characters: {
+      ...snapshot.characters,
+      [snapshot.activeCharacterId]: updatedChar
+    },
+    battleArchive: [historyRecord, ...currentArchive]
+  };
 }
 
 export { listOwnedCreatures };

@@ -117,7 +117,6 @@ test.describe('PixelForge P2P Breeding -> Egg Incubation -> Hatching -> Collecti
 
     await expect(winnerPage.getByTestId('breeding-egg-created-card')).toBeVisible();
     await expect(loserPage.getByTestId('breeding-partner-won-card')).toBeVisible();
-    await expect(loserPage.getByTestId('open-collection-modal-btn')).toContainText('1');
 
     // Non-winner can cleanly reset for a second breeding round
     await loserPage.getByTestId('new-breeding-session-btn').click();
@@ -170,7 +169,8 @@ test.describe('PixelForge P2P Breeding -> Egg Incubation -> Hatching -> Collecti
     await winnerPage.getByTestId('feed-btn-thermal-spring-water').click();
     await expect(winnerPage.getByTestId('feedback-banner')).toContainText('Água Cristalina');
 
-    // Switch back and forth between starter parent and newborn baby via HUD Collection Switcher Modal
+    // Switch back and forth between starter parent and newborn baby via Collection Switcher in Sheet tab
+    await winnerPage.getByTestId('nav-tab-sheet').click();
     await winnerPage.getByTestId('open-collection-modal-btn').click();
     const modal = winnerPage.getByTestId('collection-switcher-modal');
     await expect(modal).toBeVisible();
