@@ -4,8 +4,9 @@ import type {
   FeedingReaction,
   FoodItemDefinition
 } from '../types';
+import { FOOD_PIXEL_ARTS } from './food-pixel-art-catalog';
 
-export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
+const RAW_FOOD_CATALOG: Readonly<Record<string, Omit<FoodItemDefinition, 'pixelArt'>>> = {
   'volcanic-roast-meat': {
     id: 'volcanic-roast-meat',
     name: 'Pernil Vulcânico Assado',
@@ -421,6 +422,16 @@ export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = {
     }
   }
 };
+
+export const FOOD_CATALOG: Readonly<Record<string, FoodItemDefinition>> = Object.fromEntries(
+  Object.entries(RAW_FOOD_CATALOG).map(([id, def]) => [
+    id,
+    {
+      ...def,
+      pixelArt: FOOD_PIXEL_ARTS[id]
+    }
+  ])
+);
 
 export function listAllFoods(): readonly FoodItemDefinition[] {
   return Object.values(FOOD_CATALOG);

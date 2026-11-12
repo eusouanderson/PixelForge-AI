@@ -95,11 +95,49 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
 
     // Switch back to Feed tab & feed/buy now that baby hatched
     await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
+    expect(wrapper.find('[data-testid="food-pixel-art-thermal-spring-water"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="food-pixel-art-volcanic-roast-meat"]').exists()).toBe(true);
+
     await wrapper.get('[data-testid="feed-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain(
       'Água Cristalina da Nascente'
     );
+
+    // Exact food eating animation overlay appears in the viewport!
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="feeding-food-name"]').text()).toBe('Água Cristalina da Nascente');
+    expect(wrapper.find('[data-testid="active-feeding-art-thermal-spring-water"]').exists()).toBe(true);
+
+    // Bite 1 at ~700ms
+    await vi.advanceTimersByTimeAsync(700);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feeding-bite-status"]').text()).toContain('Mordida!');
+    expect(wrapper.find('[data-testid="feeding-bite-crumbs"]').exists()).toBe(true);
+
+    // Bite 2 at ~1400ms
+    await vi.advanceTimersByTimeAsync(700);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feeding-bite-status"]').text()).toContain('Mastigando...');
+
+    // Finished / swallowed at ~2000ms
+    await vi.advanceTimersByTimeAsync(600);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feeding-bite-status"]').text()).toContain('Delícia!');
+
+    // Reset overlay after 2400ms duration
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(false);
+
+    // Feed unneeded medicine to healthy baby to trigger rejection animation
+    await wrapper.get('[data-testid="feed-btn-nutri-vital-serum"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="feeding-rejection-mark"]').exists()).toBe(true);
+    await vi.advanceTimersByTimeAsync(2500);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="buy-food-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();

@@ -1,5 +1,6 @@
 import type { CharacterId, DiseaseId, ElementAffinity } from '@/domains/characters/types';
 import type { AttributeKind } from '@/domains/attributes/types';
+import type { DeclarativePixelArt } from '@/core/domain/pixel-art/interfaces';
 
 export type FoodCategory =
   | 'meat'
@@ -37,6 +38,7 @@ export interface FoodItemDefinition {
     readonly secondary: string;
     readonly highlight: string;
   };
+  readonly pixelArt: DeclarativePixelArt;
 }
 
 export interface FeedingReaction {

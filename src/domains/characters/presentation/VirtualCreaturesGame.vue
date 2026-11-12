@@ -70,6 +70,9 @@ import type { GameSaveSnapshot } from '@/domains/persistence/types';
 import type { GraphicsQualityPreset } from '@/domains/settings/types';
 import BreedingModal from '@/domains/breeding/presentation/BreedingModal.vue';
 import GenealogyTreeModal from '@/domains/breeding/presentation/GenealogyTreeModal.vue';
+import FoodPixelArt from '@/domains/feeding/presentation/FoodPixelArt.vue';
+import type { FoodItemDefinition } from '@/domains/feeding/types';
+import { playSoundEffect } from '@/shared/audio/sound-effects';
 import { formatBiologicalSexLabel, formatBiologicalSexSymbol } from '@/domains/genetics/domain/sex-determination-engine';
 
 const spriteRepo = new CharacterSpriteRepository();
@@ -92,6 +95,19 @@ const manualAnimOverride = ref<CharacterAnimationName | null>(null);
 const nowClockMs = ref<number>(Date.now());
 const lastIncubationTickMs = ref<number>(Date.now());
 const isHatchAnimationPlaying = ref<boolean>(false);
+
+interface ActiveFeedingAnimationState {
+  readonly food: FoodItemDefinition;
+  readonly isAccepted: boolean;
+  readonly satisfactionLevel: 'ecstatic' | 'satisfied' | 'disgusted' | 'poisoned';
+  biteStage: number;
+  crumbActive: boolean;
+}
+
+const activeFeeding = ref<ActiveFeedingAnimationState | null>(null);
+let feedingBiteTimer1: ReturnType<typeof setTimeout> | null = null;
+let feedingBiteTimer2: ReturnType<typeof setTimeout> | null = null;
+let feedingBiteTimer3: ReturnType<typeof setTimeout> | null = null;
 
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
 let incubationClockTimer: ReturnType<typeof setInterval> | null = null;
@@ -292,6 +308,7 @@ function triggerTemporaryAnimation(anim: CharacterAnimationName, durationMs: num
   if (animResetTimeout) clearTimeout(animResetTimeout);
   animResetTimeout = setTimeout(() => {
     manualAnimOverride.value = null;
+    activeFeeding.value = null;
   }, durationMs);
 }
 
@@ -302,6 +319,52 @@ async function handleFeedCharacter(foodId: string): Promise<void> {
 
   if (res.success && res.reaction) {
     const isAccepted = res.reaction.accepted;
+    const foodDef = getFoodById(foodId);
+
+    if (feedingBiteTimer1) clearTimeout(feedingBiteTimer1);
+    if (feedingBiteTimer2) clearTimeout(feedingBiteTimer2);
+    if (feedingBiteTimer3) clearTimeout(feedingBiteTimer3);
+
+    activeFeeding.value = {
+      food: foodDef,
+      isAccepted,
+      satisfactionLevel: res.reaction.satisfactionLevel,
+      biteStage: 0,
+      crumbActive: false
+    };
+
+    if (isAccepted) {
+      playSoundEffect('eat');
+      feedingBiteTimer1 = setTimeout(() => {
+        if (activeFeeding.value) {
+          activeFeeding.value.biteStage = 1;
+          activeFeeding.value.crumbActive = true;
+          playSoundEffect('eat', 0.6);
+        }
+      }, 650);
+
+      feedingBiteTimer2 = setTimeout(() => {
+        if (activeFeeding.value) {
+          activeFeeding.value.biteStage = 2;
+          activeFeeding.value.crumbActive = true;
+          playSoundEffect('eat', 0.4);
+        }
+      }, 1350);
+
+      feedingBiteTimer3 = setTimeout(() => {
+        if (activeFeeding.value) {
+          activeFeeding.value.biteStage = 3;
+          activeFeeding.value.crumbActive = false;
+        }
+      }, 1950);
+    } else {
+      if (res.reaction.contractedDiseaseId === 'overeating_indigestion') {
+        playSoundEffect('burp');
+      } else {
+        playSoundEffect('sneezing');
+      }
+    }
+
     triggerTemporaryAnimation(isAccepted ? 'comendo' : 'doente', 2400);
     sceneController.triggerReactiveParticles(
       createReactiveParticleBurst(isAccepted ? 'feeding' : 'sick')
@@ -323,6 +386,7 @@ async function handleExecuteActivity(activityId: string): Promise<void> {
   feedbackBanner.value = res.message;
 
   if (res.success) {
+    playSoundEffect('happy');
     triggerTemporaryAnimation('amando', 2400);
     if (res.evolvedToStage) {
       sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
@@ -339,6 +403,7 @@ async function handleReviveCharacter(): Promise<void> {
   manualAnimOverride.value = null;
   saveState.value = reviveDeceasedCharacterUseCase(saveState.value, Date.now());
   feedbackBanner.value = `${activeSpecies.value.displayName} renasceu com saúde total!`;
+  playSoundEffect('happy');
   sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
   await persistCurrentState();
 }
@@ -348,6 +413,7 @@ async function handleHatchEgg(): Promise<void> {
   frameToggle.value = 1;
   saveState.value = hatchCharacterEggUseCase(saveState.value, Date.now());
   feedbackBanner.value = `🐣 O ovo de ${activeSpecies.value.displayName} eclodiu!`;
+  playSoundEffect('happy');
   sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
   await persistCurrentState();
 }
@@ -731,6 +797,9 @@ onUnmounted(() => {
   if (spriteTimer) clearInterval(spriteTimer);
   if (realTimeDecayTimer) clearInterval(realTimeDecayTimer);
   if (animResetTimeout) clearTimeout(animResetTimeout);
+  if (feedingBiteTimer1) clearTimeout(feedingBiteTimer1);
+  if (feedingBiteTimer2) clearTimeout(feedingBiteTimer2);
+  if (feedingBiteTimer3) clearTimeout(feedingBiteTimer3);
   renderer2d.clearCaches();
   sceneController.dispose();
 });
@@ -879,6 +948,103 @@ onUnmounted(() => {
           class="relative z-10 w-40 h-40"
           style="image-rendering: pixelated"
         />
+
+        <!-- Active Feeding & Medicine Interactive Animation Overlay -->
+        <div
+          v-if="activeFeeding"
+          data-testid="feeding-animation-overlay"
+          class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+        >
+          <div
+            class="relative flex flex-col items-center"
+            :class="activeFeeding.isAccepted ? 'animate-feeding-approach' : 'animate-feeding-recoil'"
+          >
+            <!-- Floating Food Name & Status Badge -->
+            <div
+              data-testid="feeding-food-badge"
+              class="mb-2 px-2.5 py-1 rounded-full text-[11px] font-bold shadow-lg border backdrop-blur flex items-center gap-1.5 transition-transform"
+              :class="activeFeeding.isAccepted ? 'bg-slate-900/90 border-emerald-500/60 text-emerald-300 scale-100' : 'bg-rose-950/95 border-rose-600 text-rose-200'"
+            >
+              <span v-if="activeFeeding.food.category === 'medicine'">✚</span>
+              <span v-else>🍖</span>
+              <span data-testid="feeding-food-name">{{ activeFeeding.food.name }}</span>
+              <span
+                v-if="activeFeeding.biteStage === 1"
+                data-testid="feeding-bite-status"
+                class="text-[10px] text-amber-300"
+              >
+                (Mordida!)
+              </span>
+              <span
+                v-else-if="activeFeeding.biteStage === 2"
+                data-testid="feeding-bite-status"
+                class="text-[10px] text-amber-300"
+              >
+                (Mastigando...)
+              </span>
+              <span
+                v-else-if="activeFeeding.biteStage >= 3"
+                data-testid="feeding-bite-status"
+                class="text-[10px] text-emerald-300"
+              >
+                (Delícia! ✨)
+              </span>
+            </div>
+
+            <!-- Exact Food / Medicine Pixel Art Sprite -->
+            <div
+              data-testid="feeding-food-sprite"
+              class="relative transition-all duration-200"
+              :class="{
+                'scale-110 rotate-[-6deg]': activeFeeding.biteStage === 0,
+                'scale-95 rotate-[6deg] animate-bite-shake': activeFeeding.biteStage === 1,
+                'scale-75 rotate-[-12deg] opacity-80': activeFeeding.biteStage === 2,
+                'scale-0 opacity-0': activeFeeding.biteStage >= 3,
+                'filter brightness-75 contrast-125 saturate-50': !activeFeeding.isAccepted
+              }"
+            >
+              <food-pixel-art
+                :art="activeFeeding.food.pixelArt"
+                :size="52"
+                :bite-stage="activeFeeding.biteStage"
+                :data-testid="`active-feeding-art-${activeFeeding.food.id}`"
+              />
+
+              <!-- Bite Crumb Pixel Particles Burst -->
+              <div
+                v-if="activeFeeding.crumbActive && activeFeeding.biteStage < 3"
+                data-testid="feeding-bite-crumbs"
+                class="absolute -inset-2 pointer-events-none flex items-center justify-center"
+              >
+                <span
+                  class="absolute w-1.5 h-1.5 rounded-sm animate-crumb-1"
+                  :style="{ backgroundColor: activeFeeding.food.pixelColors.primary }"
+                />
+                <span
+                  class="absolute w-1.5 h-1.5 rounded-sm animate-crumb-2"
+                  :style="{ backgroundColor: activeFeeding.food.pixelColors.secondary }"
+                />
+                <span
+                  class="absolute w-1 h-1 rounded-sm animate-crumb-3"
+                  :style="{ backgroundColor: activeFeeding.food.pixelColors.highlight }"
+                />
+                <span
+                  class="absolute w-1 h-1 rounded-sm animate-crumb-4"
+                  :style="{ backgroundColor: activeFeeding.food.pixelColors.primary }"
+                />
+              </div>
+
+              <!-- Rejection Mark when forbidden or wrong medicine -->
+              <div
+                v-if="!activeFeeding.isAccepted"
+                data-testid="feeding-rejection-mark"
+                class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-600 border border-white text-white flex items-center justify-center text-xs font-black shadow-md animate-bounce"
+              >
+                ✕
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Environment & Status Overlay Pill -->
         <div
@@ -1158,15 +1324,16 @@ onUnmounted(() => {
               }"
             >
               <div class="flex items-center gap-2.5">
-                <!-- Pixel Art Color Swatch Icon -->
+                <!-- Exact Crisp Pixel Art Image -->
                 <div
-                  class="w-9 h-9 rounded-md border border-slate-700 shrink-0 grid grid-cols-2 grid-rows-2 p-0.5"
-                  :style="{ backgroundColor: food.pixelColors.secondary }"
+                  :data-testid="`food-pixel-card-${food.id}`"
+                  class="w-10 h-10 rounded-lg border border-slate-700/80 bg-slate-900/80 p-0.5 shrink-0 flex items-center justify-center shadow-inner"
                 >
-                  <div :style="{ backgroundColor: food.pixelColors.primary }" />
-                  <div :style="{ backgroundColor: food.pixelColors.highlight }" />
-                  <div :style="{ backgroundColor: food.pixelColors.primary }" />
-                  <div :style="{ backgroundColor: food.pixelColors.secondary }" />
+                  <food-pixel-art
+                    :art="food.pixelArt"
+                    :size="34"
+                    :data-testid="`food-pixel-art-${food.id}`"
+                  />
                 </div>
 
                 <div>
@@ -2159,3 +2326,131 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+@keyframes feeding-approach {
+  0% {
+    transform: translate(45px, 10px) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(25px, -5px) scale(1.05);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(15px, 2px) scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(12px, 0px) scale(0.9);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(8px, 0px) scale(0.85);
+    opacity: 0.9;
+  }
+}
+
+@keyframes feeding-recoil {
+  0% {
+    transform: translate(25px, 0) scale(0.8);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(15px, 0) scale(1);
+    opacity: 1;
+  }
+  55% {
+    transform: translate(25px, 15px) rotate(15deg) scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(35px, 40px) rotate(30deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes bite-shake {
+  0%, 100% {
+    transform: scale(0.95) rotate(6deg);
+  }
+  25% {
+    transform: scale(0.9) rotate(-4deg) translateY(-2px);
+  }
+  75% {
+    transform: scale(1) rotate(8deg) translateY(2px);
+  }
+}
+
+@keyframes crumb-1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-14px, -12px) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes crumb-2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(16px, -10px) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes crumb-3 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-10px, 14px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes crumb-4 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(12px, 12px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+.animate-feeding-approach {
+  animation: feeding-approach 2.4s ease-out forwards;
+}
+
+.animate-feeding-recoil {
+  animation: feeding-recoil 2.4s ease-out forwards;
+}
+
+.animate-bite-shake {
+  animation: bite-shake 0.3s ease-in-out;
+}
+
+.animate-crumb-1 {
+  animation: crumb-1 0.6s ease-out forwards;
+}
+
+.animate-crumb-2 {
+  animation: crumb-2 0.6s ease-out forwards;
+}
+
+.animate-crumb-3 {
+  animation: crumb-3 0.6s ease-out forwards;
+}
+
+.animate-crumb-4 {
+  animation: crumb-4 0.6s ease-out forwards;
+}
+</style>
