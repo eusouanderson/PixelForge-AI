@@ -28,6 +28,7 @@ describe('BabylonCreatureSceneController', () => {
     controller.resize();
 
     controller.initialize({ canvas, quality: 'high' });
+    expect(canvas.getAttribute('tabindex')).toBe('0');
 
     for (const species of listAllCharacterSpecies()) {
       const env = getCharacterEnvironmentConfig(species.id);

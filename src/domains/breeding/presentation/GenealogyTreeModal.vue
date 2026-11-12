@@ -1,17 +1,26 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm select-none">
-    <div class="relative w-full max-w-xl max-h-[90vh] bg-slate-900 border-2 border-indigo-700/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden font-sans text-slate-100">
+  <section
+    aria-label="Árvore Genealógica"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm select-none"
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="genealogy-modal-title"
+      class="relative w-full max-w-xl max-h-[90vh] bg-slate-900 border-2 border-indigo-700/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden font-sans text-slate-100"
+    >
       <!-- Modal Header -->
       <div class="px-5 py-4 bg-slate-950/80 border-b border-indigo-800/40 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
           <span class="text-xl">🧬</span>
           <div>
-            <h2 class="text-base font-black tracking-wide text-indigo-300">Árvore Genealógica</h2>
+            <h2 id="genealogy-modal-title" class="text-base font-black tracking-wide text-indigo-300">Árvore Genealógica</h2>
             <p class="text-xs text-slate-400">Linhagem biológica e ancestrais genéticos</p>
           </div>
         </div>
         <button
           type="button"
+          aria-label="Fechar árvore genealógica"
           class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 flex items-center justify-center font-bold text-sm transition-all"
           @click="$emit('close')"
         >
@@ -118,7 +127,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">

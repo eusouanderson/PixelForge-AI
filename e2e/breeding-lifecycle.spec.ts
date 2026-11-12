@@ -9,8 +9,12 @@ async function seedAdultDinosaur(
   sex: 'male' | 'female'
 ): Promise<void> {
   await expect(page.getByTestId('active-character-name')).toBeVisible();
+  await page.waitForFunction(
+    (key) => Boolean(window.localStorage.getItem(key)),
+    SAVE_STORAGE_KEY
+  );
 
-  await page.evaluate(
+  const mutatedJson = await page.evaluate(
     ({ key, targetSpecies, targetSex }) => {
       const raw = window.localStorage.getItem(key);
       if (!raw) {
@@ -39,12 +43,22 @@ async function seedAdultDinosaur(
       snapshot.activeCreatureInstanceId = targetSpecies;
       snapshot.lastSavedAtMs = Date.now();
 
-      window.localStorage.setItem(key, JSON.stringify(snapshot));
+      return JSON.stringify(snapshot);
     },
     { key: SAVE_STORAGE_KEY, targetSpecies: speciesId, targetSex: sex }
   );
 
-  await page.reload();
+  // Navigate to a scriptless same-origin URL first so "/" unmounts and flushes visibilitychange
+  // BEFORE writing the seeded snapshot, preventing stale in-memory state from overwriting storage.
+  await page.goto('/version.json');
+  await page.evaluate(
+    ({ key, value }) => {
+      window.localStorage.setItem(key, value);
+    },
+    { key: SAVE_STORAGE_KEY, value: mutatedJson }
+  );
+
+  await page.goto('/');
   await expect(page.getByTestId('active-stage-badge')).toHaveText('adulto');
 }
 

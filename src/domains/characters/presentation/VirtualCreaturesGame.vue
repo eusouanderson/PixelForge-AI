@@ -859,6 +859,7 @@ onUnmounted(() => {
         <canvas
           ref="babylonCanvasRef"
           data-testid="babylon-viewport-canvas"
+          tabindex="0"
           class="absolute inset-0 w-full h-full block"
         />
 
@@ -923,152 +924,154 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <!-- Discreet Update Notification Banners -->
-      <div
-        v-if="updaterState.status === 'ready_to_reload'"
-        data-testid="web-update-ready-banner"
-        class="px-3.5 py-2 bg-emerald-950/90 border-b border-emerald-700 text-xs text-emerald-200 flex items-center justify-between gap-2 shadow-sm"
-      >
-        <div class="flex items-center gap-1.5 truncate">
-          <sparkles-icon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span class="truncate">Atualização {{ updaterState.availableManifest?.version }} pronta para aplicar!</span>
-        </div>
-        <button
-          type="button"
-          data-testid="reload-to-apply-btn"
-          class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
-          @click="handleApplyWebReload"
-        >
-          Reiniciar
-        </button>
-      </div>
-
-      <div
-        v-else-if="updaterState.status === 'ready_to_install_apk' || updaterState.status === 'native_update_required'"
-        data-testid="apk-update-banner"
-        class="px-3.5 py-2 bg-amber-950/90 border-b border-amber-700 text-xs text-amber-200 flex items-center justify-between gap-2 shadow-sm"
-      >
-        <div class="flex items-center gap-1.5 truncate">
-          <sparkles-icon class="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span class="truncate">APK Android {{ updaterState.availableManifest?.version }} disponível!</span>
-        </div>
-        <button
-          type="button"
-          data-testid="install-apk-btn"
-          class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
-          @click="handleInstallApk"
-        >
-          Instalar
-        </button>
-      </div>
-
-      <!-- Feedback Banner & Emergency Actions -->
-      <!-- Dynamic Feedback Action Banner -->
-      <div
-        data-testid="feedback-banner"
-        class="px-3.5 py-2 border-b text-xs text-emerald-300 flex items-center justify-between gap-2 transition-colors duration-500"
-        :style="{
-          backgroundColor: creatureTheme.cardDarkBackground,
-          borderBottomColor: creatureTheme.borderSubtleColor
-        }"
-      >
-        <span>{{ feedbackBanner }}</span>
-        <button
-          v-if="activeRecord.runtime.healthCondition === 'deceased' || displayedAnimation === 'morte'"
-          type="button"
-          data-testid="revive-creature-btn"
-          class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
-          @click="handleReviveCharacter"
-        >
-          Reviver
-        </button>
-        <button
-          v-else-if="activeRecord.runtime.currentStage === 'ovo' && saveState.settings.developerModeEnabled"
-          type="button"
-          data-testid="hatch-egg-btn"
-          class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
-          @click="handleHatchEgg"
-        >
-          Eclodir Agora (Dev)
-        </button>
-      </div>
-
-      <!-- Clinical Alert Box for Active Diseases -->
-      <div
-        v-if="activeRecord.runtime.activeDiseases.length > 0"
-        data-testid="active-diseases-alert"
-        class="px-3.5 py-2 bg-rose-950/90 border-b border-rose-800 text-xs text-rose-200 space-y-1"
-      >
-        <div class="font-bold uppercase text-rose-300 text-[11px]">
-          ⚠ Enfermidades Diagnosticadas — Tratamento Necessário:
-        </div>
+      <!-- Discreet Update & Status Notification Banners -->
+      <section aria-label="Avisos, Atualizações e Feedback" class="shrink-0">
         <div
-          v-for="disease in activeRecord.runtime.activeDiseases"
-          :key="disease.id"
-          class="text-[11px] flex flex-col p-1.5 rounded border border-rose-800/70"
-          :style="{ backgroundColor: creatureTheme.cardDarkBackground }"
+          v-if="updaterState.status === 'ready_to_reload'"
+          data-testid="web-update-ready-banner"
+          class="px-3.5 py-2 bg-emerald-950/90 border-b border-emerald-700 text-xs text-emerald-200 flex items-center justify-between gap-2 shadow-sm"
         >
-          <span class="font-bold text-rose-300">{{ disease.name }}</span>
-          <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
-          <span class="text-amber-300 font-semibold text-[10px] mt-0.5">
-            Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
-          </span>
+          <div class="flex items-center gap-1.5 truncate">
+            <sparkles-icon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span class="truncate">Atualização {{ updaterState.availableManifest?.version }} pronta para aplicar!</span>
+          </div>
+          <button
+            type="button"
+            data-testid="reload-to-apply-btn"
+            class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
+            @click="handleApplyWebReload"
+          >
+            Reiniciar
+          </button>
         </div>
-      </div>
 
-      <!-- Incubator Quick Status Banner -->
-      <div
-        v-if="incubatorBannerInfo"
-        data-testid="incubator-status-banner"
-        class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
-        :class="
-          incubatorBannerInfo.isReady
-            ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200'
-            : 'bg-amber-950/80 border-amber-700/70 text-amber-200'
-        "
-      >
-        <span class="truncate font-medium">{{ incubatorBannerInfo.text }}</span>
-        <button
-          type="button"
-          data-testid="open-nursery-banner-btn"
-          class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
-          @click="breedingInitialTab = 'nursery'; activeMobileTab = 'genetics'"
+        <div
+          v-else-if="updaterState.status === 'ready_to_install_apk' || updaterState.status === 'native_update_required'"
+          data-testid="apk-update-banner"
+          class="px-3.5 py-2 bg-amber-950/90 border-b border-amber-700 text-xs text-amber-200 flex items-center justify-between gap-2 shadow-sm"
         >
-          Berçário
-        </button>
-      </div>
-
-      <!-- Discreet Urgent Care Banner When Near or At Critical Level -->
-      <div
-        v-if="notificationState.activeBannerText"
-        data-testid="care-alert-banner"
-        class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
-        :class="
-          notificationState.evaluation.activeCriticalCount > 0
-            ? 'bg-rose-950/90 border-rose-700 text-rose-200'
-            : 'bg-amber-950/85 border-amber-700 text-amber-200'
-        "
-      >
-        <div class="flex items-center gap-1.5 min-w-0">
-          <bell-icon class="w-3.5 h-3.5 shrink-0" />
-          <span class="text-[11px] font-medium truncate">{{ notificationState.activeBannerText }}</span>
+          <div class="flex items-center gap-1.5 truncate">
+            <sparkles-icon class="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span class="truncate">APK Android {{ updaterState.availableManifest?.version }} disponível!</span>
+          </div>
+          <button
+            type="button"
+            data-testid="install-apk-btn"
+            class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
+            @click="handleInstallApk"
+          >
+            Instalar
+          </button>
         </div>
-        <button
-          type="button"
-          data-testid="care-alert-action-btn"
-          class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
-          @click="
-            activeMobileTab =
-              notificationState.evaluation.immediateAlerts[0]?.reason === 'energy' ||
-              notificationState.evaluation.immediateAlerts[0]?.reason === 'happiness' ||
-              notificationState.evaluation.immediateAlerts[0]?.reason === 'hygiene'
-                ? 'activities'
-                : 'feed'
+
+        <!-- Feedback Banner & Emergency Actions -->
+        <!-- Dynamic Feedback Action Banner -->
+        <div
+          data-testid="feedback-banner"
+          class="px-3.5 py-2 border-b text-xs text-emerald-300 flex items-center justify-between gap-2 transition-colors duration-500"
+          :style="{
+            backgroundColor: creatureTheme.cardDarkBackground,
+            borderBottomColor: creatureTheme.borderSubtleColor
+          }"
+        >
+          <span>{{ feedbackBanner }}</span>
+          <button
+            v-if="activeRecord.runtime.healthCondition === 'deceased' || displayedAnimation === 'morte'"
+            type="button"
+            data-testid="revive-creature-btn"
+            class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
+            @click="handleReviveCharacter"
+          >
+            Reviver
+          </button>
+          <button
+            v-else-if="activeRecord.runtime.currentStage === 'ovo' && saveState.settings.developerModeEnabled"
+            type="button"
+            data-testid="hatch-egg-btn"
+            class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
+            @click="handleHatchEgg"
+          >
+            Eclodir Agora (Dev)
+          </button>
+        </div>
+
+        <!-- Clinical Alert Box for Active Diseases -->
+        <div
+          v-if="activeRecord.runtime.activeDiseases.length > 0"
+          data-testid="active-diseases-alert"
+          class="px-3.5 py-2 bg-rose-950/90 border-b border-rose-800 text-xs text-rose-200 space-y-1"
+        >
+          <div class="font-bold uppercase text-rose-300 text-[11px]">
+            ⚠ Enfermidades Diagnosticadas — Tratamento Necessário:
+          </div>
+          <div
+            v-for="disease in activeRecord.runtime.activeDiseases"
+            :key="disease.id"
+            class="text-[11px] flex flex-col p-1.5 rounded border border-rose-800/70"
+            :style="{ backgroundColor: creatureTheme.cardDarkBackground }"
+          >
+            <span class="font-bold text-rose-300">{{ disease.name }}</span>
+            <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
+            <span class="text-amber-300 font-semibold text-[10px] mt-0.5">
+              Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Incubator Quick Status Banner -->
+        <div
+          v-if="incubatorBannerInfo"
+          data-testid="incubator-status-banner"
+          class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
+          :class="
+            incubatorBannerInfo.isReady
+              ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200'
+              : 'bg-amber-950/80 border-amber-700/70 text-amber-200'
           "
         >
-          Cuidar
-        </button>
-      </div>
+          <span class="truncate font-medium">{{ incubatorBannerInfo.text }}</span>
+          <button
+            type="button"
+            data-testid="open-nursery-banner-btn"
+            class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
+            @click="breedingInitialTab = 'nursery'; activeMobileTab = 'genetics'"
+          >
+            Berçário
+          </button>
+        </div>
+
+        <!-- Discreet Urgent Care Banner When Near or At Critical Level -->
+        <div
+          v-if="notificationState.activeBannerText"
+          data-testid="care-alert-banner"
+          class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
+          :class="
+            notificationState.evaluation.activeCriticalCount > 0
+              ? 'bg-rose-950/90 border-rose-700 text-rose-200'
+              : 'bg-amber-950/85 border-amber-700 text-amber-200'
+          "
+        >
+          <div class="flex items-center gap-1.5 min-w-0">
+            <bell-icon class="w-3.5 h-3.5 shrink-0" />
+            <span class="text-[11px] font-medium truncate">{{ notificationState.activeBannerText }}</span>
+          </div>
+          <button
+            type="button"
+            data-testid="care-alert-action-btn"
+            class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
+            @click="
+              activeMobileTab =
+                notificationState.evaluation.immediateAlerts[0]?.reason === 'energy' ||
+                notificationState.evaluation.immediateAlerts[0]?.reason === 'happiness' ||
+                notificationState.evaluation.immediateAlerts[0]?.reason === 'hygiene'
+                  ? 'activities'
+                  : 'feed'
+            "
+          >
+            Cuidar
+          </button>
+        </div>
+      </section>
 
       <!-- 6 Normalized Need Bars (0 to 100) -->
       <section
@@ -2002,13 +2005,17 @@ onUnmounted(() => {
       </nav>
 
       <!-- Owned Dinosaur Collection & Egg Nursery Quick Switcher Modal -->
-      <div
+      <section
         v-if="isCollectionModalOpen"
         data-testid="collection-switcher-modal"
+        aria-label="Coleção de Dinossauros"
         class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
         @click.self="isCollectionModalOpen = false"
       >
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="collection-modal-title"
           class="w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
           :style="{
             backgroundColor: creatureTheme.containerBackground,
@@ -2023,7 +2030,7 @@ onUnmounted(() => {
             }"
           >
             <div>
-              <h2 class="text-sm font-black uppercase text-white flex items-center gap-1.5">
+              <h2 id="collection-modal-title" class="text-sm font-black uppercase text-white flex items-center gap-1.5">
                 <span>🐉</span>
                 <span>Meus Dinossauros ({{ ownedCreatures.length }})</span>
               </h2>
@@ -2034,6 +2041,7 @@ onUnmounted(() => {
             <button
               type="button"
               data-testid="close-collection-modal-btn"
+              aria-label="Fechar coleção"
               class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700"
               @click="isCollectionModalOpen = false"
             >
@@ -2133,7 +2141,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Interactive Genealogy Tree Modal -->
       <genealogy-tree-modal
