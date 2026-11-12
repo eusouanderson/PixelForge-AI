@@ -259,6 +259,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       pages: write
       id-token: write
     environment:
@@ -275,9 +276,23 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Upload GitHub Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: dist/
+
+      - name: Wait for Pages Artifact Indexing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 15); do
+            COUNT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" --jq '[.artifacts[] | select(.name == "github-pages")] | length' 2>/dev/null || echo 0)
+            if [ "$COUNT" -ge 1 ]; then
+              echo "github-pages artifact indexed on attempt $i"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "::warning::Artifact indexing wait timed out; proceeding to deploy-pages"
 
       - name: Deploy to GitHub Pages
         id: deployment
