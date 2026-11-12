@@ -7,6 +7,7 @@ import type {
   CharacterId,
   CharacterLifeStage,
   CharacterRuntimeState,
+  CharacterSleepState,
   DiseaseId,
   EmotionalState,
   HealthCondition
@@ -167,10 +168,12 @@ export function resolveCharacterAnimation(
   stage: CharacterLifeStage,
   healthCondition: HealthCondition,
   _emotionalState: EmotionalState,
-  temporaryOverride?: CharacterAnimationName
+  temporaryOverride?: CharacterAnimationName,
+  sleepState?: CharacterSleepState
 ): CharacterAnimationName {
   if (stage === 'ovo') return 'eclosao';
   if (healthCondition === 'deceased') return 'morte';
+  if (sleepState === 'sleeping') return 'dormindo';
   if (temporaryOverride && temporaryOverride !== 'eclosao') return temporaryOverride;
   if (healthCondition === 'sick' || healthCondition === 'critical') return 'doente';
   return 'idle';
@@ -189,6 +192,8 @@ export function createInitialCharacterRuntime(
     emotionalState: 'happy',
     healthCondition: 'healthy',
     activeDiseases: [],
+    sleepState: 'awake',
+    sleepSession: null,
     careHistory: [
       {
         id: `${characterId}-born-${nowMs}`,

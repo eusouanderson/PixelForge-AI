@@ -18,7 +18,8 @@ const REQUIRED_DOMAINS = [
   'updater',
   'genetics',
   'breeding',
-  'notifications'
+  'notifications',
+  'sleep'
 ] as const;
 
 function collectTypeScriptFiles(dir: string): string[] {

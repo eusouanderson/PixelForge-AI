@@ -116,6 +116,25 @@ describe('GameSessionService application use cases', () => {
     expect(curedFeed.message).toContain('Curou 1 enfermidade');
     expect(curedFeed.snapshot.characters.ignisauro.runtime.activeDiseases?.length).toBe(0);
 
+    // Feeding while sleeping is blocked
+    const sleepingFeedSnap = {
+      ...snap,
+      characters: {
+        ...snap.characters,
+        ignisauro: {
+          ...snap.characters.ignisauro,
+          runtime: {
+            ...snap.characters.ignisauro.runtime,
+            currentStage: 'baby' as const,
+            sleepState: 'sleeping' as const
+          }
+        }
+      }
+    };
+    const sleepFeed = feedActiveCharacterUseCase(sleepingFeedSnap, 'volcanic-roast-meat', 3600);
+    expect(sleepFeed.success).toBe(false);
+    expect(sleepFeed.message).toContain('dormindo');
+
     // Deceased character cannot eat
     snap = {
       ...snap,
@@ -214,6 +233,31 @@ describe('GameSessionService application use cases', () => {
     };
     const tiredRes = performCharacterActivityUseCase(tiredSnap, 'lava-sprint', 3000);
     expect(tiredRes.success).toBe(false);
+
+    // Sleeping character fails normal activity
+    const sleepingActSnap = {
+      ...actRes.snapshot,
+      characters: {
+        ...actRes.snapshot.characters,
+        ignisauro: {
+          ...actRes.snapshot.characters.ignisauro,
+          runtime: {
+            ...actRes.snapshot.characters.ignisauro.runtime,
+            sleepState: 'sleeping' as const
+          }
+        }
+      }
+    };
+    const sleepAct = performCharacterActivityUseCase(sleepingActSnap, 'lava-sprint', 3500);
+    expect(sleepAct.success).toBe(false);
+    expect(sleepAct.message).toContain('dormindo');
+
+    // Deep slumber initiates a restful sleep session with dormindo animation
+    const slumberRes = performCharacterActivityUseCase(actRes.snapshot, 'deep-slumber', 3600);
+    expect(slumberRes.success).toBe(true);
+    expect(slumberRes.snapshot.characters.ignisauro.runtime.sleepState).toBe('sleeping');
+    expect(slumberRes.snapshot.characters.ignisauro.runtime.currentAnimation).toBe('dormindo');
+    expect(slumberRes.snapshot.characters.ignisauro.runtime.sleepSession).toBeDefined();
 
     // Deceased character fails activity
     const deadSnap = {

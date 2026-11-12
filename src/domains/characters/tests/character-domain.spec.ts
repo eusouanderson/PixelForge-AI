@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { CharacterAnimationName } from '../types';
 import {
   CHARACTER_SPECIES_REGISTRY,
   MAX_NATURAL_LIFESPAN_HOURS,
@@ -18,7 +19,8 @@ import {
 } from '../domain/character-state-engine';
 import {
   CharacterSpriteRepository,
-  applyPaletteOverridesToSprite
+  applyPaletteOverridesToSprite,
+  synthesizeSleepingFrame
 } from '../infrastructure/character-sprite-repository';
 
 describe('characters domain registry, state engine, and sprite repository', () => {
@@ -235,9 +237,10 @@ describe('characters domain registry, state engine, and sprite repository', () =
     expect(cureDiseasesWithRemedy(undefined, 'all').remaining).toEqual([]);
   });
 
-  it('resolves character animation based on stage, health, and override action', () => {
+  it('resolves character animation based on stage, health, sleep state, and override action', () => {
     expect(resolveCharacterAnimation('ovo', 'healthy', 'calm')).toBe('eclosao');
     expect(resolveCharacterAnimation('baby', 'deceased', 'deceased')).toBe('morte');
+    expect(resolveCharacterAnimation('baby', 'healthy', 'calm', undefined, 'sleeping')).toBe('dormindo');
     expect(resolveCharacterAnimation('baby', 'sick', 'sick')).toBe('doente');
     expect(resolveCharacterAnimation('baby', 'critical', 'critical')).toBe('doente');
     expect(resolveCharacterAnimation('adulto', 'healthy', 'radiant', 'comendo')).toBe('comendo');
@@ -279,8 +282,43 @@ describe('characters domain registry, state engine, and sprite repository', () =
     expect(frame1.metadata?.creatureName).toBe('Solassauro');
     expect(frame1.metadata?.animation).toBe('comendo');
 
-    const frameOut = repo.getSpriteFrame('umbrassauro', 'adulto', 'morte', 99);
-    expect(frameOut.metadata?.creatureName).toBe('Umbrassauro');
+    // Dormindo animation synthesized from idle frames with closed eyelids
+    const sleepingFrames = repo.getAnimationFrames('ignisauro', 'baby', 'dormindo');
+    expect(sleepingFrames.length).toBe(2);
+    expect(sleepingFrames[0].metadata?.animation).toBe('dormindo');
+    expect(sleepingFrames[0].layers.length).toBeGreaterThan(0);
+
+    const sleepingSprite = repo.getSpriteFrame('ignisauro', 'baby', 'dormindo', 1);
+    expect(sleepingSprite.metadata?.animation).toBe('dormindo');
+
+    const unknownTarget = repo.getAnimationFrames('ignisauro', 'adulto', 'non_existing' as unknown as CharacterAnimationName);
+    expect(unknownTarget).toEqual([]);
+
+    const customArt = synthesizeSleepingFrame(
+      {
+        ...sleepingFrames[0],
+        layers: [
+          {
+            id: 'l1',
+            name: 'test',
+            visible: true,
+            opacity: 1,
+            zIndex: 1,
+            operations: [
+              { type: 'points', color: 'dino_pupil', coordinates: [[1, 1]] },
+              { type: 'rect', x: 2, y: 2, width: 2, height: 1, color: 'dino_pupil' },
+              { type: 'pixel', x: 3, y: 3, color: 'dino_base' }
+            ]
+          }
+        ]
+      },
+      1
+    );
+    expect(customArt.metadata?.frame).toBe(2);
+    const op0 = customArt.layers[0].operations[0];
+    const op1 = customArt.layers[0].operations[1];
+    if ('color' in op0) expect(op0.color).toBe('dino_shadow_dark');
+    if ('color' in op1) expect(op1.color).toBe('dino_shadow_dark');
 
     // Genetic palette override clones palette cleanly for baby stage without mutating original JSON
     const originalBaby = repo.getSpriteFrame('ignisauro', 'baby', 'idle', 1);

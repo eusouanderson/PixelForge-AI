@@ -19,7 +19,8 @@ const ANIM_ORDER: Record<string, number> = {
   comendo: 2,
   amando: 3,
   doente: 4,
-  morte: 5
+  morte: 5,
+  dormindo: 6
 };
 
 const ANIM_SHORT_LABELS: Record<string, string> = {
@@ -28,7 +29,8 @@ const ANIM_SHORT_LABELS: Record<string, string> = {
   comendo: 'Comendo',
   amando: 'Amando',
   doente: 'Doente',
-  morte: 'Morte'
+  morte: 'Morte',
+  dormindo: 'Dormindo'
 };
 
 const sortedEntries = Object.entries(jsonModules).sort(([pathA, dataA], [pathB, dataB]) => {

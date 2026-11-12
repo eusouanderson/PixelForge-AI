@@ -143,13 +143,53 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain('Comprou');
 
-    // Switch to Activities tab and execute purifying-bath
+    // Switch to Activities tab and execute purifying-bath and thunder-dash to expend energy
     await wrapper.get('[data-testid="nav-tab-activities"]').trigger('click');
     await wrapper.get('[data-testid="activity-btn-purifying-bath"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain(
       'Banho Termal Purificador'
     );
+    await wrapper.get('[data-testid="activity-btn-thunder-dash"]').trigger('click');
+    await flushPromises();
+
+    // Execute deep-slumber to test sleep rest state, interaction locks, and awakening
+    await wrapper.get('[data-testid="activity-btn-deep-slumber"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="active-emotional-state"]').text()).toContain('dormindo');
+    expect(wrapper.find('[data-testid="sleeping-countdown-banner"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="sleep-particles-overlay"]').exists()).toBe(true);
+
+    // All activities are now disabled while sleeping
+    expect(
+      (wrapper.get('[data-testid="activity-btn-purifying-bath"]').element as HTMLButtonElement).disabled
+    ).toBe(true);
+    expect(wrapper.find('[data-testid="sleep-activity-blocked-notice"]').exists()).toBe(true);
+
+    // Switch to Feed tab: feeding is also blocked and buttons disabled
+    await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="sleep-feed-blocked-notice"]').exists()).toBe(true);
+    const feedBtn = wrapper.get('[data-testid="feed-btn-thermal-spring-water"]');
+    expect((feedBtn.element as HTMLButtonElement).disabled).toBe(true);
+    expect(feedBtn.text()).toBe('Dormindo');
+
+    // Switch to Activities tab: activities are also blocked with Dormindo button label
+    await wrapper.get('[data-testid="nav-tab-activities"]').trigger('click');
+    await flushPromises();
+    const actBtn = wrapper.get('[data-testid="activity-btn-purifying-bath"]');
+    expect((actBtn.element as HTMLButtonElement).disabled).toBe(true);
+    expect(actBtn.text()).toBe('Dormindo');
+
+    // Advance time past sleep duration (16 minutes) -> natural awakening!
+    vi.setSystemTime(Date.now() + 16 * 60 * 1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="sleeping-countdown-banner"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="sleep-particles-overlay"]').exists()).toBe(false);
+    expect(
+      (wrapper.get('[data-testid="activity-btn-purifying-bath"]').element as HTMLButtonElement).disabled
+    ).toBe(false);
 
     // Biological sex symbol on viewport overlay
     const sexBadge = wrapper.get('[data-testid="active-sex-badge"]');

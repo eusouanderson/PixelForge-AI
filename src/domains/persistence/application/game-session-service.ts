@@ -29,6 +29,7 @@ import { executeCharacterActivity } from '@/domains/activities/domain/activities
 import { earnCoins, spendCoins } from '@/domains/economy/domain/economy-engine';
 import { updateGameSettings } from '@/domains/settings/domain/settings-engine';
 import type { GameSettingsState } from '@/domains/settings/types';
+import { startSleepSession } from '@/domains/sleep/domain/sleep-engine';
 import type { BredEggRecord, BreedingHistoryRecord } from '@/domains/breeding/types';
 import {
   advanceBredEggIncubationList,
@@ -122,6 +123,14 @@ export function feedActiveCharacterUseCase(
     return {
       success: false,
       message: `${species.displayName} está falecido. Utilize a Bênção do Santuário para revivê-lo!`,
+      snapshot
+    };
+  }
+
+  if (charRecord.runtime.sleepState === 'sleeping') {
+    return {
+      success: false,
+      message: `${species.displayName} está dormindo profundamente e descansando. Não é possível alimentá-lo agora!`,
       snapshot
     };
   }
@@ -261,6 +270,16 @@ export function performCharacterActivityUseCase(
     };
   }
 
+  if (charRecord.runtime.sleepState === 'sleeping') {
+    return {
+      success: false,
+      message: `${species.displayName} está dormindo profundamente e descansando. Aguarde ele acordar naturalmente!`,
+      leveledUp: false,
+      evolvedToStage: null,
+      snapshot
+    };
+  }
+
   const execRes = executeCharacterActivity(
     species,
     activityId,
@@ -321,11 +340,18 @@ export function performCharacterActivityUseCase(
     updatedDiseases.length,
     currentAgeHours
   );
+  const isDeepSlumber = activityId === 'deep-slumber';
+  const newSleepSession = isDeepSlumber
+    ? startSleepSession(finalStage, nextNeeds.energy, nowMs)
+    : charRecord.runtime.sleepSession;
+  const newSleepState = isDeepSlumber ? 'sleeping' : charRecord.runtime.sleepState;
+
   const nextAnimation = resolveCharacterAnimation(
     finalStage,
     healthCondition,
     emotionalState,
-    'amando'
+    isDeepSlumber ? undefined : 'amando',
+    newSleepState
   );
 
   const summary = evolvedToStage
@@ -340,7 +366,9 @@ export function performCharacterActivityUseCase(
       emotionalState,
       healthCondition,
       currentAnimation: nextAnimation,
-      activeDiseases: updatedDiseases
+      activeDiseases: updatedDiseases,
+      sleepState: newSleepState,
+      sleepSession: newSleepSession
     },
     evolvedToStage ? 'evolve' : 'activity',
     summary,

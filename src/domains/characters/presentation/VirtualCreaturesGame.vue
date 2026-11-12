@@ -205,6 +205,30 @@ const nextEvolutionRule = computed(() =>
   activeSpecies.value.evolutionRules.find((r) => r.fromStage === displayedStage.value) ?? null
 );
 
+const isSleeping = computed<boolean>(() => activeRecord.value.runtime.sleepState === 'sleeping');
+const sleepSession = computed(() => activeRecord.value.runtime.sleepSession);
+const sleepRemainingMs = computed<number>(() => {
+  if (!sleepSession.value) return 0;
+  return Math.max(0, sleepSession.value.wakeAtMs - nowClockMs.value);
+});
+const sleepRemainingFormatted = computed<string>(() => {
+  const totalSeconds = Math.ceil(sleepRemainingMs.value / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}m ${String(secs).padStart(2, '0')}s`;
+});
+
+watch(
+  () => isSleeping.value,
+  (sleeping, wasSleeping) => {
+    if (sleeping && !wasSleeping) {
+      playSoundEffect('snoring', 0.5);
+    } else if (!sleeping && wasSleeping) {
+      playSoundEffect('happy', 0.8);
+    }
+  }
+);
+
 const displayedAnimation = computed<CharacterAnimationName>(() => {
   if (displayedStage.value === 'ovo') return 'eclosao';
   return manualAnimOverride.value ?? activeRecord.value.runtime.currentAnimation;
@@ -313,6 +337,10 @@ function triggerTemporaryAnimation(anim: CharacterAnimationName, durationMs: num
 }
 
 async function handleFeedCharacter(foodId: string): Promise<void> {
+  if (isSleeping.value) {
+    feedbackBanner.value = `${activeDisplayName.value} está dormindo profundamente e descansando. Não é possível alimentá-lo agora!`;
+    return;
+  }
   const res = feedActiveCharacterUseCase(saveState.value, foodId, Date.now());
   saveState.value = res.snapshot;
   feedbackBanner.value = res.message;
@@ -381,13 +409,24 @@ async function handlePurchaseFood(foodId: string): Promise<void> {
 }
 
 async function handleExecuteActivity(activityId: string): Promise<void> {
+  if (isSleeping.value) {
+    feedbackBanner.value = `${activeDisplayName.value} está dormindo profundamente e descansando. Aguarde ele acordar naturalmente!`;
+    return;
+  }
   const res = performCharacterActivityUseCase(saveState.value, activityId, Date.now());
   saveState.value = res.snapshot;
   feedbackBanner.value = res.message;
 
   if (res.success) {
-    playSoundEffect('happy');
-    triggerTemporaryAnimation('amando', 2400);
+    if (activityId === 'deep-slumber') {
+      playSoundEffect('snoring', 0.6);
+    } else if (activityId === 'purifying-bath') {
+      playSoundEffect('shower');
+      triggerTemporaryAnimation('amando', 2400);
+    } else {
+      playSoundEffect('happy');
+      triggerTemporaryAnimation('amando', 2400);
+    }
     if (res.evolvedToStage) {
       sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
     } else if (res.leveledUp) {
@@ -635,6 +674,15 @@ async function handleVisibilityOrAppStateChange(isForeground: boolean): Promise<
     ) {
       startEggHatchSequence();
     }
+
+    if (isSleeping.value && sleepRemainingMs.value <= 0) {
+      saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, now, {
+        deferActiveEggHatch: true
+      });
+      feedbackBanner.value = `✨ ${activeDisplayName.value} despertou revitalizado com energia total!`;
+      playSoundEffect('happy');
+      void persistCurrentState();
+    }
     return;
   }
   await persistCurrentState();
@@ -722,6 +770,15 @@ onMounted(async () => {
       eggRemainingMs.value <= 0
     ) {
       startEggHatchSequence();
+    }
+
+    if (isSleeping.value && sleepRemainingMs.value <= 0) {
+      saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, tickNow, {
+        deferActiveEggHatch: true
+      });
+      feedbackBanner.value = `✨ ${activeDisplayName.value} despertou revitalizado com energia total!`;
+      playSoundEffect('happy');
+      void persistCurrentState();
     }
 
     if (deltaMs > 0 && saveState.value.incubator.some((egg) => resolveEggStatus(egg) === 'incubating')) {
@@ -949,6 +1006,19 @@ onUnmounted(() => {
           style="image-rendering: pixelated"
         />
 
+        <!-- Floating Z z z particles overlay during sleep -->
+        <div
+          v-if="isSleeping"
+          data-testid="sleep-particles-overlay"
+          class="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center overflow-hidden"
+        >
+          <div class="relative w-40 h-40">
+            <span class="absolute top-2 right-4 text-xl font-bold font-mono text-cyan-300 animate-bounce opacity-90 drop-shadow-md">Z</span>
+            <span class="absolute top-8 right-10 text-base font-bold font-mono text-cyan-200 animate-pulse opacity-75 drop-shadow-sm">z</span>
+            <span class="absolute top-14 right-14 text-xs font-bold font-mono text-cyan-100 animate-ping opacity-60">z</span>
+          </div>
+        </div>
+
         <!-- Active Feeding & Medicine Interactive Animation Overlay -->
         <div
           v-if="activeFeeding"
@@ -1053,7 +1123,7 @@ onUnmounted(() => {
           <span class="font-bold text-emerald-400">{{ activeEnvironment.name }}</span>
           <span class="text-slate-500">|</span>
           <span data-testid="active-emotional-state" class="uppercase text-amber-300 font-semibold">
-            Estado: {{ activeRecord.runtime.emotionalState }}
+            Estado: {{ isSleeping ? 'dormindo' : activeRecord.runtime.emotionalState }}
           </span>
           <template v-if="activeRecord.genetics">
             <span class="text-slate-500">|</span>
@@ -1135,6 +1205,29 @@ onUnmounted(() => {
           >
             Instalar
           </button>
+        </div>
+
+        <!-- Sleeping Status & Natural Rest Countdown Banner -->
+        <div
+          v-if="isSleeping"
+          data-testid="sleeping-countdown-banner"
+          class="px-3.5 py-2.5 bg-indigo-950/95 border-b border-indigo-600/70 text-xs text-indigo-100 flex items-center justify-between gap-2 shadow-inner transition-colors duration-500"
+        >
+          <div class="flex items-center gap-2 truncate">
+            <span class="text-base animate-pulse">💤</span>
+            <div>
+              <p class="font-bold text-indigo-200">Dormindo e Recuperando Energia Vital</p>
+              <p class="text-[11px] text-indigo-300">
+                Energia: <strong class="text-emerald-400">{{ activeRecord.needs.energy }}/100</strong> · Despertar natural em:
+                <strong class="text-amber-300 font-mono">{{ sleepRemainingFormatted }}</strong>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-900 border border-indigo-500/50 text-indigo-200 uppercase">
+              Em Repouso
+            </span>
+          </div>
         </div>
 
         <!-- Feedback Banner & Emergency Actions -->
@@ -1312,6 +1405,14 @@ onUnmounted(() => {
             <span>🥚 O ovo ancestral está incubando no santuário! Ecloda-o para alimentar o filhote.</span>
           </div>
 
+          <div
+            v-else-if="isSleeping"
+            data-testid="sleep-feed-blocked-notice"
+            class="p-2.5 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs flex items-center justify-between gap-2 shadow-sm"
+          >
+            <span>💤 {{ activeDisplayName }} está dormindo profundamente. Alimentação e remédios estão bloqueados durante o repouso.</span>
+          </div>
+
           <div class="space-y-2">
             <div
               v-for="food in allFoods"
@@ -1379,12 +1480,12 @@ onUnmounted(() => {
                 <button
                   type="button"
                   :data-testid="`feed-btn-${food.id}`"
-                  :disabled="displayedStage === 'ovo'"
+                  :disabled="displayedStage === 'ovo' || isSleeping"
                   class="px-2.5 py-1.5 rounded-md text-xs font-bold uppercase shadow-sm transition"
-                  :class="displayedStage === 'ovo' ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
+                  :class="displayedStage === 'ovo' || isSleeping ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
                   @click="handleFeedCharacter(food.id)"
                 >
-                  Dar
+                  {{ isSleeping ? 'Dormindo' : 'Dar' }}
                 </button>
                 <button
                   type="button"
@@ -1414,6 +1515,14 @@ onUnmounted(() => {
             class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-2"
           >
             <span>🥚 O ovo ancestral está em repouso no ninho! Ecloda-o para iniciar treinos e atividades.</span>
+          </div>
+
+          <div
+            v-else-if="isSleeping"
+            data-testid="sleep-activity-blocked-notice"
+            class="p-2.5 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs flex items-center justify-between gap-2 shadow-sm"
+          >
+            <span>💤 {{ activeDisplayName }} está dormindo profundamente. Todas as atividades e banhos estão bloqueados durante o descanso.</span>
           </div>
 
           <div class="space-y-2">
@@ -1446,12 +1555,12 @@ onUnmounted(() => {
               <button
                 type="button"
                 :data-testid="`activity-btn-${act.id}`"
-                :disabled="displayedStage === 'ovo'"
+                :disabled="displayedStage === 'ovo' || isSleeping"
                 class="px-3 py-2 rounded-md text-xs font-bold uppercase shrink-0 shadow-sm transition"
-                :class="displayedStage === 'ovo' ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
+                :class="displayedStage === 'ovo' || isSleeping ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
                 @click="handleExecuteActivity(act.id)"
               >
-                Iniciar
+                {{ isSleeping ? 'Dormindo' : 'Iniciar' }}
               </button>
             </div>
           </div>

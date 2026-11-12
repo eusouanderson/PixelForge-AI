@@ -121,6 +121,91 @@ describe('persistence domain engine, offline simulation, and save repository', (
     expect(oldAgeSnap.characters.ignisauro.needs.health).toBe(0);
   });
 
+  it('simulates sleep recovery, age-dependent rest, and natural awakening over offline time', () => {
+    const baseSnap = createNewGameSaveSnapshot(100000, 'ignisauro');
+
+    // 1. Sleeping baby character partially recovers energy offline
+    const sleepingBabySnap = {
+      ...baseSnap,
+      lastSavedAtMs: 100000,
+      characters: {
+        ...baseSnap.characters,
+        ignisauro: {
+          ...baseSnap.characters.ignisauro,
+          progression: {
+            ...baseSnap.characters.ignisauro.progression,
+            currentStage: 'baby' as const
+          },
+          needs: {
+            ...baseSnap.characters.ignisauro.needs,
+            energy: 10
+          },
+          runtime: {
+            ...baseSnap.characters.ignisauro.runtime,
+            currentStage: 'baby' as const,
+            sleepState: 'sleeping' as const,
+            sleepSession: {
+              state: 'sleeping' as const,
+              startedAtMs: 100000,
+              durationMinutes: 15,
+              wakeAtMs: 100000 + 15 * 60 * 1000,
+              energyAtStart: 10,
+              targetEnergy: 100,
+              lastEnergyUpdateMs: 100000
+            }
+          }
+        }
+      }
+    };
+
+    // 7.5 minutes elapsed (50% progress of 15 min session):
+    const midSleepSnap = simulateOfflineProgressOnSnapshot(sleepingBabySnap, 100000 + 450 * 1000);
+    const midBaby = midSleepSnap.characters.ignisauro;
+    expect(midBaby.runtime.sleepState).toBe('sleeping');
+    expect(midBaby.runtime.currentAnimation).toBe('dormindo');
+    expect(midBaby.needs.energy).toBe(55); // 10 + (100 - 10) * 0.5 = 55
+    expect(midBaby.runtime.sleepSession).not.toBeNull();
+
+    // 16 minutes elapsed (exceeds 15 min duration): wakes up naturally with 100 energy
+    const wokeUpSnap = simulateOfflineProgressOnSnapshot(sleepingBabySnap, 100000 + 960 * 1000);
+    const wokeBaby = wokeUpSnap.characters.ignisauro;
+    expect(wokeBaby.runtime.sleepState).toBe('awake');
+    expect(wokeBaby.runtime.currentAnimation).toBe('idle');
+    expect(wokeBaby.needs.energy).toBe(100);
+    expect(wokeBaby.runtime.sleepSession).toBeNull();
+
+    // 2. Awake adult character whose energy drops below 15 fatigue threshold falls asleep offline
+    const tiredAdultSnap = {
+      ...baseSnap,
+      lastSavedAtMs: 100000,
+      characters: {
+        ...baseSnap.characters,
+        ignisauro: {
+          ...baseSnap.characters.ignisauro,
+          progression: {
+            ...baseSnap.characters.ignisauro.progression,
+            currentStage: 'adulto' as const
+          },
+          needs: {
+            ...baseSnap.characters.ignisauro.needs,
+            energy: 14 // below adult fatigue threshold 15
+          },
+          runtime: {
+            ...baseSnap.characters.ignisauro.runtime,
+            currentStage: 'adulto' as const,
+            sleepState: 'awake' as const,
+            sleepSession: null
+          }
+        }
+      }
+    };
+    const fellAsleepSnap = simulateOfflineProgressOnSnapshot(tiredAdultSnap, 100000 + 60 * 1000);
+    const fellAsleepAdult = fellAsleepSnap.characters.ignisauro;
+    expect(fellAsleepAdult.runtime.sleepState).toBe('sleeping');
+    expect(fellAsleepAdult.runtime.currentAnimation).toBe('dormindo');
+    expect(fellAsleepAdult.runtime.sleepSession).not.toBeNull();
+  });
+
   it('validates and migrates legacy or corrupted save snapshots safely', () => {
     const valid = createNewGameSaveSnapshot(1000);
     expect(validateAndMigrateSaveSnapshot(valid, 2000).schemaVersion).toBe(

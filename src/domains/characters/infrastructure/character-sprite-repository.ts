@@ -62,6 +62,46 @@ export function applyPaletteOverridesToSprite(
   };
 }
 
+export function synthesizeSleepingFrame(
+  idleArt: DeclarativePixelArt,
+  frameIndex: number
+): DeclarativePixelArt {
+  const transformedLayers = idleArt.layers.map((layer) => {
+    const transformedOps = layer.operations.map((op) => {
+      if (op.type === 'rect' && (op.color === 'dino_pupil' || op.color === 'dino_eye')) {
+        return {
+          ...op,
+          y: op.y + Math.max(0, op.height - 1),
+          height: 1,
+          color: 'dino_shadow_dark'
+        };
+      }
+      if (op.type === 'points' && (op.color === 'dino_pupil' || op.color === 'dino_eye')) {
+        return {
+          ...op,
+          color: 'dino_shadow_dark'
+        };
+      }
+      return op;
+    });
+
+    return {
+      ...layer,
+      operations: transformedOps
+    };
+  });
+
+  return {
+    ...idleArt,
+    metadata: {
+      ...idleArt.metadata,
+      animation: 'dormindo',
+      frame: frameIndex + 1
+    },
+    layers: transformedLayers
+  };
+}
+
 export class CharacterSpriteRepository implements CharacterSpriteRepositoryPort {
   public getAnimationFrames(
     characterId: CharacterId,
@@ -79,7 +119,16 @@ export class CharacterSpriteRepository implements CharacterSpriteRepositoryPort 
         item.data.metadata?.animation === targetAnim
     );
 
-    return matching.map((item) => item.data);
+    if (matching.length > 0) {
+      return matching.map((item) => item.data);
+    }
+
+    if (targetAnim === 'dormindo') {
+      const idleFrames = this.getAnimationFrames(characterId, stage, 'idle');
+      return idleFrames.map((frame, idx) => synthesizeSleepingFrame(frame, idx));
+    }
+
+    return [];
   }
 
   public getSpriteFrame(
