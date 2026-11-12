@@ -351,4 +351,22 @@ describe('Breeding: Application Service & Protocol', () => {
     serviceA.dispose();
     serviceB.dispose();
   });
+
+  it('keeps failed phase cleanly without throwing invalid state transition when transport.connect emits an error', async () => {
+    const transport = new DirectLinkedMockP2PAdapter('peer-connect-fail');
+    let errorHandler: ((err: Error) => void) | undefined;
+    transport.onError = (handler) => {
+      errorHandler = handler;
+      return () => {};
+    };
+    transport.connect = async () => {
+      errorHandler?.(new Error('Permissões de Nearby não concedidas.'));
+    };
+
+    const service = new BreedingService(transport);
+    await expect(service.openDiscovery('perm-denied-room')).resolves.toBeUndefined();
+    expect(service.getState().phase).toBe('failed');
+    expect(service.getState().errorMessage).toBe('Permissões de Nearby não concedidas.');
+    service.dispose();
+  });
 });

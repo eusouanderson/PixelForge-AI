@@ -3,8 +3,8 @@ import type { NearbyConnectionStatus } from '../types';
 const VALID_CONNECTION_TRANSITIONS: Record<NearbyConnectionStatus, readonly NearbyConnectionStatus[]> = {
   idle: ['checking_environment', 'requesting_permissions', 'starting_discovery', 'discovering', 'failed'],
   checking_environment: ['requesting_permissions', 'starting_discovery', 'discovering', 'failed', 'idle'],
-  requesting_permissions: ['starting_discovery', 'discovering', 'failed', 'idle'],
-  starting_discovery: ['discovering', 'player_found', 'connection_pending', 'failed', 'idle'],
+  requesting_permissions: ['checking_environment', 'starting_discovery', 'discovering', 'failed', 'idle'],
+  starting_discovery: ['checking_environment', 'discovering', 'player_found', 'connection_pending', 'failed', 'idle'],
   discovering: ['player_found', 'connection_requested', 'connection_pending', 'connecting', 'authenticating', 'connected', 'checking_environment', 'idle', 'failed'],
   player_found: ['connection_requested', 'connection_pending', 'connecting', 'authenticating', 'connected', 'discovering', 'checking_environment', 'idle', 'failed'],
   connection_requested: ['connection_pending', 'connecting', 'authenticating', 'connected', 'player_found', 'discovering', 'disconnected', 'failed', 'idle'],

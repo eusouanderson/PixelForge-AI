@@ -1,11 +1,15 @@
 package ai.pixelforge.virtualcreatures;
 
 import android.Manifest;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -71,16 +75,48 @@ public class NearbyConnectionsPlugin extends Plugin {
     private static final String TAG = "NearbyConnections";
     private static final String DEFAULT_SERVICE_ID = "ai.pixelforge.virtualcreatures.breeding";
     private static final Strategy STRATEGY = Strategy.P2P_POINT_TO_POINT;
+    private static final long POST_GRANT_RETRY_WINDOW_MS = 5000L;
+    private static final long POST_GRANT_RETRY_DELAY_MS = 350L;
+    private static final int MAX_POST_GRANT_ATTEMPTS = 2;
 
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private ConnectionsClient connectionsClient;
+    private boolean clientInitializedWithPermissions = false;
+    private long lastPermissionGrantElapsedMs = 0L;
     private boolean isAdvertising = false;
     private boolean isDiscovering = false;
 
     @Override
     public void load() {
         super.load();
-        connectionsClient = Nearby.getConnectionsClient(getContext());
-        Log.d(TAG, "Plugin NearbyConnections inicializado.");
+        clientInitializedWithPermissions = areRequiredPermissionsGranted();
+        connectionsClient = Nearby.getConnectionsClient(resolvePluginContext());
+        Log.d(TAG, "Plugin NearbyConnections inicializado (permissões=" + clientInitializedWithPermissions + ").");
+    }
+
+    private Context resolvePluginContext() {
+        Activity activity = getActivity();
+        return activity != null ? activity : getContext();
+    }
+
+    private synchronized ConnectionsClient refreshConnectionsClient() {
+        connectionsClient = Nearby.getConnectionsClient(resolvePluginContext());
+        clientInitializedWithPermissions = areRequiredPermissionsGranted();
+        isAdvertising = false;
+        isDiscovering = false;
+        Log.d(TAG, "ConnectionsClient reinicializado (permissões=" + clientInitializedWithPermissions + ").");
+        return connectionsClient;
+    }
+
+    private synchronized ConnectionsClient getOrRefreshConnectionsClient() {
+        boolean hasPerms = areRequiredPermissionsGranted();
+        if (connectionsClient == null || (!clientInitializedWithPermissions && hasPerms)) {
+            if (!clientInitializedWithPermissions && hasPerms && lastPermissionGrantElapsedMs == 0L) {
+                lastPermissionGrantElapsedMs = SystemClock.elapsedRealtime();
+            }
+            return refreshConnectionsClient();
+        }
+        return connectionsClient;
     }
 
     private final ConnectionLifecycleCallback connectionLifecycleCallback = new ConnectionLifecycleCallback() {
@@ -104,12 +140,13 @@ public class NearbyConnectionsPlugin extends Plugin {
             Log.d(TAG, "onConnectionResult: id=" + endpointId + " status=" + statusCode + " (" + statusCodeName + ") success=" + success);
 
             if (success) {
+                ConnectionsClient client = getOrRefreshConnectionsClient();
                 if (isAdvertising) {
-                    connectionsClient.stopAdvertising();
+                    client.stopAdvertising();
                     isAdvertising = false;
                 }
                 if (isDiscovering) {
-                    connectionsClient.stopDiscovery();
+                    client.stopDiscovery();
                     isDiscovering = false;
                 }
             }
@@ -198,15 +235,7 @@ public class NearbyConnectionsPlugin extends Plugin {
 
     @PluginMethod
     public void checkPermissions(PluginCall call) {
-        Context context = getContext();
-        List<String> requiredPermissions = getRequiredPermissionsForCurrentSdk();
-        List<String> missingPermissions = new ArrayList<>();
-
-        for (String permission : requiredPermissions) {
-            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-                missingPermissions.add(permission);
-            }
-        }
+        List<String> missingPermissions = getMissingPermissions();
 
         JSObject ret = new JSObject();
         ret.put("granted", missingPermissions.isEmpty());
@@ -219,18 +248,117 @@ public class NearbyConnectionsPlugin extends Plugin {
 
     @PluginMethod
     public void requestPermissions(PluginCall call) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissionForAliases(new String[]{"nearby_bluetooth", "nearby_wifi", "nearby_location"}, call, "nearbyPermissionsCallback");
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            requestPermissionForAliases(new String[]{"nearby_bluetooth", "nearby_location"}, call, "nearbyPermissionsCallback");
-        } else {
-            requestPermissionForAlias("nearby_location", call, "nearbyPermissionsCallback");
+        if (areRequiredPermissionsGranted()) {
+            getOrRefreshConnectionsClient();
+            checkPermissions(call);
+            return;
         }
+
+        // Em Android 13+ (TIRAMISU), ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION usam maxSdkVersion="32"
+        // no AndroidManifest.xml; pedir "nearby_location" faria Bridge.validatePermissions() rejeitar a chamada.
+        String[] aliasesToRequest = getMissingAliasesForCurrentSdk();
+        if (aliasesToRequest.length == 0) {
+            checkPermissions(call);
+            return;
+        }
+
+        requestPermissionForAliases(aliasesToRequest, call, "nearbyPermissionsCallback");
     }
 
     @PermissionCallback
     private void nearbyPermissionsCallback(PluginCall call) {
+        if (areRequiredPermissionsGranted()) {
+            lastPermissionGrantElapsedMs = SystemClock.elapsedRealtime();
+            refreshConnectionsClient();
+        }
         checkPermissions(call);
+    }
+
+    private List<String> getMissingPermissions() {
+        Context context = resolvePluginContext();
+        List<String> requiredPermissions = getRequiredPermissionsForCurrentSdk();
+        List<String> missingPermissions = new ArrayList<>();
+
+        for (String permission : requiredPermissions) {
+            if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                missingPermissions.add(permission);
+            }
+        }
+        return missingPermissions;
+    }
+
+    private boolean areRequiredPermissionsGranted() {
+        return getMissingPermissions().isEmpty();
+    }
+
+    private String[] getMissingAliasesForCurrentSdk() {
+        Context context = resolvePluginContext();
+        List<String> aliases = new ArrayList<>();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            boolean needsBluetooth =
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED;
+            if (needsBluetooth) {
+                aliases.add("nearby_bluetooth");
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+                aliases.add("nearby_wifi");
+            }
+        } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            aliases.add("nearby_location");
+        }
+
+        return aliases.toArray(new String[0]);
+    }
+
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        if (!clientInitializedWithPermissions && areRequiredPermissionsGranted()) {
+            lastPermissionGrantElapsedMs = SystemClock.elapsedRealtime();
+            refreshConnectionsClient();
+        }
+    }
+
+    private boolean isWithinPostPermissionGrantWindow() {
+        return lastPermissionGrantElapsedMs > 0L
+                && (SystemClock.elapsedRealtime() - lastPermissionGrantElapsedMs) <= POST_GRANT_RETRY_WINDOW_MS;
+    }
+
+    private boolean isHardwareDisabled() {
+        try {
+            BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
+            if (btAdapter == null || !btAdapter.isEnabled()) {
+                return true;
+            }
+        } catch (Exception ignored) {}
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            try {
+                LocationManager locManager = (LocationManager) resolvePluginContext().getSystemService(Context.LOCATION_SERVICE);
+                if (locManager != null) {
+                    boolean isGpsEnabled = locManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+                    boolean isNetworkEnabled = locManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+                    if (!isGpsEnabled && !isNetworkEnabled) {
+                        return true;
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return false;
+    }
+
+    private boolean shouldRetryRadioStartup(int attempt, Exception error) {
+        if (attempt >= MAX_POST_GRANT_ATTEMPTS || !areRequiredPermissionsGranted() || isHardwareDisabled()) {
+            return false;
+        }
+        return error instanceof SecurityException || isWithinPostPermissionGrantWindow();
     }
 
     private String getHardwareDiagnostics() {
@@ -245,7 +373,7 @@ public class NearbyConnectionsPlugin extends Plugin {
         } catch (Exception ignored) {}
 
         try {
-            LocationManager locManager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+            LocationManager locManager = (LocationManager) resolvePluginContext().getSystemService(Context.LOCATION_SERVICE);
             if (locManager != null) {
                 boolean isGpsEnabled = locManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
                 boolean isNetworkEnabled = locManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
@@ -267,44 +395,85 @@ public class NearbyConnectionsPlugin extends Plugin {
         return msg != null && (msg.contains("8003") || msg.contains("STATUS_ALREADY_CONNECTED_TO_ENDPOINT"));
     }
 
+    private void resolveSuccess(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("success", true);
+        call.resolve(ret);
+    }
+
+    private boolean isAlreadyActiveCode(Exception e, int expectedStatusCode) {
+        return e instanceof ApiException && ((ApiException) e).getStatusCode() == expectedStatusCode;
+    }
+
+    private void handleRadioStartupFailure(
+            PluginCall call,
+            Exception e,
+            int attempt,
+            String operationName,
+            Runnable onFinalFailure,
+            Runnable onRetry
+    ) {
+        if (shouldRetryRadioStartup(attempt, e)) {
+            Log.w(TAG, "Retentando " + operationName + " após concessão de permissões (tentativa=" + (attempt + 1) + "): " + e.getMessage());
+            mainHandler.postDelayed(onRetry, POST_GRANT_RETRY_DELAY_MS);
+            return;
+        }
+        onFinalFailure.run();
+        call.reject("Falha ao iniciar " + operationName + " Nearby: " + e.getMessage() + getHardwareDiagnostics(), e);
+    }
+
     @PluginMethod
     public void startAdvertising(PluginCall call) {
         String endpointName = call.getString("endpointName", "PixelForge-Player");
         String serviceId = call.getString("serviceId", DEFAULT_SERVICE_ID);
+        attemptStartAdvertising(call, endpointName, serviceId, 0);
+    }
 
+    private void attemptStartAdvertising(PluginCall call, String endpointName, String serviceId, int attempt) {
         AdvertisingOptions options = new AdvertisingOptions.Builder()
                 .setStrategy(STRATEGY)
                 .build();
 
-        connectionsClient.startAdvertising(endpointName, serviceId, connectionLifecycleCallback, options)
-                .addOnSuccessListener(unused -> {
-                    isAdvertising = true;
-                    JSObject ret = new JSObject();
-                    ret.put("success", true);
-                    call.resolve(ret);
-                })
-                .addOnFailureListener(e -> {
-                    if (e instanceof ApiException && ((ApiException) e).getStatusCode() == ConnectionsStatusCodes.STATUS_ALREADY_ADVERTISING) {
+        ConnectionsClient client = attempt > 0 ? refreshConnectionsClient() : getOrRefreshConnectionsClient();
+        try {
+            client.startAdvertising(endpointName, serviceId, connectionLifecycleCallback, options)
+                    .addOnSuccessListener(unused -> {
                         isAdvertising = true;
-                        JSObject ret = new JSObject();
-                        ret.put("success", true);
-                        call.resolve(ret);
-                        return;
-                    }
-                    isAdvertising = false;
-                    String diag = getHardwareDiagnostics();
-                    call.reject("Falha ao iniciar anúncio Nearby: " + e.getMessage() + diag, e);
-                });
+                        resolveSuccess(call);
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAlreadyActiveCode(e, ConnectionsStatusCodes.STATUS_ALREADY_ADVERTISING)) {
+                            isAdvertising = true;
+                            resolveSuccess(call);
+                            return;
+                        }
+                        handleRadioStartupFailure(
+                                call,
+                                e,
+                                attempt,
+                                "anúncio",
+                                () -> isAdvertising = false,
+                                () -> attemptStartAdvertising(call, endpointName, serviceId, attempt + 1)
+                        );
+                    });
+        } catch (SecurityException se) {
+            handleRadioStartupFailure(
+                    call,
+                    se,
+                    attempt,
+                    "anúncio",
+                    () -> isAdvertising = false,
+                    () -> attemptStartAdvertising(call, endpointName, serviceId, attempt + 1)
+            );
+        }
     }
 
     @PluginMethod
     public void stopAdvertising(PluginCall call) {
         try {
-            connectionsClient.stopAdvertising();
+            getOrRefreshConnectionsClient().stopAdvertising();
             isAdvertising = false;
-            JSObject ret = new JSObject();
-            ret.put("success", true);
-            call.resolve(ret);
+            resolveSuccess(call);
         } catch (Exception e) {
             call.reject("Erro ao parar anúncio: " + e.getMessage(), e);
         }
@@ -313,36 +482,52 @@ public class NearbyConnectionsPlugin extends Plugin {
     @PluginMethod
     public void startDiscovery(PluginCall call) {
         String serviceId = call.getString("serviceId", DEFAULT_SERVICE_ID);
+        attemptStartDiscovery(call, serviceId, 0);
+    }
 
+    private void attemptStartDiscovery(PluginCall call, String serviceId, int attempt) {
         DiscoveryOptions options = new DiscoveryOptions.Builder()
                 .setStrategy(STRATEGY)
                 .build();
 
-        connectionsClient.startDiscovery(serviceId, endpointDiscoveryCallback, options)
-                .addOnSuccessListener(unused -> {
-                    isDiscovering = true;
-                    JSObject ret = new JSObject();
-                    ret.put("success", true);
-                    call.resolve(ret);
-                })
-                .addOnFailureListener(e -> {
-                    if (e instanceof ApiException && ((ApiException) e).getStatusCode() == ConnectionsStatusCodes.STATUS_ALREADY_DISCOVERING) {
+        ConnectionsClient client = attempt > 0 ? refreshConnectionsClient() : getOrRefreshConnectionsClient();
+        try {
+            client.startDiscovery(serviceId, endpointDiscoveryCallback, options)
+                    .addOnSuccessListener(unused -> {
                         isDiscovering = true;
-                        JSObject ret = new JSObject();
-                        ret.put("success", true);
-                        call.resolve(ret);
-                        return;
-                    }
-                    isDiscovering = false;
-                    String diag = getHardwareDiagnostics();
-                    call.reject("Falha ao iniciar descoberta Nearby: " + e.getMessage() + diag, e);
-                });
+                        resolveSuccess(call);
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAlreadyActiveCode(e, ConnectionsStatusCodes.STATUS_ALREADY_DISCOVERING)) {
+                            isDiscovering = true;
+                            resolveSuccess(call);
+                            return;
+                        }
+                        handleRadioStartupFailure(
+                                call,
+                                e,
+                                attempt,
+                                "descoberta",
+                                () -> isDiscovering = false,
+                                () -> attemptStartDiscovery(call, serviceId, attempt + 1)
+                        );
+                    });
+        } catch (SecurityException se) {
+            handleRadioStartupFailure(
+                    call,
+                    se,
+                    attempt,
+                    "descoberta",
+                    () -> isDiscovering = false,
+                    () -> attemptStartDiscovery(call, serviceId, attempt + 1)
+            );
+        }
     }
 
     @PluginMethod
     public void stopDiscovery(PluginCall call) {
         try {
-            connectionsClient.stopDiscovery();
+            getOrRefreshConnectionsClient().stopDiscovery();
             isDiscovering = false;
             JSObject ret = new JSObject();
             ret.put("success", true);
@@ -362,7 +547,7 @@ public class NearbyConnectionsPlugin extends Plugin {
             return;
         }
 
-        connectionsClient.requestConnection(endpointName, endpointId, connectionLifecycleCallback)
+        getOrRefreshConnectionsClient().requestConnection(endpointName, endpointId, connectionLifecycleCallback)
                 .addOnSuccessListener(unused -> {
                     JSObject ret = new JSObject();
                     ret.put("success", true);
@@ -389,7 +574,7 @@ public class NearbyConnectionsPlugin extends Plugin {
             return;
         }
 
-        connectionsClient.acceptConnection(endpointId, payloadCallback)
+        getOrRefreshConnectionsClient().acceptConnection(endpointId, payloadCallback)
                 .addOnSuccessListener(unused -> {
                     JSObject ret = new JSObject();
                     ret.put("success", true);
@@ -416,7 +601,7 @@ public class NearbyConnectionsPlugin extends Plugin {
             return;
         }
 
-        connectionsClient.rejectConnection(endpointId)
+        getOrRefreshConnectionsClient().rejectConnection(endpointId)
                 .addOnSuccessListener(unused -> {
                     JSObject ret = new JSObject();
                     ret.put("success", true);
@@ -439,7 +624,7 @@ public class NearbyConnectionsPlugin extends Plugin {
         Payload payload = Payload.fromBytes(bytes);
         Log.d(TAG, "sendPayload: to=" + endpointId + " bytes=" + bytes.length);
 
-        connectionsClient.sendPayload(endpointId, payload)
+        getOrRefreshConnectionsClient().sendPayload(endpointId, payload)
                 .addOnSuccessListener(unused -> {
                     JSObject ret = new JSObject();
                     ret.put("success", true);
@@ -455,10 +640,11 @@ public class NearbyConnectionsPlugin extends Plugin {
     public void disconnect(PluginCall call) {
         String endpointId = call.getString("endpointId");
         try {
+            ConnectionsClient client = getOrRefreshConnectionsClient();
             if (endpointId != null && !endpointId.isEmpty()) {
-                connectionsClient.disconnectFromEndpoint(endpointId);
+                client.disconnectFromEndpoint(endpointId);
             } else {
-                connectionsClient.stopAllEndpoints();
+                client.stopAllEndpoints();
             }
             JSObject ret = new JSObject();
             ret.put("success", true);
@@ -471,12 +657,24 @@ public class NearbyConnectionsPlugin extends Plugin {
     @PluginMethod
     public void stopAllEndpoints(PluginCall call) {
         try {
-            connectionsClient.stopAdvertising();
-            isAdvertising = false;
-            connectionsClient.stopDiscovery();
-            isDiscovering = false;
-            connectionsClient.stopAllEndpoints();
+            ConnectionsClient client = getOrRefreshConnectionsClient();
+            if (isAdvertising) {
+                client.stopAdvertising();
+                isAdvertising = false;
+            }
+            if (isDiscovering) {
+                client.stopDiscovery();
+                isDiscovering = false;
+            }
+            client.stopAllEndpoints();
 
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (SecurityException se) {
+            Log.w(TAG, "stopAllEndpoints ignorado antes da concessão completa: " + se.getMessage());
+            isAdvertising = false;
+            isDiscovering = false;
             JSObject ret = new JSObject();
             ret.put("success", true);
             call.resolve(ret);

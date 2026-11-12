@@ -439,4 +439,100 @@ describe('Two-Device Nearby P2P Breeding Integration Simulation', () => {
     serviceA.dispose();
     serviceB.dispose();
   });
+
+  it('allows granting permissions in OS dialog on first click or retrying after denial in BreedingModal without restarting APK', async () => {
+    const sim = createNearbyRadioSimulator();
+    const pluginA = sim.createPluginForDevice('uiRetryA');
+    const pluginB = sim.createPluginForDevice('uiRetryB');
+
+    let grantedOnA = false;
+    pluginA.checkPermissions = vi.fn().mockImplementation(async () => ({
+      granted: grantedOnA,
+      missingCount: grantedOnA ? 0 : 2
+    }));
+    pluginA.requestPermissions = vi
+      .fn()
+      // 1st click: user denies permission
+      .mockResolvedValueOnce({ granted: false, missingCount: 2 })
+      // 2nd click ("Tentar Novamente"): user grants permission in same session without restarting APK
+      .mockImplementationOnce(async () => {
+        grantedOnA = true;
+        return { granted: true, missingCount: 0 };
+      });
+
+    const transportA = new NearbyConnectionsP2PAdapter({
+      localPeerId: 'peer-ui-retry-a',
+      playerName: 'Treinador Retry A',
+      isNativeOverride: true,
+      pluginOverride: pluginA,
+      postGrantRetryDelayMs: 0
+    });
+    const transportB = new NearbyConnectionsP2PAdapter({
+      localPeerId: 'peer-ui-retry-b',
+      playerName: 'Treinador Retry B',
+      isNativeOverride: true,
+      pluginOverride: pluginB,
+      postGrantRetryDelayMs: 0
+    });
+
+    const baseA = createNewGameSaveSnapshot(1000, 'solassauro');
+    const saveA = {
+      ...baseA,
+      characters: {
+        ...baseA.characters,
+        solassauro: {
+          ...baseA.characters.solassauro,
+          genetics: maleSol
+        }
+      }
+    };
+
+    const baseB = createNewGameSaveSnapshot(1000, 'terrassauro');
+    const saveB = {
+      ...baseB,
+      characters: {
+        ...baseB.characters,
+        terrassauro: {
+          ...baseB.characters.terrassauro,
+          genetics: femaleAqua
+        }
+      }
+    };
+
+    const wrapperA = mount(BreedingModal, {
+      props: { saveSnapshot: saveA, transportOverride: transportA },
+      global: { stubs: { BreedingAnimationCanvas: true } }
+    });
+    const wrapperB = mount(BreedingModal, {
+      props: { saveSnapshot: saveB, transportOverride: transportB },
+      global: { stubs: { BreedingAnimationCanvas: true } }
+    });
+
+    // 1st click on A denies permission -> error banner displayed cleanly
+    await wrapperA.get('[data-testid="p2p-connect-btn"]').trigger('click');
+    await vi.waitFor(
+      async () => {
+        await nextTick();
+        expect(wrapperA.find('[data-testid="connection-error-banner"]').exists()).toBe(true);
+        expect(wrapperA.get('[data-testid="p2p-connect-btn"]').text()).toContain('Tentar Novamente');
+      },
+      { timeout: 3000 }
+    );
+
+    // 2nd click ("Tentar Novamente") grants permission and connects to B immediately without remounting/restarting
+    await wrapperB.get('[data-testid="p2p-connect-btn"]').trigger('click');
+    await wrapperA.get('[data-testid="p2p-connect-btn"]').trigger('click');
+
+    await vi.waitFor(
+      async () => {
+        await nextTick();
+        expect(wrapperA.text()).toContain('Parceiro Conectado!');
+        expect(wrapperB.text()).toContain('Parceiro Conectado!');
+      },
+      { timeout: 3000 }
+    );
+
+    wrapperA.unmount();
+    wrapperB.unmount();
+  });
 });

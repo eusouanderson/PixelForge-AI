@@ -694,5 +694,114 @@ describe('NearbyConnectionsP2PAdapter', () => {
       unsubLogs();
       expect(logSnapshots.length).toBeGreaterThan(1);
     });
+
+    it('immediately starts discovery on first click after permissions are granted and recovers from transient post-grant radio startup errors', async () => {
+      const mockPlugin = createMockPlugin();
+      mockPlugin.checkPermissions = vi
+        .fn()
+        .mockResolvedValueOnce({ granted: false, missingCount: 2, missingDetails: 'BLUETOOTH_SCAN, NEARBY_WIFI_DEVICES' });
+      mockPlugin.requestPermissions = vi
+        .fn()
+        .mockResolvedValueOnce({ granted: true, missingCount: 0 });
+      mockPlugin.startAdvertising = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Permissão ainda propagando no rádio Nearby'))
+        .mockResolvedValueOnce({ success: true });
+
+      const adapter = new NearbyConnectionsP2PAdapter({
+        localPeerId: 'first-grant-peer',
+        isNativeOverride: true,
+        pluginOverride: mockPlugin,
+        postGrantRetryDelayMs: 5
+      });
+
+      await adapter.connect('room-first-grant');
+
+      expect(mockPlugin.requestPermissions).toHaveBeenCalledTimes(1);
+      expect(mockPlugin.startAdvertising).toHaveBeenCalledTimes(2);
+      expect(mockPlugin.startDiscovery).toHaveBeenCalledTimes(1);
+      expect(adapter.getConnectionStatus()).toBe('discovering');
+      expect(adapter.getDiagnosticLogs().some((l) => l.message.includes('BLUETOOTH_SCAN, NEARBY_WIFI_DEVICES'))).toBe(true);
+      expect(adapter.getDiagnosticLogs().some((l) => l.message.includes('tentando novamente'))).toBe(true);
+
+      // Re-check branch: requestPermissions returns false initially, immediate checkPermissions confirms granted
+      const mockRecheckPlugin = createMockPlugin();
+      mockRecheckPlugin.checkPermissions = vi
+        .fn()
+        .mockResolvedValueOnce({ granted: false, missingCount: 1 })
+        .mockResolvedValueOnce({ granted: true, missingCount: 0 });
+      mockRecheckPlugin.requestPermissions = vi.fn().mockResolvedValueOnce({ granted: false, missingCount: 1 });
+      mockRecheckPlugin.startAdvertising = vi
+        .fn()
+        .mockRejectedValueOnce('Falha transiente pós-concessão')
+        .mockResolvedValueOnce({ success: true });
+
+      const adapterRecheck = new NearbyConnectionsP2PAdapter({
+        localPeerId: 'recheck-peer',
+        isNativeOverride: true,
+        pluginOverride: mockRecheckPlugin,
+        postGrantRetryDelayMs: 0
+      });
+
+      await adapterRecheck.connect('room-recheck');
+      expect(adapterRecheck.getConnectionStatus()).toBe('discovering');
+      expect(adapterRecheck.getDiagnosticLogs().some((l) => l.message.includes('rechecagem imediata'))).toBe(true);
+    });
+
+    it('preserves caught permission errors without overwriting and does not retry when hardware is turned off', async () => {
+      const mockPlugin = createMockPlugin();
+      mockPlugin.checkPermissions = vi.fn().mockResolvedValueOnce({ granted: false, missingCount: 1 });
+      mockPlugin.requestPermissions = vi.fn().mockRejectedValueOnce(new Error('Erro nativo ao solicitar permissão'));
+
+      const adapter = new NearbyConnectionsP2PAdapter({
+        localPeerId: 'perm-err-peer',
+        isNativeOverride: true,
+        pluginOverride: mockPlugin
+      });
+
+      const errors: string[] = [];
+      adapter.onError((e) => errors.push(e.message));
+
+      await adapter.connect('room-err');
+      expect(errors).toEqual(['Erro nativo ao solicitar permissão']);
+      expect(adapter.getConnectionStatus()).toBe('failed');
+
+      // Missing permissions log with missingDetails when both check & recheck fail
+      const mockDeniedDetails = createMockPlugin();
+      mockDeniedDetails.checkPermissions = vi
+        .fn()
+        .mockResolvedValueOnce({ granted: false, missingCount: 1 })
+        .mockResolvedValueOnce({ granted: false, missingCount: 1, missingDetails: 'BLUETOOTH_SCAN' });
+      mockDeniedDetails.requestPermissions = vi.fn().mockResolvedValueOnce({ granted: false, missingCount: 1 });
+
+      const adapterDenied = new NearbyConnectionsP2PAdapter({
+        localPeerId: 'denied-details-peer',
+        isNativeOverride: true,
+        pluginOverride: mockDeniedDetails
+      });
+      await adapterDenied.connect('room-denied-details');
+      expect(adapterDenied.getDiagnosticLogs().some((l) => l.message.includes('Permissões ainda ausentes: BLUETOOTH_SCAN'))).toBe(true);
+
+      // Hardware off should fail fast even immediately after permission grant
+      const mockHwOff = createMockPlugin();
+      mockHwOff.checkPermissions = vi.fn().mockResolvedValueOnce({ granted: false, missingCount: 1 });
+      mockHwOff.requestPermissions = vi.fn().mockResolvedValueOnce({ granted: true, missingCount: 0 });
+      mockHwOff.startAdvertising = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Falha Nearby [Bluetooth está DESLIGADO no aparelho - ative para parear]'));
+
+      const adapterHwOff = new NearbyConnectionsP2PAdapter({
+        localPeerId: 'hw-off-peer',
+        isNativeOverride: true,
+        pluginOverride: mockHwOff
+      });
+      const hwErrors: string[] = [];
+      adapterHwOff.onError((e) => hwErrors.push(e.message));
+
+      await adapterHwOff.connect('room-hw-off');
+      expect(mockHwOff.startAdvertising).toHaveBeenCalledTimes(1);
+      expect(hwErrors[0]).toContain('DESLIGADO');
+      expect(adapterHwOff.getConnectionStatus()).toBe('failed');
+    });
   });
 });
