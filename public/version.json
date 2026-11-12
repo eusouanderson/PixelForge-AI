@@ -1,26 +1,26 @@
 {
-  "version": "1.10.0",
-  "build": 11000,
+  "version": "1.10.1",
+  "build": 11001,
   "minimumVersion": "1.0.0",
   "releaseDate": "2026-11-12",
   "changelog": [
-    "PixelForge AI v1.10.0 (Build 11000)",
+    "PixelForge AI v1.10.1 (Build 11001)",
     "Sistema Inteligente de Atualização Automática (OTA Web + APK Nativo)",
     "Auditoria de integridade SHA-256 e preservação integral de dados locais",
     "Exibição visual do status e versão ativa em tempo real"
   ],
   "webUpdate": {
     "available": true,
-    "version": "1.10.0",
+    "version": "1.10.1",
     "bundleUrl": "https://eusouanderson.github.io/PixelForge-AI/web-bundle.zip",
-    "checksum": "d6c72005cda8118659cde2c6648cd96c695d7dffe34d842a0d914fc00dbc9439",
-    "sizeBytes": 1075940
+    "checksum": "1693128deb33da7eeaed1e52d1d88d48c43e2c9cce6e84db46e3b89c701959c4",
+    "sizeBytes": 1078015
   },
   "androidUpdate": {
     "available": true,
-    "version": "1.10.0",
-    "apkUrl": "https://github.com/eusouanderson/PixelForge-AI/releases/download/v1.10.0/pixelforge-virtual-creatures-v1.10.0.apk",
-    "checksum": "4408817f984f1aca3144db4391dd67cba66cb8ad463400a3f1f3defbc7de8b8e",
-    "sizeBytes": 5758688
+    "version": "1.10.1",
+    "apkUrl": "https://github.com/eusouanderson/PixelForge-AI/releases/download/v1.10.1/pixelforge-virtual-creatures-v1.10.1.apk",
+    "checksum": "36db879b7c7a63152379847332ac35cea6e71746e27fec4513f71421bc0e3f5a",
+    "sizeBytes": 5762848
   }
 }
