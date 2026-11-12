@@ -737,7 +737,7 @@
                 v-else
                 type="button"
                 :data-testid="`hatch-ready-btn-${egg.id}`"
-                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md animate-bounce transition-all active:scale-95"
+                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md animate-pulse transition-all active:scale-95"
                 @click="openHatchPreview(egg.id)"
               >
                 ✨ Chocar Ovo Agora!
