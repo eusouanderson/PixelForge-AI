@@ -1,26 +1,26 @@
 {
-  "version": "1.9.2",
-  "build": 10902,
+  "version": "1.9.3",
+  "build": 10903,
   "minimumVersion": "1.0.0",
   "releaseDate": "2026-11-12",
   "changelog": [
-    "PixelForge AI v1.9.2 (Build 10902)",
+    "PixelForge AI v1.9.3 (Build 10903)",
     "Sistema Inteligente de Atualização Automática (OTA Web + APK Nativo)",
     "Auditoria de integridade SHA-256 e preservação integral de dados locais",
     "Exibição visual do status e versão ativa em tempo real"
   ],
   "webUpdate": {
     "available": true,
-    "version": "1.9.2",
+    "version": "1.9.3",
     "bundleUrl": "https://eusouanderson.github.io/PixelForge-AI/web-bundle.zip",
-    "checksum": "2ed3ebabceb689ea7b624758ac5bf4906e8931cc4aaf98a33d1abbac74451309",
-    "sizeBytes": 1068906
+    "checksum": "8e00dd8026df22917b56114872a50ac29e0b42b57c49a8f5933d208dc39a8a74",
+    "sizeBytes": 1069297
   },
   "androidUpdate": {
     "available": true,
-    "version": "1.9.2",
-    "apkUrl": "https://github.com/eusouanderson/PixelForge-AI/releases/download/v1.9.2/pixelforge-virtual-creatures-v1.9.2.apk",
-    "checksum": "66740e067ec7a8b64ce838b22bc05ac174c29629f5f310b610c0dc84c8b1d3d9",
-    "sizeBytes": 5740652
+    "version": "1.9.3",
+    "apkUrl": "https://github.com/eusouanderson/PixelForge-AI/releases/download/v1.9.3/pixelforge-virtual-creatures-v1.9.3.apk",
+    "checksum": "6725ebdf473499b3df43fc6447c95a7be816c7dc1348648f77467b3d52cd8cc3",
+    "sizeBytes": 5744232
   }
 }
