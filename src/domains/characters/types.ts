@@ -32,7 +32,8 @@ export type CharacterAnimationName =
   | 'comendo'
   | 'amando'
   | 'doente'
-  | 'morte';
+  | 'morte'
+  | 'dormindo';
 
 export type CharacterLifeStage =
   | 'ovo'
@@ -54,6 +55,18 @@ export type EmotionalState =
   | 'deceased';
 
 export type HealthCondition = 'healthy' | 'weakened' | 'sick' | 'critical' | 'deceased';
+
+export type CharacterSleepState = 'awake' | 'sleeping' | 'waking_up';
+
+export interface CharacterSleepSessionSummary {
+  readonly state: CharacterSleepState;
+  readonly startedAtMs: number;
+  readonly durationMinutes: number;
+  readonly wakeAtMs: number;
+  readonly energyAtStart: number;
+  readonly targetEnergy: number;
+  readonly lastEnergyUpdateMs: number;
+}
 
 export type DiseaseId =
   | 'malnutrition'
@@ -157,6 +170,8 @@ export interface CharacterRuntimeState {
   readonly activeDiseases: readonly ActiveDisease[];
   readonly causeOfDeath?: 'neglect_or_disease' | 'old_age';
   readonly careHistory: readonly CharacterCareLogEntry[];
+  readonly sleepState?: CharacterSleepState;
+  readonly sleepSession?: CharacterSleepSessionSummary | null;
   readonly createdAtMs: number;
   readonly lastUpdatedAtMs: number;
 }

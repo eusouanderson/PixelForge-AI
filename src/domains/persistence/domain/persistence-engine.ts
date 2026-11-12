@@ -26,6 +26,7 @@ import { createInitialWallet } from '@/domains/economy/domain/economy-engine';
 import { createDefaultSettings } from '@/domains/settings/domain/settings-engine';
 import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
 import { deterministicSexFromSeed } from '@/domains/genetics/domain/sex-determination-engine';
+import { evaluateSleepStateOverTime } from '@/domains/sleep/domain/sleep-engine';
 import type { BredEggRecord, EggIncubationStatus } from '@/domains/breeding/types';
 import type {
   CharacterSaveRecord,
@@ -317,31 +318,60 @@ function simulateSingleCharacterProgress(
 
   const sim = simulateNeedsOverTime(prevRecord.needs, effectiveMinutes);
   const nextAgeHours = Math.round((prevRecord.runtime.ageHours + elapsedHours) * 10) / 10;
+  const reachedOldAge = nextAgeHours >= MAX_NATURAL_LIFESPAN_HOURS;
+
+  const rawEnergy =
+    prevRecord.runtime.sleepSession?.state === 'sleeping'
+      ? prevRecord.needs.energy
+      : sim.currentNeeds.energy;
+
+  const initialSleepEval = evaluateSleepStateOverTime(
+    baseProgression.currentStage,
+    rawEnergy,
+    prevRecord.runtime.sleepSession ?? null,
+    nowMs,
+    reachedOldAge || sim.currentNeeds.health <= 0
+  );
+
+  const finalNeeds = reachedOldAge
+    ? { ...sim.currentNeeds, health: 0, energy: initialSleepEval.energy }
+    : { ...sim.currentNeeds, energy: initialSleepEval.energy };
+
   const nextDiseases = diagnoseNeedsTriggeredDiseases(
-    sim.currentNeeds,
+    finalNeeds,
     prevRecord.runtime.activeDiseases,
     nowMs
   );
-  const reachedOldAge = nextAgeHours >= MAX_NATURAL_LIFESPAN_HOURS;
+
   const evolvedStage =
     nextDiseases.length === 0 && !reachedOldAge
       ? resolveEligibleEvolutionStage(
           baseProgression,
           nextAgeHours,
-          sim.currentNeeds.health,
-          sim.currentNeeds.happiness,
+          finalNeeds.health,
+          finalNeeds.happiness,
           species.evolutionRules
         )
       : null;
   const nextStage = evolvedStage ?? baseProgression.currentStage;
   const { emotionalState, healthCondition } = deriveEmotionalAndHealthState(
-    sim.currentNeeds,
+    finalNeeds,
     nextDiseases.length,
     nextAgeHours
   );
-  const nextAnimation = resolveCharacterAnimation(nextStage, healthCondition, emotionalState);
 
-  const finalNeeds = reachedOldAge ? { ...sim.currentNeeds, health: 0 } : sim.currentNeeds;
+  const isDeceased = healthCondition === 'deceased';
+  const finalSleepState = isDeceased || isEgg ? 'awake' : initialSleepEval.sleepState;
+  const finalSleepSession = isDeceased || isEgg ? null : initialSleepEval.session;
+
+  const nextAnimation = resolveCharacterAnimation(
+    nextStage,
+    healthCondition,
+    emotionalState,
+    undefined,
+    finalSleepState
+  );
+
   const causeOfDeath =
     healthCondition === 'deceased'
       ? reachedOldAge
@@ -364,6 +394,8 @@ function simulateSingleCharacterProgress(
       healthCondition,
       currentAnimation: nextAnimation,
       activeDiseases: nextDiseases,
+      sleepState: finalSleepState,
+      sleepSession: finalSleepSession,
       causeOfDeath,
       lastUpdatedAtMs: nowMs
     }
