@@ -112,9 +112,12 @@ export function normalizeBredEggRecord(
         incubationProgress: clampedProgress
       });
 
+  const normalizedOwnerId =
+    !egg.ownerId || egg.ownerId.startsWith('peer-') ? fallbackOwnerId : egg.ownerId;
+
   return {
     ...egg,
-    ownerId: egg.ownerId ?? fallbackOwnerId,
+    ownerId: normalizedOwnerId,
     status: rawStatus,
     incubationProgress: clampedProgress,
     maxIncubationHours,

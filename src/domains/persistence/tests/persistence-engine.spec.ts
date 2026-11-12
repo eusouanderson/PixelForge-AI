@@ -233,6 +233,22 @@ describe('persistence domain engine, offline simulation, and save repository', (
       })
     ).toBe('incubating');
 
+    const normalizedPeerEgg = normalizeBredEggRecord(
+      {
+        id: 'e-peer',
+        ownerId: 'peer-ephemeral-123',
+        genome,
+        targetSpecies: 'ignisauro',
+        incubationProgress: 0,
+        maxIncubationHours: 0.05,
+        isWarm: true,
+        createdAtMs: 1000,
+        isReadyToHatch: false
+      },
+      'local-player'
+    );
+    expect(normalizedPeerEgg.ownerId).toBe('local-player');
+
     const normalizedBadHours = normalizeBredEggRecord(
       {
         id: 'e2',
