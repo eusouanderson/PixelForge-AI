@@ -86,7 +86,7 @@
         <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" :style="{ color: activeTheme.highlightColor }">
           <span>⚔️</span> Golpes Desbloqueados ({{ availableAttacks.length }})
         </h3>
-        <div class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-0.5">
+        <div class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-0.5" tabindex="0" role="region" aria-label="Lista de golpes desbloqueados">
           <div
             v-for="atk in availableAttacks"
             :key="atk.id"
@@ -127,7 +127,7 @@
         >
           Nenhuma batalha registrada ainda.
         </div>
-        <div v-else class="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-0.5">
+        <div v-else class="flex flex-col gap-1.5 max-h-32 overflow-y-auto pr-0.5" tabindex="0" role="region" aria-label="Histórico de confrontos recentes">
           <div
             v-for="b in recentBattles"
             :key="b.id"

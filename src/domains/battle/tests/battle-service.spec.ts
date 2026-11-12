@@ -139,7 +139,20 @@ describe('Battle Service Application', () => {
 
     const claimResB = serviceB.claimReward(walletB, settled);
     expect(claimResB.success).toBe(true);
-    expect(claimResB.history?.result).toBe('defeat');
+    expect(claimResB.history).toBeDefined();
+    expect(serviceB.getState().phase).toBe('reward_claimed');
+
+    if (simA.winnerPeerId === 'peer-A') {
+      expect(claimResA.history?.result).toBe('victory');
+      expect(claimResB.history?.result).toBe('defeat');
+    } else {
+      expect(claimResA.history?.result).toBe('defeat');
+      expect(claimResB.history?.result).toBe('victory');
+    }
+
+    // Claim reward with insufficient funds fallback branch
+    const brokeClaim = serviceB.claimReward({ amberCoins: 0, totalEarned: 0, totalSpent: 0 }, new Set());
+    expect(brokeClaim.success).toBe(true);
 
     // Double dispose to cover null unbind branch
     serviceA.dispose();
@@ -177,6 +190,10 @@ describe('Battle Service Application', () => {
     serviceA.cancelOrForfeit();
     expect(serviceA.getState().phase).toBe('cancelled');
     expect(serviceB.getState().phase).toBe('cancelled');
+
+    serviceA.reset();
+    expect(serviceA.getState().phase).toBe('idle');
+    expect(serviceA.getState().errorMessage).toBeNull();
   });
 
   it('handles subscription unbind, claimReward guards, transport error and self-message ignore', () => {

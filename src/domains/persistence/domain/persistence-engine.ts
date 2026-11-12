@@ -286,6 +286,7 @@ export function createNewGameSaveSnapshot(
 
 export interface OfflineSimulationOptions {
   readonly deferActiveEggHatch?: boolean;
+  readonly forceEvaluate?: boolean;
 }
 
 function simulateSingleCharacterProgress(
@@ -403,6 +404,13 @@ function simulateSingleCharacterProgress(
   };
 }
 
+function isSleepingReadyToWake(record: CharacterSaveRecord, nowMs: number): boolean {
+  if (record.runtime.sleepState !== 'sleeping') {
+    return false;
+  }
+  return !record.runtime.sleepSession || nowMs >= record.runtime.sleepSession.wakeAtMs;
+}
+
 export function simulateOfflineProgressOnSnapshot(
   snapshot: GameSaveSnapshot,
   nowMs: number,
@@ -411,7 +419,11 @@ export function simulateOfflineProgressOnSnapshot(
   const elapsedMs = Math.max(0, nowMs - snapshot.lastSavedAtMs);
   const elapsedMinutes = Math.floor(elapsedMs / 60000);
 
-  if (elapsedMinutes <= 0) {
+  const hasSleepingCreatureReadyToWake =
+    Object.values(snapshot.characters).some((c) => isSleepingReadyToWake(c, nowMs)) ||
+    Object.values(snapshot.collection ?? {}).some((c) => isSleepingReadyToWake(c, nowMs));
+
+  if (elapsedMinutes <= 0 && !options.forceEvaluate && !hasSleepingCreatureReadyToWake) {
     return {
       ...snapshot,
       lastSavedAtMs: nowMs

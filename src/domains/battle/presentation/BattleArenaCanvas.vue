@@ -122,6 +122,7 @@
       <button
         type="button"
         class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold transition-colors"
+        data-testid="toggle-battle-speed-btn"
         @click="toggleSpeed"
       >
         Velocidade: {{ playbackSpeed }}x
@@ -129,7 +130,8 @@
 
       <button
         type="button"
-        class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-md transition-all"
+        class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold shadow-md transition-all active:scale-95"
+        data-testid="skip-battle-animation-btn"
         @click="skipToEnd"
       >
         ⏩ Pular para o Fim

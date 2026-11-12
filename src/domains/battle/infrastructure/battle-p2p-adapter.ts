@@ -68,6 +68,38 @@ export class BattleP2PAdapter implements BattleTransportPort {
       this.channel.onmessage = (event: MessageEvent) => {
         const data = event.data as BattleP2PMessage;
         if (data && data.senderId !== this.localPeerId) {
+          if (data.type === 'BATTLE_HELLO') {
+            const payload = data.payload as { playerName?: string; isReply?: boolean } | undefined;
+            const existingIdx = this.discoveredOpponents.findIndex((o) => o.peerId === data.senderId);
+            const opponentInfo: BattleDiscoveredOpponent = {
+              endpointId: data.senderId,
+              peerId: data.senderId,
+              playerName: payload?.playerName ?? 'Treinador Próximo',
+              avatarSpeciesId: 'ignisauro',
+              discoveredAtMs: Date.now()
+            };
+            if (existingIdx === -1) {
+              this.discoveredOpponents.push(opponentInfo);
+            } else {
+              this.discoveredOpponents[existingIdx] = opponentInfo;
+            }
+            for (const h of this.peersHandlers) {
+              h([...this.discoveredOpponents]);
+            }
+            if (!payload?.isReply) {
+              this.sendBattleMessage({
+                protocolVersion: BATTLE_PROTOCOL_VERSION,
+                messageId: `hello-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                type: 'BATTLE_HELLO',
+                senderId: this.localPeerId,
+                sessionId: this.activeChannelId,
+                sequence: 0,
+                payload: { playerName: this.playerName, isReply: true },
+                timestampMs: Date.now()
+              });
+            }
+          }
+
           for (const handler of this.messageHandlers) {
             handler(data);
           }
@@ -77,6 +109,18 @@ export class BattleP2PAdapter implements BattleTransportPort {
         this.emitError(new Error('Falha na desserialização de mensagem P2P de batalha.'));
       };
       this.setStatus('connected');
+
+      // Anuncia presença na sala Web BroadcastChannel
+      this.sendBattleMessage({
+        protocolVersion: BATTLE_PROTOCOL_VERSION,
+        messageId: `hello-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'BATTLE_HELLO',
+        senderId: this.localPeerId,
+        sessionId: this.activeChannelId,
+        sequence: 0,
+        payload: { playerName: this.playerName, isReply: false },
+        timestampMs: Date.now()
+      });
     /* v8 ignore start */
     } else {
       this.setStatus('connected');
@@ -91,6 +135,10 @@ export class BattleP2PAdapter implements BattleTransportPort {
     }
     if (this.underlyingTransport) {
       this.underlyingTransport.disconnect();
+    }
+    this.discoveredOpponents = [];
+    for (const h of this.peersHandlers) {
+      h([]);
     }
     this.setStatus('idle');
   }

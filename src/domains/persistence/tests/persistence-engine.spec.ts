@@ -174,6 +174,116 @@ describe('persistence domain engine, offline simulation, and save repository', (
     expect(wokeBaby.needs.energy).toBe(100);
     expect(wokeBaby.runtime.sleepSession).toBeNull();
 
+    // Wakes up when elapsedMinutes is 0 (e.g. checked right when wakeAtMs is reached):
+    const sleepSnapReadyToWake = {
+      ...sleepingBabySnap,
+      lastSavedAtMs: 100000 + 15 * 60 * 1000 - 500
+    };
+    const wakeImmediatelySnap = simulateOfflineProgressOnSnapshot(
+      sleepSnapReadyToWake,
+      100000 + 15 * 60 * 1000 + 100
+    );
+    expect(wakeImmediatelySnap.characters.ignisauro.runtime.sleepState).toBe('awake');
+    expect(wakeImmediatelySnap.characters.ignisauro.needs.energy).toBe(100);
+    expect(wakeImmediatelySnap.characters.ignisauro.runtime.sleepSession).toBeNull();
+
+    // Force evaluate option forces offline progress evaluation even when elapsedMinutes is 0
+    const forceEvalSnap = simulateOfflineProgressOnSnapshot(
+      sleepingBabySnap,
+      100000 + 200,
+      { forceEvaluate: true }
+    );
+    expect(forceEvalSnap.characters.ignisauro.runtime.lastUpdatedAtMs).toBe(100000 + 200);
+
+    // Sleeping creature in collection ready to wake up when elapsedMinutes is 0
+    const collectionSleepSnap = {
+      ...baseSnap,
+      lastSavedAtMs: 100000,
+      characters: {
+        ...baseSnap.characters,
+        ignisauro: {
+          ...baseSnap.characters.ignisauro,
+          runtime: {
+            ...baseSnap.characters.ignisauro.runtime,
+            sleepState: 'awake' as const
+          }
+        }
+      },
+      collection: {
+        'inst-1': {
+          ...sleepingBabySnap.characters.ignisauro,
+          runtime: {
+            ...sleepingBabySnap.characters.ignisauro.runtime,
+            sleepState: 'sleeping' as const,
+            sleepSession: {
+              state: 'sleeping' as const,
+              startedAtMs: 100000,
+              durationMinutes: 15,
+              wakeAtMs: 100000 + 15 * 60 * 1000,
+              energyAtStart: 10,
+              targetEnergy: 100,
+              lastEnergyUpdateMs: 100000
+            }
+          }
+        }
+      }
+    };
+
+    const wakeCollSnap = simulateOfflineProgressOnSnapshot(
+      collectionSleepSnap,
+      100000 + 15 * 60 * 1000 + 100
+    );
+    expect(wakeCollSnap.collection!['inst-1'].runtime.sleepState).toBe('awake');
+
+    // Corrupted sleeping creature without session in collection triggers evaluation
+    const corruptCollSnap = {
+      ...collectionSleepSnap,
+      collection: {
+        'inst-2': {
+          ...sleepingBabySnap.characters.ignisauro,
+          needs: {
+            ...sleepingBabySnap.characters.ignisauro.needs,
+            energy: 80
+          },
+          runtime: {
+            ...sleepingBabySnap.characters.ignisauro.runtime,
+            sleepState: 'sleeping' as const,
+            sleepSession: null
+          }
+        }
+      }
+    };
+    const wakeCorruptCollSnap = simulateOfflineProgressOnSnapshot(corruptCollSnap, 100000 + 500);
+    expect(wakeCorruptCollSnap.collection!['inst-2'].runtime.sleepState).toBe('awake');
+
+    // Corrupted sleeping creature without session in characters triggers evaluation
+    const corruptCharSnap = {
+      ...baseSnap,
+      lastSavedAtMs: 100000,
+      characters: {
+        ...baseSnap.characters,
+        ignisauro: {
+          ...baseSnap.characters.ignisauro,
+          progression: {
+            ...baseSnap.characters.ignisauro.progression,
+            currentStage: 'baby' as const
+          },
+          needs: {
+            ...baseSnap.characters.ignisauro.needs,
+            energy: 80
+          },
+          runtime: {
+            ...baseSnap.characters.ignisauro.runtime,
+            currentStage: 'baby' as const,
+            sleepState: 'sleeping' as const,
+            sleepSession: null
+          }
+        }
+      }
+    };
+    const wakeCorruptCharSnap = simulateOfflineProgressOnSnapshot(corruptCharSnap, 100000 + 500);
+    expect(wakeCorruptCharSnap.characters.ignisauro.runtime.sleepState).toBe('awake');
+
     // 2. Awake adult character whose energy drops below 15 fatigue threshold falls asleep offline
     const tiredAdultSnap = {
       ...baseSnap,

@@ -246,6 +246,7 @@ export interface BattleDiscoveredOpponent {
 
 export interface BattleTransportPort {
   readonly localPeerId: string;
+  readonly playerName?: string;
   connect(channelId: string): Promise<void>;
   disconnect(): void;
   sendBattleMessage(message: BattleP2PMessage): void;

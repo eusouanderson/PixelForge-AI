@@ -11,7 +11,7 @@ import { getCharacterSpeciesById } from '@/domains/characters/domain/character-r
 describe('feeding domain catalog and dietary rules', () => {
   it('exposes complete food catalog with all 8 species signature foods plus hydration and specific medicines', () => {
     const all = listAllFoods();
-    expect(all.length).toBe(17);
+    expect(all.length).toBe(18);
     for (const item of all) {
       expect(getFoodById(item.id)).toEqual(item);
     }
@@ -19,6 +19,8 @@ describe('feeding domain catalog and dietary rules', () => {
     expect(FOOD_CATALOG['thermal-spring-water'].category).toBe('hydration');
     expect(FOOD_CATALOG['vitality-herbal-elixir'].category).toBe('medicine');
     expect(FOOD_CATALOG['nutri-vital-serum'].curesDiseaseId).toBe('malnutrition');
+    expect(FOOD_CATALOG['awakening-fruit'].category).toBe('fruit');
+    expect(FOOD_CATALOG['awakening-fruit'].priceCoins).toBe(100);
   });
 
   it('evaluates favorite, accepted, and forbidden foods per character species', () => {
@@ -27,6 +29,7 @@ describe('feeding domain catalog and dietary rules', () => {
     expect(evaluateDietaryPreference(igni, 'golden-starburst-sunpeach')).toBe('accepted');
     expect(evaluateDietaryPreference(igni, 'frosted-crystal-berry')).toBe('forbidden');
     expect(evaluateDietaryPreference(igni, 'nutri-vital-serum')).toBe('accepted');
+    expect(evaluateDietaryPreference(igni, 'awakening-fruit')).toBe('accepted');
     expect(evaluateDietaryPreference(igni, 'unknown-item')).toBe('accepted');
   });
 
@@ -99,6 +102,13 @@ describe('feeding domain catalog and dietary rules', () => {
     expect(forbReaction.appliedNeedsDelta.happiness).toBeLessThan(0);
     expect(forbReaction.appliedAttributeDelta).toEqual({});
     expect(forbReaction.experienceGained).toBe(0);
+
+    // Awakening fruit (awakening-fruit) is accepted, grants awakening reaction with 5 XP
+    const awakenReaction = feedCharacter(igni, 'awakening-fruit', 3500, 50);
+    expect(awakenReaction.accepted).toBe(true);
+    expect(awakenReaction.preference).toBe('accepted');
+    expect(awakenReaction.message).toContain('Fruta do Despertar');
+    expect(awakenReaction.experienceGained).toBe(5);
   });
 });
 

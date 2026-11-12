@@ -247,7 +247,7 @@
             >
               Buscando desafiantes próximos na mesma sala...
             </div>
-            <div v-else class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-0.5">
+            <div v-else class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-0.5" tabindex="0" role="region" aria-label="Lista de treinadores próximos">
               <div
                 v-for="opp in discoveredOpponents"
                 :key="opp.peerId"
@@ -456,10 +456,13 @@ const showHistoryModal = ref(false);
 const roomChannelCode = ref('BATALHA-777');
 const selectedWager = ref(50);
 
+const initialSpeciesId = (props.activeCreature.runtime?.characterId ?? props.activeCreature.id ?? 'ignisauro') as import('@/domains/characters/types').CharacterId;
+const initialSpecies = getCharacterSpeciesById(initialSpeciesId) || getCharacterSpeciesById('ignisauro');
+
 const transport: BattleTransportPort =
   props.transportOverride ??
   new BattleP2PAdapter({
-    playerName: 'Treinador Pixel'
+    playerName: props.activeCreature.runtime?.customNickname || initialSpecies.name
   });
 
 const battleService = new BattleService(transport);
@@ -476,22 +479,28 @@ if (transport.onPeersChange) {
   });
 }
 
+const activeSpecies = computed(() => {
+  const charId = (props.activeCreature.runtime?.characterId ?? props.activeCreature.id ?? 'ignisauro') as import('@/domains/characters/types').CharacterId;
+  return getCharacterSpeciesById(charId) || getCharacterSpeciesById('ignisauro');
+});
+
 const activeParticipant = computed<BattleParticipant>(() => {
   const rec = props.activeCreature;
+  const spec = activeSpecies.value;
   return {
     peerId: transport.localPeerId,
-    playerName: 'Treinador Pixel',
-    creatureInstanceId: rec.id ?? rec.runtime.characterId,
-    speciesId: rec.runtime.characterId,
-    speciesName: rec.runtime.characterId.toUpperCase(),
-    customNickname: rec.runtime.customNickname,
-    stage: rec.runtime.currentStage,
-    level: rec.progression.level,
-    ageHours: rec.runtime.ageHours,
+    playerName: transport.playerName || rec.runtime?.customNickname || spec.name,
+    creatureInstanceId: rec.id ?? rec.runtime?.characterId ?? 'ignisauro',
+    speciesId: spec.id,
+    speciesName: spec.name,
+    customNickname: rec.runtime?.customNickname,
+    stage: rec.runtime?.currentStage ?? 'adulto',
+    level: rec.progression?.level ?? 1,
+    ageHours: rec.runtime?.ageHours ?? 0,
     attributes: rec.attributes,
     needs: rec.needs,
-    personalityTemper: 'ferocious',
-    element: 'fire',
+    personalityTemper: spec.personality.temper,
+    element: spec.element,
     unlockedAttackIds: [],
     combatLevel: rec.battleRecord?.combatLevel ?? 1,
     combatXp: rec.battleRecord?.combatXp ?? 0,
@@ -560,6 +569,7 @@ function onBattleFinished(_result: BattleSimulationResult): void {
 }
 
 function claimAndFinish(): void {
+  battleService.reset();
   emit('close');
 }
 
