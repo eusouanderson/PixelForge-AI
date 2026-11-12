@@ -37,7 +37,7 @@ export interface AppConfiguration {
 export const APP_CONFIG: AppConfiguration = {
   appName: 'PixelForge AI',
   appSubtitle: 'Plataforma Profissional de Pixel Art com LLM',
-  version: '1.9.0',
+  version: '1.9.1',
   defaultOutputDimensions: {
     width: 1024,
     height: 1024
