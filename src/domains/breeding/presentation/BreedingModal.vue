@@ -122,6 +122,7 @@
               <input
                 v-model="roomChannelCode"
                 type="text"
+                aria-label="Código da sala de reprodução"
                 class="w-28 px-2 py-1 border rounded-lg font-mono text-center text-xs"
                 :style="{
                   backgroundColor: theme.cardBackground,
@@ -687,6 +688,7 @@
                   v-model="pendingHatchNickname"
                   type="text"
                   maxlength="24"
+                  aria-label="Apelido opcional do filhote"
                   :data-testid="`hatch-nickname-input-${egg.id}`"
                   class="w-full px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"
                   placeholder="Apelido opcional do filhote..."
@@ -1085,9 +1087,12 @@ const localCreature = computed(() => {
 
 function handleSelectLocalCreature(): void {
   if (localCreature.value) {
+    const plainGenome = JSON.parse(
+      JSON.stringify(localCreature.value.genetics)
+    ) as import('@/domains/genetics/types').CreatureGenome;
     breedingService.selectLocalCreature(
       localCreature.value.speciesId,
-      localCreature.value.genetics,
+      plainGenome,
       localCreature.value.name
     );
   }
@@ -1117,12 +1122,8 @@ watch(
 );
 
 watch(nearbyStatus, (status) => {
-  if (status === 'connected' && localCreature.value) {
-    breedingService.selectLocalCreature(
-      localCreature.value.speciesId,
-      localCreature.value.genetics,
-      localCreature.value.name
-    );
+  if (status === 'connected') {
+    handleSelectLocalCreature();
   }
 });
 

@@ -117,6 +117,7 @@ test.describe('PixelForge P2P Breeding -> Egg Incubation -> Hatching -> Collecti
 
     await expect(winnerPage.getByTestId('breeding-egg-created-card')).toBeVisible();
     await expect(loserPage.getByTestId('breeding-partner-won-card')).toBeVisible();
+    await expect(loserPage.getByTestId('open-collection-modal-btn')).toContainText('1');
 
     // Non-winner can cleanly reset for a second breeding round
     await loserPage.getByTestId('new-breeding-session-btn').click();
@@ -173,6 +174,7 @@ test.describe('PixelForge P2P Breeding -> Egg Incubation -> Hatching -> Collecti
     await winnerPage.getByTestId('open-collection-modal-btn').click();
     const modal = winnerPage.getByTestId('collection-switcher-modal');
     await expect(modal).toBeVisible();
+    await expect(modal).toContainText('Meus Dinossauros (2)');
     await expect(modal).toContainText(starterDisplayName);
     await expect(modal).toContainText('Filhote E2E');
 
@@ -197,6 +199,7 @@ test.describe('PixelForge P2P Breeding -> Egg Incubation -> Hatching -> Collecti
 
     await winnerPage.getByTestId('nav-tab-sheet').click();
     const sheetCollection = winnerPage.getByTestId('player-collection-card');
+    await expect(sheetCollection).toContainText('2 criatura(s)');
     await expect(sheetCollection).toContainText(starterDisplayName);
     await expect(sheetCollection).toContainText('Filhote E2E');
 

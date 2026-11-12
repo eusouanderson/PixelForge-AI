@@ -41,7 +41,9 @@ export class BroadcastChannelP2PAdapter implements P2PTransportPort {
 
   public send(message: P2PMessage): void {
     if (this.channel) {
-      this.channel.postMessage(message);
+      // Strip nested Vue reactive Proxies so browser BroadcastChannel structured clone never throws DataCloneError.
+      const serializableMessage = JSON.parse(JSON.stringify(message)) as P2PMessage;
+      this.channel.postMessage(serializableMessage);
     }
   }
 

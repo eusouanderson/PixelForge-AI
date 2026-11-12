@@ -279,10 +279,11 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
 
     expect(wrapper1.find('[data-testid="incubator-status-banner"]').exists()).toBe(true);
 
-    // Quick HUD Collection Switcher opens before hatching too and shows Nursery egg shortcut
+    // Quick HUD Collection Switcher opens before hatching too: shows ONLY 1 starter dinosaur + Nursery egg shortcut
     await wrapper1.get('[data-testid="open-collection-modal-btn"]').trigger('click');
     await flushPromises();
     expect(wrapper1.find('[data-testid="collection-switcher-modal"]').exists()).toBe(true);
+    expect(wrapper1.get('[data-testid="collection-switcher-modal"]').text()).toContain('Meus Dinossauros (1)');
     expect(wrapper1.find('[data-testid="collection-modal-eggs-section"]').exists()).toBe(true);
     await wrapper1.get('[data-testid="collection-modal-open-nursery-btn"]').trigger('click');
     await flushPromises();
@@ -318,10 +319,11 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await flushPromises();
     expect(wrapper1.get('[data-testid="feedback-banner"]').text()).toContain('Água Cristalina');
 
-    // Check Ficha tab: BOTH parent Ignisauro AND newborn Ignis Filho appear in Minha Coleção!
+    // Check Ficha tab: BOTH parent Ignisauro AND newborn Ignis Filho appear in Minha Coleção (total 2, never all 11)!
     await wrapper1.get('[data-testid="nav-tab-sheet"]').trigger('click');
     await flushPromises();
     const collectionText = wrapper1.get('[data-testid="player-collection-card"]').text();
+    expect(collectionText).toContain('2 criatura(s)');
     expect(collectionText).toContain('Ignisauro');
     expect(collectionText).toContain('Ignis Filho');
     expect(collectionText).toContain('adulto');
@@ -336,6 +338,7 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     // Switch back to newborn using the always-visible HUD Collection Switcher modal
     await wrapper1.get('[data-testid="open-collection-modal-btn"]').trigger('click');
     await flushPromises();
+    expect(wrapper1.get('[data-testid="collection-switcher-modal"]').text()).toContain('Meus Dinossauros (2)');
     expect(wrapper1.get('[data-testid="collection-switcher-modal"]').text()).toContain('Ignis Filho');
     await wrapper1.get('[data-testid="modal-collection-creature-creature-egg-e2e-1"]').trigger('click');
     await flushPromises();
