@@ -161,12 +161,20 @@ export interface CharacterRuntimeState {
   readonly lastUpdatedAtMs: number;
 }
 
+export interface CreaturePaletteOverrides {
+  readonly base: string;
+  readonly belly: string;
+  readonly crest: string;
+  readonly eye: string;
+}
+
 export interface CharacterSpriteRepositoryPort {
   getSpriteFrame(
     characterId: CharacterId,
     stage: CharacterLifeStage | LifeStage,
     animation: CharacterAnimationName,
-    frame: number
+    frame: number,
+    paletteOverrides?: CreaturePaletteOverrides
   ): DeclarativePixelArt;
   getAnimationFrames(
     characterId: CharacterId,

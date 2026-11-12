@@ -3,9 +3,18 @@ import {
   CURRENT_SAVE_SCHEMA_VERSION,
   SystemClock,
   createNewGameSaveSnapshot,
+  listOwnedCreatures,
+  normalizeBredEggRecord,
+  resolveActiveCreatureContext,
+  resolveEggStatus,
   simulateOfflineProgressOnSnapshot,
   validateAndMigrateSaveSnapshot
 } from '../domain/persistence-engine';
+import {
+  recordBreedingResultUseCase,
+  startEggIncubationUseCase,
+  hatchBredEggAtomicUseCase
+} from '../application/game-session-service';
 import {
   LocalStorageGameSaveRepository,
   MemoryKeyValueStorage,
@@ -202,5 +211,169 @@ describe('persistence domain engine, offline simulation, and save repository', (
       removeItem: () => undefined
     };
     expect(resolveDefaultStorageAdapter(fakeBrowserStorage)).toBe(fakeBrowserStorage);
+  });
+
+  it('persists, reloads, simulates offline progress and reconciles incubator eggs and collection babies safely', async () => {
+    const memoryStorage = new MemoryKeyValueStorage();
+    const repo = new LocalStorageGameSaveRepository('bred_lifecycle_test', memoryStorage);
+    const startSnap = createNewGameSaveSnapshot(1000, 'ignisauro');
+    const genome = startSnap.characters.ignisauro.genetics;
+
+    // Normalize helper edge cases: legacy statuses & invalid fallback maxIncubationHours
+    expect(
+      resolveEggStatus({
+        id: 'e1',
+        genome,
+        targetSpecies: 'ignisauro',
+        incubationProgress: 0.02,
+        maxIncubationHours: 0.05,
+        isWarm: true,
+        createdAtMs: 1000,
+        isReadyToHatch: false
+      })
+    ).toBe('incubating');
+
+    const normalizedBadHours = normalizeBredEggRecord(
+      {
+        id: 'e2',
+        genome,
+        targetSpecies: 'ignisauro',
+        incubationProgress: 0,
+        maxIncubationHours: 0,
+        isWarm: true,
+        createdAtMs: 1000,
+        isReadyToHatch: false
+      },
+      'local-player'
+    );
+    expect(normalizedBadHours.maxIncubationHours).toBe(0.05);
+
+    const withEggs = recordBreedingResultUseCase(
+      startSnap,
+      {
+        sessionId: 's1',
+        timestampMs: 1200,
+        sireGenomeId: genome.genomeId,
+        damGenomeId: genome.genomeId,
+        sireSpecies: 'ignisauro',
+        damSpecies: 'ignisauro',
+        offspringGenomeId: genome.genomeId,
+        offspringSpecies: 'ignisauro',
+        winnerPeerId: 'local-player',
+        isLocalWinner: true,
+        mutationCount: 0
+      },
+      {
+        id: 'egg-persist-1',
+        ownerId: 'local-player',
+        genome,
+        targetSpecies: 'ignisauro',
+        status: 'available',
+        incubationProgress: 0,
+        maxIncubationHours: 0.05,
+        isWarm: true,
+        createdAtMs: 1200,
+        isReadyToHatch: false
+      },
+      1200
+    );
+
+    const incubatingSnap = startEggIncubationUseCase(withEggs, 'egg-persist-1', 1500).snapshot;
+
+    // Simulate +10 minutes offline: egg finishes incubation and becomes ready_to_hatch
+    const afterOffline = simulateOfflineProgressOnSnapshot(incubatingSnap, 1500 + 10 * 60_000);
+    expect(resolveEggStatus(afterOffline.incubator[0])).toBe('ready_to_hatch');
+
+    const hatched = hatchBredEggAtomicUseCase(afterOffline, 'egg-persist-1', 1500 + 11 * 60_000, 'Brasinha');
+    expect(hatched.success).toBe(true);
+    const babyId = hatched.hatchedCreatureId!;
+
+    await repo.saveSnapshot(hatched.snapshot);
+    const reloaded = await repo.loadSave();
+    expect(reloaded).not.toBeNull();
+    expect(reloaded?.collection?.[babyId]?.originEggId).toBe('egg-persist-1');
+    expect(reloaded?.incubator[0]?.status).toBe('hatched');
+    expect(resolveActiveCreatureContext(reloaded!).creatureId).toBe(babyId);
+    expect(listOwnedCreatures(reloaded!).length).toBeGreaterThanOrEqual(2);
+
+    // Offline progress also evolves/updates creatures inside collection
+    const afterBabyOffline = simulateOfflineProgressOnSnapshot(reloaded!, reloaded!.lastSavedAtMs + 2 * 3600_000);
+    expect(afterBabyOffline.collection?.[babyId]?.runtime.ageHours).toBe(2);
+
+    // Migration ignores corrupted incubator or collection entries safely while reconciling hatched link
+    const migratedReconcile = validateAndMigrateSaveSnapshot(
+      {
+        ...reloaded!,
+        playerId: '',
+        incubator: [
+          null,
+          {
+            ...reloaded!.incubator[0],
+            status: 'ready_to_hatch',
+            isReadyToHatch: true
+          }
+        ],
+        collection: {
+          broken: null,
+          [babyId]: {
+            ...reloaded!.collection![babyId],
+            id: undefined
+          }
+        }
+      },
+      99999
+    );
+    expect(migratedReconcile.incubator).toHaveLength(1);
+    expect(migratedReconcile.incubator[0].status).toBe('hatched');
+    expect(migratedReconcile.playerId).toBe('local-player');
+    expect(migratedReconcile.collection?.broken).toBeUndefined();
+    expect(migratedReconcile.collection?.[babyId]?.id).toBe(babyId);
+
+    // Legacy snapshot without starterCharacterId, id fields, or collection works seamlessly
+    const legacyNoCollection = {
+      ...startSnap,
+      starterCharacterId: undefined,
+      collection: undefined,
+      characters: {
+        ...startSnap.characters,
+        ignisauro: {
+          ...startSnap.characters.ignisauro,
+          id: undefined
+        }
+      }
+    };
+    expect(resolveActiveCreatureContext(legacyNoCollection).creatureId).toBe('ignisauro');
+    expect(
+      resolveActiveCreatureContext({ ...legacyNoCollection, activeCreatureInstanceId: undefined }).creatureId
+    ).toBe('ignisauro');
+    expect(listOwnedCreatures(legacyNoCollection).length).toBe(1);
+    expect(simulateOfflineProgressOnSnapshot(legacyNoCollection, 120_000).collection).toEqual({});
+
+    // Re-migrating an existing legacy character without `.id` populates `id: species.id` cleanly
+    const migratedNoCharId = validateAndMigrateSaveSnapshot(legacyNoCollection, 120_000);
+    expect(migratedNoCharId.characters.ignisauro.id).toBe('ignisauro');
+
+    // Owned list keeps unlocked species when active creature lives in collection
+    const withUnlockedStarter = {
+      ...startSnap,
+      starterCharacterId: 'ignisauro' as const,
+      activeCharacterId: 'glacissauro' as const,
+      activeCreatureInstanceId: babyId,
+      collection: {
+        [babyId]: reloaded!.collection![babyId]
+      },
+      characters: {
+        ...startSnap.characters,
+        glacissauro: {
+          ...startSnap.characters.glacissauro,
+          runtime: {
+            ...startSnap.characters.glacissauro.runtime,
+            currentStage: 'adulto' as const
+          }
+        }
+      }
+    };
+    const ownedUnlocked = listOwnedCreatures(withUnlockedStarter);
+    expect(ownedUnlocked.some((e) => e.speciesId === 'glacissauro' && e.source === 'starter')).toBe(true);
   });
 });

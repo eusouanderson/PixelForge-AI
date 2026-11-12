@@ -8,7 +8,9 @@ import {
 } from '../infrastructure/nearby-connections-adapter';
 import BreedingModal from '../presentation/BreedingModal.vue';
 import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
-import { createNewGameSaveSnapshot } from '@/domains/persistence/domain/persistence-engine';
+import { crossGenomes } from '@/domains/genetics/domain/inheritance-engine';
+import { createNewGameSaveSnapshot, resolveEggStatus } from '@/domains/persistence/domain/persistence-engine';
+import type { GameSaveSnapshot } from '@/domains/persistence/types';
 
 interface RadioNode {
   id: string;
@@ -534,5 +536,103 @@ describe('Two-Device Nearby P2P Breeding Integration Simulation', () => {
 
     wrapperA.unmount();
     wrapperB.unmount();
+  });
+
+  it('completes the real egg nursery UI lifecycle from available -> incubating -> ready -> hatched baby without losing egg or parent', async () => {
+    const base = createNewGameSaveSnapshot(1000, 'ignisauro');
+    const sire = createGenesisGenome('ignisauro', 'male', 1000, 'sire-modal');
+    const dam = createGenesisGenome('terrassauro', 'female', 1000, 'dam-modal');
+    const childGenome = crossGenomes(sire, dam, 2000, {}, 'child-modal');
+
+    const parentAdult = {
+      ...base.characters.ignisauro,
+      runtime: {
+        ...base.characters.ignisauro.runtime,
+        currentStage: 'adulto' as const,
+        ageHours: 500
+      },
+      genetics: sire
+    };
+
+    const initialSave: GameSaveSnapshot = {
+      ...base,
+      characters: {
+        ...base.characters,
+        ignisauro: parentAdult
+      },
+      incubator: [
+        {
+          id: 'egg-ui-1',
+          ownerId: 'local-player',
+          genome: childGenome,
+          targetSpecies: childGenome.species,
+          status: 'available',
+          incubationProgress: 0,
+          maxIncubationHours: 1 / 60, // 1 minute = 2 warms of 30s!
+          isWarm: true,
+          createdAtMs: 2000,
+          isReadyToHatch: false
+        }
+      ]
+    };
+
+    let currentSave = initialSave;
+    const sim = createNearbyRadioSimulator();
+    const wrapper = mount(BreedingModal, {
+      props: {
+        saveSnapshot: currentSave,
+        initialSubtab: 'nursery',
+        transportOverride: new NearbyConnectionsP2PAdapter({
+          localPeerId: 'nursery-peer',
+          isNativeOverride: true,
+          pluginOverride: sim.createPluginForDevice('nurseryUi')
+        })
+      },
+      global: { stubs: { BreedingAnimationCanvas: true } }
+    });
+
+    expect(wrapper.get('[data-testid="egg-status-egg-ui-1"]').text()).toContain('Disponível');
+
+    // Step 1: Start incubation -> egg stays present and switches to Incubando
+    await wrapper.get('[data-testid="start-incubation-btn-egg-ui-1"]').trigger('click');
+    const updates = wrapper.emitted('update-save') as GameSaveSnapshot[][];
+    currentSave = updates[updates.length - 1][0];
+    await wrapper.setProps({ saveSnapshot: currentSave });
+
+    expect(currentSave.incubator).toHaveLength(1);
+    expect(resolveEggStatus(currentSave.incubator[0])).toBe('incubating');
+    expect(wrapper.get('[data-testid="egg-status-egg-ui-1"]').text()).toContain('Incubando');
+
+    // Step 2: Warm egg twice (+30s each) until Ready to Hatch
+    await wrapper.get('[data-testid="warm-egg-btn-egg-ui-1"]').trigger('click');
+    currentSave = updates[updates.length - 1][0];
+    await wrapper.setProps({ saveSnapshot: currentSave });
+
+    await wrapper.get('[data-testid="warm-egg-btn-egg-ui-1"]').trigger('click');
+    currentSave = updates[updates.length - 1][0];
+    await wrapper.setProps({ saveSnapshot: currentSave });
+    expect(wrapper.get('[data-testid="egg-status-egg-ui-1"]').text()).toContain('Pronto');
+
+    // Step 3: Open hatch confirmation, enter nickname, and confirm birth
+    await wrapper.get('[data-testid="hatch-ready-btn-egg-ui-1"]').trigger('click');
+    expect(wrapper.find('[data-testid="hatch-confirm-box-egg-ui-1"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="hatch-nickname-input-egg-ui-1"]').setValue('Brotinho');
+    await wrapper.get('[data-testid="confirm-hatch-btn-egg-ui-1"]').trigger('click');
+    currentSave = updates[updates.length - 1][0];
+    await wrapper.setProps({ saveSnapshot: currentSave });
+
+    // Verify baby created in collection, parent preserved, and hatched egg logged in registry
+    expect(wrapper.find('[data-testid="hatch-celebration-card"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="hatched-egg-record-egg-ui-1"]').exists()).toBe(true);
+    expect(currentSave.characters.ignisauro.runtime.currentStage).toBe('adulto');
+    const createdCreatureId = currentSave.incubator[0].hatchedCreatureId!;
+    expect(currentSave.collection?.[createdCreatureId]?.runtime.currentStage).toBe('baby');
+    expect(currentSave.collection?.[createdCreatureId]?.runtime.customNickname).toBe('Brotinho');
+
+    // Step 4: Navigate to care for the newborn baby
+    await wrapper.get('[data-testid="go-to-hatched-baby-btn"]').trigger('click');
+    expect(wrapper.emitted('focus-creature')?.[0]).toEqual([createdCreatureId]);
+
+    wrapper.unmount();
   });
 });

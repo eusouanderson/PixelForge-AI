@@ -63,10 +63,10 @@
         >
           🥚 Berçário de Ovos
           <span
-            v-if="incubatorEggs.length > 0"
+            v-if="activeIncubatorEggs.length > 0"
             class="ml-1 px-1.5 py-0.2 rounded-full text-[9px] bg-amber-500 text-slate-950 font-black"
           >
-            {{ incubatorEggs.length }}
+            {{ activeIncubatorEggs.length }}
           </span>
         </button>
         <button
@@ -304,7 +304,7 @@
 
                 <!-- Selector dropdown -->
                 <select
-                  v-model="selectedLocalSpeciesId"
+                  v-model="selectedLocalCreatureId"
                   data-testid="local-dinosaur-select"
                   class="w-full border rounded-xl px-3 py-2 text-sm text-white font-bold transition-colors"
                   :style="{
@@ -316,8 +316,8 @@
                 >
                   <option
                     v-for="creature in availableCreatures"
-                    :key="creature.speciesId"
-                    :value="creature.speciesId"
+                    :key="creature.creatureId"
+                    :value="creature.creatureId"
                   >
                     {{ creature.name }} ({{ creature.genetics.sex === 'male' ? '♂' : '♀' }}) - {{ creature.stageLabel }} (Gen {{ creature.genetics.generation }})
                   </option>
@@ -447,14 +447,76 @@
         </div>
 
         <!-- TAB 2: NURSERY (BERÇÁRIO DE OVOS) -->
-        <div v-else-if="activeTab === 'nursery'" class="space-y-4">
+        <div v-else-if="activeTab === 'nursery'" data-testid="nursery-tab-panel" class="space-y-4">
           <div class="flex items-center justify-between">
-            <h2 class="text-sm font-bold text-amber-300">Ninho Genético & Ovos em Incubação</h2>
-            <span class="text-xs text-slate-400 font-mono">{{ incubatorEggs.length }} ovo(s) no ninho</span>
+            <h2 class="text-sm font-bold text-amber-300">Ninho Genético & Incubadora de Ovos</h2>
+            <span class="text-xs text-slate-400 font-mono">
+              {{ activeIncubatorEggs.length }} ativo(s) · {{ hatchedIncubatorEggs.length }} eclodido(s)
+            </span>
           </div>
 
           <div
-            v-if="incubatorEggs.length === 0"
+            v-if="nurseryFeedback"
+            data-testid="nursery-feedback-banner"
+            class="px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-950/30 text-amber-200 text-xs"
+          >
+            {{ nurseryFeedback }}
+          </div>
+
+          <!-- Newborn Celebration Card after Hatching -->
+          <div
+            v-if="recentlyHatchedInfo"
+            data-testid="hatch-celebration-card"
+            class="p-4 rounded-2xl border-2 border-emerald-400 bg-emerald-950/30 space-y-3 shadow-lg"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-12 h-12 rounded-xl border border-emerald-400/50 flex items-center justify-center text-2xl shadow-inner"
+                  :style="{ backgroundColor: recentlyHatchedInfo.colors.base }"
+                >
+                  🐣
+                </div>
+                <div>
+                  <div class="text-xs font-bold uppercase text-emerald-300">Novo Filhote na Coleção!</div>
+                  <div class="text-base font-black text-white capitalize">
+                    {{ recentlyHatchedInfo.displayName }}
+                  </div>
+                  <div class="text-[11px] text-slate-300 font-mono">
+                    Fase: Baby · Gen {{ recentlyHatchedInfo.generation }} ·
+                    {{ recentlyHatchedInfo.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                data-testid="go-to-hatched-baby-btn"
+                class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black uppercase shadow-md transition active:scale-95"
+                @click="handleFocusHatchedCreature(recentlyHatchedInfo.creatureId)"
+              >
+                Cuidar do Filhote
+              </button>
+            </div>
+            <div class="text-[11px] text-emerald-200/90 space-y-0.5">
+              <div>
+                <strong>ID:</strong> <span class="font-mono">{{ recentlyHatchedInfo.creatureId }}</span> ·
+                <strong>Ovo de origem:</strong> <span class="font-mono">{{ recentlyHatchedInfo.originEggId }}</span>
+              </div>
+              <div v-if="recentlyHatchedInfo.parentsSummary">
+                <strong>Pais:</strong> {{ recentlyHatchedInfo.parentsSummary }}
+              </div>
+              <div>
+                <strong>Atributos iniciais:</strong>
+                Força {{ recentlyHatchedInfo.attributes.strength }} ·
+                Defesa {{ recentlyHatchedInfo.attributes.defense }} ·
+                Agilidade {{ recentlyHatchedInfo.attributes.agility }} ·
+                Afinidade {{ recentlyHatchedInfo.attributes.elementalAffinity }}
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="activeIncubatorEggs.length === 0"
             class="p-8 text-center border border-dashed rounded-2xl text-xs text-slate-400 space-y-2 transition-colors"
             :style="{
               backgroundColor: theme.cardDarkBackground,
@@ -462,59 +524,179 @@
             }"
           >
             <div class="text-3xl">🥚</div>
-            <p class="font-bold text-amber-200">Nenhum ovo em incubação no momento.</p>
-            <p>Realize um cruzamento no modo P2P para gerar novos descendentes com DNA exclusivo!</p>
+            <p class="font-bold text-amber-200">Nenhum ovo aguardando incubação no momento.</p>
+            <p>Realize um cruzamento no modo P2P para gerar novos ovos com DNA exclusivo!</p>
           </div>
 
           <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div
-              v-for="egg in incubatorEggs"
+              v-for="egg in activeIncubatorEggs"
               :key="egg.id"
+              :data-testid="`egg-card-${egg.id}`"
               class="p-4 border rounded-2xl space-y-3 shadow-md transition-colors"
               :style="{
                 backgroundColor: theme.cardDarkBackground,
-                borderColor: '#f59e0b'
+                borderColor: getEggStatus(egg) === 'ready_to_hatch' ? '#10b981' : getEggStatus(egg) === 'incubating' ? '#f59e0b' : theme.borderColor
               }"
             >
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                  <span class="text-2xl">🥚</span>
+                  <div
+                    class="w-9 h-9 rounded-xl border border-white/15 flex items-center justify-center text-lg"
+                    :style="{ backgroundColor: egg.genome.phenotype.colors.base }"
+                  >
+                    🥚
+                  </div>
                   <div>
-                    <div class="font-black text-white capitalize text-sm">{{ egg.targetSpecies }}</div>
-                    <div class="text-[10px] text-amber-300 font-mono">Geração: Gen {{ egg.genome.generation }}</div>
+                    <div class="font-black text-white capitalize text-sm">{{ getSpeciesDisplayName(egg.targetSpecies) }}</div>
+                    <div class="text-[10px] text-amber-300 font-mono">
+                      Gen {{ egg.genome.generation }} · {{ egg.genome.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }}
+                    </div>
                   </div>
                 </div>
                 <span
-                  class="px-2 py-0.5 rounded text-[10px] font-bold border"
-                  :class="egg.genome.sex === 'male' ? 'bg-sky-500/20 text-sky-300 border-sky-500/30' : 'bg-pink-500/20 text-pink-300 border-pink-500/30'"
+                  :data-testid="`egg-status-${egg.id}`"
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase"
+                  :class="
+                    getEggStatus(egg) === 'ready_to_hatch'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : getEggStatus(egg) === 'incubating'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                  "
                 >
-                  {{ egg.genome.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }}
+                  {{
+                    getEggStatus(egg) === 'ready_to_hatch'
+                      ? '✨ Pronto'
+                      : getEggStatus(egg) === 'incubating'
+                        ? '🔥 Incubando'
+                        : 'Disponível'
+                  }}
                 </span>
+              </div>
+
+              <div v-if="egg.genome.parents" class="text-[10px] text-slate-300">
+                Pais: <strong>{{ egg.genome.parents.sireName }}</strong> × <strong>{{ egg.genome.parents.damName }}</strong>
               </div>
 
               <!-- Incubation Progress Bar -->
               <div class="space-y-1">
                 <div class="flex justify-between text-[10px] text-slate-400">
-                  <span>Incubação</span>
-                  <span>{{ Math.round((egg.incubationProgress / egg.maxIncubationHours) * 100) }}%</span>
+                  <span>
+                    {{
+                      getEggStatus(egg) === 'available'
+                        ? 'Aguardando início'
+                        : getEggStatus(egg) === 'ready_to_hatch'
+                          ? 'Incubação concluída!'
+                          : `Restante: ${formatEggRemainingTime(egg)}`
+                    }}
+                  </span>
+                  <span>{{ computeEggProgressPercent(egg) }}%</span>
                 </div>
                 <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                   <div
-                    class="h-full bg-amber-400 transition-all duration-300"
-                    :style="{ width: `${Math.min(100, (egg.incubationProgress / egg.maxIncubationHours) * 100)}%` }"
+                    class="h-full transition-all duration-300"
+                    :class="getEggStatus(egg) === 'ready_to_hatch' ? 'bg-emerald-400' : 'bg-amber-400'"
+                    :style="{ width: `${computeEggProgressPercent(egg)}%` }"
                   ></div>
                 </div>
               </div>
 
-              <!-- Hatch Action -->
-              <button
-                type="button"
-                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95"
-                :class="egg.isReadyToHatch || egg.incubationProgress >= egg.maxIncubationHours ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md animate-bounce' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'"
-                @click="handleHatchEgg(egg.id)"
+              <!-- Hatch confirmation dialog inline -->
+              <div
+                v-if="pendingHatchEggId === egg.id && getEggStatus(egg) === 'ready_to_hatch'"
+                :data-testid="`hatch-confirm-box-${egg.id}`"
+                class="p-2.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 space-y-2"
               >
-                {{ egg.isReadyToHatch || egg.incubationProgress >= egg.maxIncubationHours ? '✨ Chocar Ovo Agora!' : 'Aqueça e Cuide do Ovo' }}
+                <div class="text-[11px] font-bold text-emerald-200">
+                  Confirmar eclosão de {{ getSpeciesDisplayName(egg.targetSpecies) }} (Baby)?
+                </div>
+                <input
+                  v-model="pendingHatchNickname"
+                  type="text"
+                  maxlength="24"
+                  :data-testid="`hatch-nickname-input-${egg.id}`"
+                  class="w-full px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"
+                  placeholder="Apelido opcional do filhote..."
+                />
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    :data-testid="`confirm-hatch-btn-${egg.id}`"
+                    class="flex-1 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black uppercase"
+                    @click="confirmHatchEgg(egg.id)"
+                  >
+                    🐣 Confirmar Nascimento
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+                    @click="cancelHatchPreview"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Egg State Actions -->
+              <button
+                v-else-if="getEggStatus(egg) === 'available'"
+                type="button"
+                :data-testid="`start-incubation-btn-${egg.id}`"
+                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-sky-600 hover:bg-sky-500 text-white shadow-md transition-all active:scale-95"
+                @click="handleStartIncubation(egg.id)"
+              >
+                🔥 Iniciar Incubação
               </button>
+
+              <button
+                v-else-if="getEggStatus(egg) === 'incubating'"
+                type="button"
+                :data-testid="`warm-egg-btn-${egg.id}`"
+                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-amber-600/80 hover:bg-amber-500 text-slate-950 shadow-sm transition-all active:scale-95"
+                @click="handleWarmEgg(egg.id)"
+              >
+                ♨️ Aquecer & Cuidar (+30s)
+              </button>
+
+              <button
+                v-else
+                type="button"
+                :data-testid="`hatch-ready-btn-${egg.id}`"
+                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md animate-bounce transition-all active:scale-95"
+                @click="openHatchPreview(egg.id)"
+              >
+                ✨ Chocar Ovo Agora!
+              </button>
+            </div>
+          </div>
+
+          <!-- Hatched Eggs Registry (prevents duplicate hatching & preserves origin traceability) -->
+          <div v-if="hatchedIncubatorEggs.length > 0" class="pt-2 space-y-2">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Registro de Ovos Eclodidos ({{ hatchedIncubatorEggs.length }})
+            </h3>
+            <div
+              v-for="egg in hatchedIncubatorEggs"
+              :key="egg.id"
+              :data-testid="`hatched-egg-record-${egg.id}`"
+              class="p-3 rounded-xl border flex items-center justify-between text-xs opacity-80"
+              :style="{
+                backgroundColor: theme.cardDarkBackground,
+                borderColor: theme.borderSubtleColor
+              }"
+            >
+              <div>
+                <div class="font-bold text-slate-200 capitalize">
+                  🐣 {{ getSpeciesDisplayName(egg.targetSpecies) }} · Gen {{ egg.genome.generation }}
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono">
+                  Ovo: {{ egg.id }} → Criatura: {{ egg.hatchedCreatureId ?? 'Registrada' }}
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[10px] font-bold uppercase">
+                ✓ Eclodido
+              </span>
             </div>
           </div>
         </div>
@@ -586,7 +768,17 @@ import type {
 } from '@/domains/breeding/types';
 import { BreedingService } from '@/domains/breeding/application/breeding-service';
 import { NearbyConnectionsP2PAdapter } from '@/domains/breeding/infrastructure/nearby-connections-adapter';
-import { hatchBredEggUseCase, recordBreedingResultUseCase } from '@/domains/persistence/application/game-session-service';
+import {
+  listOwnedCreatures,
+  resolveActiveCreatureContext,
+  resolveEggStatus
+} from '@/domains/persistence/domain/persistence-engine';
+import {
+  hatchBredEggAtomicUseCase,
+  recordBreedingResultUseCase,
+  startEggIncubationUseCase,
+  warmIncubatingEggUseCase
+} from '@/domains/persistence/application/game-session-service';
 import BreedingAnimationCanvas from './BreedingAnimationCanvas.vue';
 
 const props = withDefaults(
@@ -594,23 +786,28 @@ const props = withDefaults(
     saveSnapshot: GameSaveSnapshot;
     creatureTheme?: CreatureTheme;
     transportOverride?: P2PTransportPort;
+    initialSubtab?: 'breeding' | 'nursery' | 'lineage';
   }>(),
   {
     creatureTheme: undefined,
-    transportOverride: undefined
+    transportOverride: undefined,
+    initialSubtab: 'breeding'
   }
 );
 
 const emit = defineEmits<{
   (e: 'update-save', snapshot: GameSaveSnapshot): void;
+  (e: 'focus-creature', creatureId: string): void;
 }>();
 
 const fallbackTheme = computed<CreatureTheme>(() => {
-  const activeId = props.saveSnapshot.activeCharacterId;
-  const species = CHARACTER_SPECIES_REGISTRY[activeId];
+  const activeCtx = resolveActiveCreatureContext(props.saveSnapshot);
+  const species = CHARACTER_SPECIES_REGISTRY[activeCtx.speciesId];
   if (species) {
     return generateCreatureTheme(
-      species.visualTraits.primaryColors.base,
+      activeCtx.record.genetics.parents
+        ? activeCtx.record.genetics.phenotype.colors.base
+        : species.visualTraits.primaryColors.base,
       species.visualTraits.primaryColors.highlight
     );
   }
@@ -619,7 +816,15 @@ const fallbackTheme = computed<CreatureTheme>(() => {
 
 const theme = computed<CreatureTheme>(() => props.creatureTheme ?? fallbackTheme.value);
 
-const activeTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
+const activeTab = ref<'breeding' | 'nursery' | 'lineage'>(props.initialSubtab);
+watch(
+  () => props.initialSubtab,
+  (tab) => {
+    if (tab) {
+      activeTab.value = tab;
+    }
+  }
+);
 const roomChannelCode = ref('SALA-777');
 
 const transport: P2PTransportPort =
@@ -672,10 +877,56 @@ const compatibilityResult = computed(() => sessionState.value.compatibility);
 const remoteParticipant = computed(() => sessionState.value.remoteParticipant);
 
 const incubatorEggs = computed(() => props.saveSnapshot.incubator ?? []);
+const activeIncubatorEggs = computed(() =>
+  incubatorEggs.value.filter((egg) => resolveEggStatus(egg) !== 'hatched')
+);
+const hatchedIncubatorEggs = computed(() =>
+  incubatorEggs.value.filter((egg) => resolveEggStatus(egg) === 'hatched')
+);
 const genealogyArchive = computed(() => props.saveSnapshot.genealogyArchive ?? []);
+const nurseryFeedback = ref<string | null>(null);
+const pendingHatchEggId = ref<string | null>(null);
+const pendingHatchNickname = ref<string>('');
+const recentlyHatchedInfo = ref<{
+  readonly creatureId: string;
+  readonly originEggId: string;
+  readonly displayName: string;
+  readonly generation: number;
+  readonly sex: 'male' | 'female';
+  readonly colors: { readonly base: string; readonly crest: string };
+  readonly attributes: {
+    readonly strength: number;
+    readonly defense: number;
+    readonly agility: number;
+    readonly elementalAffinity: number;
+  };
+  readonly parentsSummary: string | null;
+} | null>(null);
+
+function getEggStatus(egg: import('@/domains/breeding/types').BredEggRecord) {
+  return resolveEggStatus(egg);
+}
+
+function getSpeciesDisplayName(speciesId: CharacterId): string {
+  return CHARACTER_SPECIES_REGISTRY[speciesId]?.displayName ?? speciesId;
+}
+
+function computeEggProgressPercent(egg: import('@/domains/breeding/types').BredEggRecord): number {
+  if (getEggStatus(egg) === 'ready_to_hatch') return 100;
+  return Math.min(100, Math.round((egg.incubationProgress / egg.maxIncubationHours) * 100));
+}
+
+function formatEggRemainingTime(egg: import('@/domains/breeding/types').BredEggRecord): string {
+  const remainingHours = Math.max(0, egg.maxIncubationHours - egg.incubationProgress);
+  const totalSeconds = Math.ceil(remainingHours * 3600);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
 
 const availableCreatures = computed(() => {
   const result: Array<{
+    creatureId: string;
     speciesId: CharacterId;
     name: string;
     stage: CharacterLifeStage;
@@ -693,16 +944,31 @@ const availableCreatures = computed(() => {
   };
 
   const showAllSpecies = Boolean(props.saveSnapshot.settings?.developerModeEnabled);
-  const activeId = props.saveSnapshot.activeCharacterId;
+  const seenIds = new Set<string>();
+  const activeCtx = resolveActiveCreatureContext(props.saveSnapshot);
 
-  for (const [id, record] of Object.entries(props.saveSnapshot.characters)) {
-    if (!showAllSpecies && id !== activeId) {
-      continue;
-    }
-    if (record.runtime.healthCondition !== 'deceased' && record.genetics) {
+  for (const owned of listOwnedCreatures(props.saveSnapshot)) {
+    if (owned.record.runtime.healthCondition === 'deceased') continue;
+    seenIds.add(owned.creatureId);
+    const species = CHARACTER_SPECIES_REGISTRY[owned.speciesId];
+    const displayName = owned.record.runtime.customNickname || species?.displayName || owned.speciesId;
+    result.push({
+      creatureId: owned.creatureId,
+      speciesId: owned.speciesId,
+      name: displayName,
+      stage: owned.record.runtime.currentStage,
+      stageLabel: stageLabels[owned.record.runtime.currentStage] ?? owned.record.runtime.currentStage,
+      genetics: owned.record.genetics
+    });
+  }
+
+  if (showAllSpecies) {
+    for (const [id, record] of Object.entries(props.saveSnapshot.characters)) {
+      if (seenIds.has(id) || record.runtime.healthCondition === 'deceased' || !record.genetics) continue;
       const species = CHARACTER_SPECIES_REGISTRY[id as CharacterId];
       const displayName = record.runtime.customNickname || species?.displayName || id;
       result.push({
+        creatureId: id,
         speciesId: id as CharacterId,
         name: displayName,
         stage: record.runtime.currentStage,
@@ -712,40 +978,26 @@ const availableCreatures = computed(() => {
     }
   }
 
-  // Ensure active character is first
   result.sort((a, b) => {
-    if (a.speciesId === activeId) return -1;
-    if (b.speciesId === activeId) return 1;
+    if (a.creatureId === activeCtx.creatureId) return -1;
+    if (b.creatureId === activeCtx.creatureId) return 1;
     return a.name.localeCompare(b.name);
   });
 
   return result;
 });
 
-const selectedLocalSpeciesId = ref<CharacterId | null>(
-  props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null
+const selectedLocalCreatureId = ref<string | null>(
+  resolveActiveCreatureContext(props.saveSnapshot).creatureId ?? availableCreatures.value[0]?.creatureId ?? null
 );
 
 const localCreature = computed(() => {
-  if (!selectedLocalSpeciesId.value) return null;
-  const rec = props.saveSnapshot.characters[selectedLocalSpeciesId.value];
-  if (!rec || !rec.genetics) return null;
-  const species = CHARACTER_SPECIES_REGISTRY[selectedLocalSpeciesId.value];
-  const stageLabels: Record<CharacterLifeStage, string> = {
-    ovo: 'Ovo',
-    baby: 'Bebê',
-    crianca: 'Criança',
-    'pre-adolescente': 'Pré-Adolescente',
-    adolescente: 'Adolescente',
-    adulto: 'Adulto'
-  };
-  return {
-    speciesId: selectedLocalSpeciesId.value,
-    name: rec.runtime.customNickname || species?.displayName || selectedLocalSpeciesId.value,
-    stage: rec.runtime.currentStage,
-    stageLabel: stageLabels[rec.runtime.currentStage] ?? rec.runtime.currentStage,
-    genetics: rec.genetics
-  };
+  if (!selectedLocalCreatureId.value) return null;
+  return (
+    availableCreatures.value.find((c) => c.creatureId === selectedLocalCreatureId.value) ??
+    availableCreatures.value[0] ??
+    null
+  );
 });
 
 function handleSelectLocalCreature(): void {
@@ -759,10 +1011,10 @@ function handleSelectLocalCreature(): void {
 }
 
 watch(
-  () => props.saveSnapshot.activeCharacterId,
+  () => resolveActiveCreatureContext(props.saveSnapshot).creatureId,
   (newId) => {
     if (newId) {
-      selectedLocalSpeciesId.value = newId;
+      selectedLocalCreatureId.value = newId;
       handleSelectLocalCreature();
     }
   },
@@ -772,8 +1024,9 @@ watch(
 watch(
   availableCreatures,
   (list) => {
-    if (!selectedLocalSpeciesId.value && list.length > 0) {
-      selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? list[0]?.speciesId ?? null;
+    if (!selectedLocalCreatureId.value && list.length > 0) {
+      selectedLocalCreatureId.value =
+        resolveActiveCreatureContext(props.saveSnapshot).creatureId ?? list[0]?.creatureId ?? null;
       handleSelectLocalCreature();
     }
   },
@@ -886,8 +1139,9 @@ async function handleCopyLogs(): Promise<void> {
 
 async function handleConnect(): Promise<void> {
   pendingPeerEndpointId.value = null;
-  if (!selectedLocalSpeciesId.value) {
-    selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
+  if (!selectedLocalCreatureId.value) {
+    selectedLocalCreatureId.value =
+      resolveActiveCreatureContext(props.saveSnapshot).creatureId ?? availableCreatures.value[0]?.creatureId ?? null;
   }
   await breedingService.openDiscovery(roomChannelCode.value);
   if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') {
@@ -919,12 +1173,66 @@ function handleSceneChanged(sceneIndex: number): void {
   breedingService.setAnimationScene(sceneIndex);
 }
 
-function handleHatchEgg(eggId: string): void {
-  const egg = incubatorEggs.value.find((e) => e.id === eggId);
-  if (!egg) return;
+function handleStartIncubation(eggId: string): void {
+  const res = startEggIncubationUseCase(props.saveSnapshot, eggId, Date.now());
+  nurseryFeedback.value = res.message;
+  if (res.success) {
+    emit('update-save', res.snapshot);
+  }
+}
 
-  const nextSnapshot = hatchBredEggUseCase(props.saveSnapshot, eggId, Date.now());
-  emit('update-save', nextSnapshot);
+function handleWarmEgg(eggId: string): void {
+  const res = warmIncubatingEggUseCase(props.saveSnapshot, eggId, Date.now());
+  nurseryFeedback.value = res.message;
+  if (res.success) {
+    emit('update-save', res.snapshot);
+  }
+}
+
+function openHatchPreview(eggId: string): void {
+  pendingHatchEggId.value = eggId;
+  pendingHatchNickname.value = '';
+}
+
+function cancelHatchPreview(): void {
+  pendingHatchEggId.value = null;
+  pendingHatchNickname.value = '';
+}
+
+function confirmHatchEgg(eggId: string): void {
+  const res = hatchBredEggAtomicUseCase(props.saveSnapshot, eggId, Date.now(), pendingHatchNickname.value);
+  nurseryFeedback.value = res.message;
+  if (!res.success || !res.hatchedRecord || !res.hatchedCreatureId) {
+    return;
+  }
+
+  pendingHatchEggId.value = null;
+  pendingHatchNickname.value = '';
+  const speciesName = getSpeciesDisplayName(res.hatchedRecord.runtime.characterId);
+  const parents = res.hatchedRecord.genetics.parents;
+  recentlyHatchedInfo.value = {
+    creatureId: res.hatchedCreatureId,
+    originEggId: eggId,
+    displayName: res.hatchedRecord.runtime.customNickname || speciesName,
+    generation: res.hatchedRecord.genetics.generation,
+    sex: res.hatchedRecord.genetics.sex,
+    colors: {
+      base: res.hatchedRecord.genetics.phenotype.colors.base,
+      crest: res.hatchedRecord.genetics.phenotype.colors.crest
+    },
+    attributes: {
+      strength: res.hatchedRecord.attributes.strength,
+      defense: res.hatchedRecord.attributes.defense,
+      agility: res.hatchedRecord.attributes.agility,
+      elementalAffinity: res.hatchedRecord.attributes.elementalAffinity
+    },
+    parentsSummary: parents ? `${parents.sireName} × ${parents.damName}` : null
+  };
+  emit('update-save', res.snapshot);
+}
+
+function handleFocusHatchedCreature(creatureId: string): void {
+  emit('focus-creature', creatureId);
 }
 
 watch(
@@ -944,8 +1252,9 @@ watch(
 );
 
 onMounted(() => {
-  if (!selectedLocalSpeciesId.value) {
-    selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
+  if (!selectedLocalCreatureId.value) {
+    selectedLocalCreatureId.value =
+      resolveActiveCreatureContext(props.saveSnapshot).creatureId ?? availableCreatures.value[0]?.creatureId ?? null;
   }
   handleSelectLocalCreature();
 });

@@ -30,7 +30,21 @@ import { earnCoins, spendCoins } from '@/domains/economy/domain/economy-engine';
 import { updateGameSettings } from '@/domains/settings/domain/settings-engine';
 import type { GameSettingsState } from '@/domains/settings/types';
 import type { BredEggRecord, BreedingHistoryRecord } from '@/domains/breeding/types';
-import type { GameSaveSnapshot, CharacterSaveRecord } from '../types';
+import {
+  advanceBredEggIncubationList,
+  applyActiveCreatureUpdate,
+  isValidBredEggRecord,
+  listOwnedCreatures,
+  normalizeBredEggRecord,
+  resolveActiveCreatureContext,
+  resolveEggStatus
+} from '../domain/persistence-engine';
+import type {
+  CharacterSaveRecord,
+  EggActionResult,
+  GameSaveSnapshot,
+  HatchBredEggResult
+} from '../types';
 
 export function selectActiveCharacterUseCase(
   snapshot: GameSaveSnapshot,
@@ -40,8 +54,32 @@ export function selectActiveCharacterUseCase(
   return {
     ...snapshot,
     activeCharacterId: characterId,
+    activeCreatureInstanceId: characterId,
     lastSavedAtMs: nowMs
   };
+}
+
+export function selectActiveCreatureUseCase(
+  snapshot: GameSaveSnapshot,
+  creatureId: string,
+  nowMs: number
+): GameSaveSnapshot {
+  const fromCollection = snapshot.collection?.[creatureId];
+  if (fromCollection) {
+    return {
+      ...snapshot,
+      activeCharacterId: fromCollection.runtime.characterId,
+      activeCreatureInstanceId: creatureId,
+      lastSavedAtMs: nowMs
+    };
+  }
+
+  if (creatureId in snapshot.characters) {
+    const speciesId = creatureId as CharacterId;
+    return selectActiveCharacterUseCase(snapshot, speciesId, nowMs);
+  }
+
+  return snapshot;
 }
 
 export function updateSettingsUseCase(
@@ -68,9 +106,9 @@ export function feedActiveCharacterUseCase(
   foodId: string,
   nowMs: number
 ): FeedCharacterUseCaseResult {
-  const activeId = snapshot.activeCharacterId;
-  const charRecord = snapshot.characters[activeId];
-  const species = getCharacterSpeciesById(activeId);
+  const activeCtx = resolveActiveCreatureContext(snapshot);
+  const charRecord = activeCtx.record;
+  const species = getCharacterSpeciesById(activeCtx.speciesId);
 
   if (charRecord.runtime.currentStage === 'ovo') {
     return {
@@ -167,24 +205,22 @@ export function feedActiveCharacterUseCase(
     success: true,
     message: finalMessage,
     reaction,
-    snapshot: {
-      ...snapshot,
-      lastSavedAtMs: nowMs,
-      inventory: consumeRes.state,
-      characters: {
-        ...snapshot.characters,
-        [activeId]: {
-          ...charRecord,
-          runtime: nextRuntime,
-          needs: nextNeeds,
-          attributes: nextAttributes,
-          progression: {
-            ...xpResult.state,
-            currentStage: finalStage
-          }
+    snapshot: applyActiveCreatureUpdate(
+      snapshot,
+      activeCtx,
+      {
+        ...charRecord,
+        runtime: nextRuntime,
+        needs: nextNeeds,
+        attributes: nextAttributes,
+        progression: {
+          ...xpResult.state,
+          currentStage: finalStage
         }
-      }
-    }
+      },
+      nowMs,
+      { inventory: consumeRes.state }
+    )
   };
 }
 
@@ -201,9 +237,9 @@ export function performCharacterActivityUseCase(
   activityId: string,
   nowMs: number
 ): PerformActivityUseCaseResult {
-  const activeId = snapshot.activeCharacterId;
-  const charRecord = snapshot.characters[activeId];
-  const species = getCharacterSpeciesById(activeId);
+  const activeCtx = resolveActiveCreatureContext(snapshot);
+  const charRecord = activeCtx.record;
+  const species = getCharacterSpeciesById(activeCtx.speciesId);
 
   if (charRecord.runtime.currentStage === 'ovo') {
     return {
@@ -318,24 +354,22 @@ export function performCharacterActivityUseCase(
     message: summary,
     leveledUp: xpResult.leveledUp,
     evolvedToStage,
-    snapshot: {
-      ...snapshot,
-      lastSavedAtMs: nowMs,
-      wallet: coinRes.wallet,
-      characters: {
-        ...snapshot.characters,
-        [activeId]: {
-          ...charRecord,
-          runtime: nextRuntime,
-          needs: nextNeeds,
-          attributes: nextAttributes,
-          progression: {
-            ...xpResult.state,
-            currentStage: finalStage
-          }
+    snapshot: applyActiveCreatureUpdate(
+      snapshot,
+      activeCtx,
+      {
+        ...charRecord,
+        runtime: nextRuntime,
+        needs: nextNeeds,
+        attributes: nextAttributes,
+        progression: {
+          ...xpResult.state,
+          currentStage: finalStage
         }
-      }
-    }
+      },
+      nowMs,
+      { wallet: coinRes.wallet }
+    )
   };
 }
 
@@ -387,8 +421,8 @@ export function hatchCharacterEggUseCase(
   snapshot: GameSaveSnapshot,
   nowMs: number
 ): GameSaveSnapshot {
-  const activeId = snapshot.activeCharacterId;
-  const charRecord = snapshot.characters[activeId];
+  const activeCtx = resolveActiveCreatureContext(snapshot);
+  const charRecord = activeCtx.record;
   if (charRecord.runtime.currentStage !== 'ovo') {
     return snapshot;
   }
@@ -404,29 +438,27 @@ export function hatchCharacterEggUseCase(
     nowMs
   );
 
-  return {
-    ...snapshot,
-    lastSavedAtMs: nowMs,
-    characters: {
-      ...snapshot.characters,
-      [activeId]: {
-        ...charRecord,
-        runtime: nextRuntime,
-        progression: {
-          ...charRecord.progression,
-          currentStage: 'baby'
-        }
+  return applyActiveCreatureUpdate(
+    snapshot,
+    activeCtx,
+    {
+      ...charRecord,
+      runtime: nextRuntime,
+      progression: {
+        ...charRecord.progression,
+        currentStage: 'baby'
       }
-    }
-  };
+    },
+    nowMs
+  );
 }
 
 export function reviveDeceasedCharacterUseCase(
   snapshot: GameSaveSnapshot,
   nowMs: number
 ): GameSaveSnapshot {
-  const activeId = snapshot.activeCharacterId;
-  const charRecord = snapshot.characters[activeId];
+  const activeCtx = resolveActiveCreatureContext(snapshot);
+  const charRecord = activeCtx.record;
   const restoredNeeds = createInitialNeeds();
   const isReincarnation = charRecord.runtime.ageHours >= MAX_NATURAL_LIFESPAN_HOURS;
   const targetStage = isReincarnation ? 'ovo' : charRecord.runtime.currentStage;
@@ -450,22 +482,20 @@ export function reviveDeceasedCharacterUseCase(
     nowMs
   );
 
-  return {
-    ...snapshot,
-    lastSavedAtMs: nowMs,
-    characters: {
-      ...snapshot.characters,
-      [activeId]: {
-        ...charRecord,
-        needs: restoredNeeds,
-        progression: {
-          ...charRecord.progression,
-          currentStage: targetStage
-        },
-        runtime: nextRuntime
-      }
-    }
-  };
+  return applyActiveCreatureUpdate(
+    snapshot,
+    activeCtx,
+    {
+      ...charRecord,
+      needs: restoredNeeds,
+      progression: {
+        ...charRecord.progression,
+        currentStage: targetStage
+      },
+      runtime: nextRuntime
+    },
+    nowMs
+  );
 }
 
 export function recordBreedingResultUseCase(
@@ -474,9 +504,13 @@ export function recordBreedingResultUseCase(
   bredEggIfWon: BredEggRecord | null,
   nowMs: number
 ): GameSaveSnapshot {
-  const nextIncubator = bredEggIfWon
-    ? [...snapshot.incubator, bredEggIfWon]
-    : snapshot.incubator;
+  const ownerId = snapshot.playerId ?? 'local-player';
+  let nextIncubator = snapshot.incubator;
+
+  if (bredEggIfWon && !snapshot.incubator.some((e) => e.id === bredEggIfWon.id)) {
+    const normalizedEgg = normalizeBredEggRecord(bredEggIfWon, ownerId, snapshot.collection);
+    nextIncubator = [...snapshot.incubator, normalizedEgg];
+  }
 
   return {
     ...snapshot,
@@ -486,22 +520,95 @@ export function recordBreedingResultUseCase(
   };
 }
 
+function findOwnedValidEgg(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  actorPlayerId?: string
+): { readonly ok: true; readonly egg: BredEggRecord } | { readonly ok: false; readonly message: string } {
+  const egg = snapshot.incubator.find((e) => e.id === eggId);
+  if (!egg) {
+    return { ok: false, message: 'Ovo não encontrado no inventário/berçário.' };
+  }
+
+  const actor = actorPlayerId ?? snapshot.playerId;
+  if (egg.ownerId && actor && egg.ownerId !== actor) {
+    return { ok: false, message: 'Este ovo pertence a outro jogador e não pode ser utilizado.' };
+  }
+
+  if (!isValidBredEggRecord(egg)) {
+    return { ok: false, message: 'Dados do ovo inválidos para incubação ou eclosão.' };
+  }
+
+  return { ok: true, egg };
+}
+
+export function startEggIncubationUseCase(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  nowMs: number,
+  actorPlayerId?: string
+): EggActionResult {
+  const lookup = findOwnedValidEgg(snapshot, eggId, actorPlayerId);
+  if (!lookup.ok) {
+    return { success: false, message: lookup.message, snapshot };
+  }
+
+  const status = resolveEggStatus(lookup.egg);
+  if (status === 'incubating') {
+    return {
+      success: false,
+      message: 'Este ovo já está em processo de incubação.',
+      snapshot
+    };
+  }
+  if (status === 'ready_to_hatch') {
+    return {
+      success: false,
+      message: 'Este ovo já concluiu a incubação e está pronto para nascer.',
+      snapshot
+    };
+  }
+  if (status === 'hatched') {
+    return {
+      success: false,
+      message: 'Este ovo já eclodiu e não pode ser incubado novamente.',
+      snapshot
+    };
+  }
+
+  const updatedIncubator = snapshot.incubator.map((egg) =>
+    egg.id === eggId
+      ? {
+          ...egg,
+          status: 'incubating' as const,
+          incubationStartedAtMs: nowMs,
+          isWarm: true,
+          isReadyToHatch: false
+        }
+      : egg
+  );
+
+  return {
+    success: true,
+    message: `Incubação de ${getCharacterSpeciesById(lookup.egg.targetSpecies).displayName} iniciada!`,
+    snapshot: {
+      ...snapshot,
+      lastSavedAtMs: nowMs,
+      incubator: updatedIncubator
+    }
+  };
+}
+
 export function advanceIncubationUseCase(
   snapshot: GameSaveSnapshot,
   eggId: string,
   elapsedMinutes: number,
   nowMs: number
 ): GameSaveSnapshot {
-  const updatedIncubator = snapshot.incubator.map((egg) => {
-    if (egg.id !== eggId) return egg;
-    const progressInc = elapsedMinutes / 60;
-    const nextProgress = Math.min(egg.maxIncubationHours, egg.incubationProgress + progressInc);
-    return {
-      ...egg,
-      incubationProgress: nextProgress,
-      isReadyToHatch: nextProgress >= egg.maxIncubationHours
-    };
-  });
+  const updatedIncubator = advanceBredEggIncubationList(snapshot.incubator, eggId, elapsedMinutes);
+  if (updatedIncubator === snapshot.incubator) {
+    return snapshot;
+  }
 
   return {
     ...snapshot,
@@ -510,26 +617,141 @@ export function advanceIncubationUseCase(
   };
 }
 
-export function hatchBredEggUseCase(
+export function advanceAllIncubatingEggsUseCase(
   snapshot: GameSaveSnapshot,
-  eggId: string,
+  elapsedMinutes: number,
   nowMs: number
 ): GameSaveSnapshot {
-  const egg = snapshot.incubator.find((e) => e.id === eggId);
-  if (!egg) {
+  const updatedIncubator = advanceBredEggIncubationList(snapshot.incubator, null, elapsedMinutes);
+  if (updatedIncubator === snapshot.incubator) {
     return snapshot;
   }
 
-  const targetSpecies = egg.targetSpecies;
-  const initialRuntime = createInitialCharacterRuntime(targetSpecies, nowMs, 'baby');
-  const loggedRuntime = appendCharacterCareLog(
-    initialRuntime,
-    'evolve',
-    `Ovo de reprodução (${egg.genome.generation}ª Geração) eclodiu com sucesso!`,
-    nowMs
+  return {
+    ...snapshot,
+    lastSavedAtMs: nowMs,
+    incubator: updatedIncubator
+  };
+}
+
+export function warmIncubatingEggUseCase(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  nowMs: number,
+  actorPlayerId?: string
+): EggActionResult {
+  const lookup = findOwnedValidEgg(snapshot, eggId, actorPlayerId);
+  if (!lookup.ok) {
+    return { success: false, message: lookup.message, snapshot };
+  }
+
+  const status = resolveEggStatus(lookup.egg);
+  if (status === 'available') {
+    return startEggIncubationUseCase(snapshot, eggId, nowMs, actorPlayerId);
+  }
+  if (status === 'ready_to_hatch') {
+    return {
+      success: false,
+      message: 'A incubação já foi concluída! Ecloda o ovo para conhecer o filhote.',
+      snapshot
+    };
+  }
+  if (status === 'hatched') {
+    return {
+      success: false,
+      message: 'Este ovo já eclodiu anteriormente.',
+      snapshot
+    };
+  }
+
+  const warmedIncubator = advanceBredEggIncubationList(
+    snapshot.incubator.map((egg) => (egg.id === eggId ? { ...egg, isWarm: true } : egg)),
+    eggId,
+    0.5
   );
+  const updatedEgg = warmedIncubator.find((e) => e.id === eggId)!;
+  const ready = resolveEggStatus(updatedEgg) === 'ready_to_hatch';
+
+  return {
+    success: true,
+    message: ready
+      ? '✨ Incubação concluída! O ovo está pronto para nascer!'
+      : '♨️ Ovo aquecido! O embrião está se desenvolvendo bem.',
+    snapshot: {
+      ...snapshot,
+      lastSavedAtMs: nowMs,
+      incubator: warmedIncubator
+    }
+  };
+}
+
+function buildUniqueCreatureId(
+  egg: BredEggRecord,
+  collection: Readonly<Record<string, CharacterSaveRecord>> | undefined
+): string {
+  const baseId = `creature-${egg.id}`;
+  if (!collection || !(baseId in collection)) {
+    return baseId;
+  }
+  let suffix = 2;
+  while (`${baseId}-${suffix}` in collection) {
+    suffix += 1;
+  }
+  return `${baseId}-${suffix}`;
+}
+
+export function hatchBredEggAtomicUseCase(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  nowMs: number,
+  customNickname?: string,
+  actorPlayerId?: string
+): HatchBredEggResult {
+  const lookup = findOwnedValidEgg(snapshot, eggId, actorPlayerId);
+  if (!lookup.ok) {
+    return { success: false, message: lookup.message, snapshot };
+  }
+
+  const egg = lookup.egg;
+  const status = resolveEggStatus(egg);
+  const collection = snapshot.collection ?? {};
+  const existingFromEgg = Object.values(collection).find((c) => c.originEggId === egg.id);
+
+  if (status === 'hatched' || Boolean(egg.hatchedCreatureId) || existingFromEgg) {
+    return {
+      success: false,
+      message: 'Este ovo já eclodiu e não pode gerar outro dinossauro.',
+      snapshot
+    };
+  }
+
+  if (status !== 'ready_to_hatch') {
+    return {
+      success: false,
+      message: 'Este ovo ainda não terminou a incubação para nascer.',
+      snapshot
+    };
+  }
+
+  const targetSpecies = egg.targetSpecies;
+  const speciesDef = getCharacterSpeciesById(targetSpecies);
+  const creatureId = buildUniqueCreatureId(egg, collection);
+  const trimmedNick = customNickname?.trim();
+
+  const initialRuntime = createInitialCharacterRuntime(targetSpecies, nowMs, 'baby');
+  const birthSummary = egg.genome.parents
+    ? `Nasceu do ovo ${egg.id} (${egg.genome.generation}ª Geração: ${egg.genome.parents.sireName} × ${egg.genome.parents.damName}).`
+    : `Nasceu do ovo ${egg.id} (${egg.genome.generation}ª Geração)!`;
+
+  const runtimeWithNick = trimmedNick
+    ? { ...initialRuntime, customNickname: trimmedNick }
+    : initialRuntime;
+
+  const loggedRuntime = appendCharacterCareLog(runtimeWithNick, 'evolve', birthSummary, nowMs);
 
   const newRecord: CharacterSaveRecord = {
+    id: creatureId,
+    originEggId: egg.id,
     runtime: loggedRuntime,
     needs: createInitialNeeds(),
     attributes: { ...egg.genome.phenotype.attributes },
@@ -537,16 +759,45 @@ export function hatchBredEggUseCase(
     genetics: egg.genome
   };
 
-  const remainingIncubator = snapshot.incubator.filter((e) => e.id !== eggId);
+  const updatedIncubator = snapshot.incubator.map((item) =>
+    item.id === eggId
+      ? {
+          ...item,
+          status: 'hatched' as const,
+          isReadyToHatch: false,
+          hatchedAtMs: nowMs,
+          hatchedCreatureId: creatureId
+        }
+      : item
+  );
 
-  return {
+  const nextSnapshot: GameSaveSnapshot = {
     ...snapshot,
     activeCharacterId: targetSpecies,
+    activeCreatureInstanceId: creatureId,
     lastSavedAtMs: nowMs,
-    characters: {
-      ...snapshot.characters,
-      [targetSpecies]: newRecord
+    collection: {
+      ...collection,
+      [creatureId]: newRecord
     },
-    incubator: remainingIncubator
+    incubator: updatedIncubator
+  };
+
+  return {
+    success: true,
+    message: `🐣 ${trimmedNick || speciesDef.displayName} (Baby, Gen ${egg.genome.generation}) nasceu e entrou para sua coleção!`,
+    hatchedCreatureId: creatureId,
+    hatchedRecord: newRecord,
+    snapshot: nextSnapshot
   };
 }
+
+export function hatchBredEggUseCase(
+  snapshot: GameSaveSnapshot,
+  eggId: string,
+  nowMs: number
+): GameSaveSnapshot {
+  return hatchBredEggAtomicUseCase(snapshot, eggId, nowMs).snapshot;
+}
+
+export { listOwnedCreatures };

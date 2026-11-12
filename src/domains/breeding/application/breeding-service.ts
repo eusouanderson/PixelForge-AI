@@ -23,6 +23,8 @@ import type {
   RevealPayload
 } from '../types';
 
+export const BRED_EGG_INCUBATION_HOURS = 0.05; // 3 real minutes of incubation
+
 export class BreedingService {
   private state: BreedingSessionState;
   private listeners: Array<(state: BreedingSessionState) => void> = [];
@@ -432,10 +434,12 @@ export class BreedingService {
     if (resolution.isLocalWinner) {
       producedEgg = {
         id: `egg-${childGenome.genomeId}`,
+        ownerId: this.state.localPeerId,
         genome: childGenome,
         targetSpecies: childGenome.species,
+        status: 'available',
         incubationProgress: 0,
-        maxIncubationHours: 24,
+        maxIncubationHours: BRED_EGG_INCUBATION_HOURS,
         isWarm: true,
         createdAtMs: Date.now(),
         isReadyToHatch: false
