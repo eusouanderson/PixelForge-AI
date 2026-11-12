@@ -95,11 +95,49 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
 
     // Switch back to Feed tab & feed/buy now that baby hatched
     await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
+    expect(wrapper.find('[data-testid="food-pixel-art-thermal-spring-water"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="food-pixel-art-volcanic-roast-meat"]').exists()).toBe(true);
+
     await wrapper.get('[data-testid="feed-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('[data-testid="feedback-banner"]').text()).toContain(
       'Água Cristalina da Nascente'
     );
+
+    // Exact food eating animation overlay appears in the viewport!
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(true);
+    expect(wrapper.get('[data-testid="feeding-food-name"]').text()).toBe('Água Cristalina da Nascente');
+    expect(wrapper.find('[data-testid="active-feeding-art-thermal-spring-water"]').exists()).toBe(true);
+
+    // Bite 1 at ~700ms
+    await vi.advanceTimersByTimeAsync(700);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feeding-bite-status"]').text()).toContain('Mordida!');
+    expect(wrapper.find('[data-testid="feeding-bite-crumbs"]').exists()).toBe(true);
+
+    // Bite 2 at ~1400ms
+    await vi.advanceTimersByTimeAsync(700);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feeding-bite-status"]').text()).toContain('Mastigando...');
+
+    // Finished / swallowed at ~2000ms
+    await vi.advanceTimersByTimeAsync(600);
+    await flushPromises();
+    expect(wrapper.get('[data-testid="feeding-bite-status"]').text()).toContain('Delícia!');
+
+    // Reset overlay after 2400ms duration
+    await vi.advanceTimersByTimeAsync(500);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(false);
+
+    // Feed unneeded medicine to healthy baby to trigger rejection animation
+    await wrapper.get('[data-testid="feed-btn-nutri-vital-serum"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="feeding-rejection-mark"]').exists()).toBe(true);
+    await vi.advanceTimersByTimeAsync(2500);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="feeding-animation-overlay"]').exists()).toBe(false);
 
     await wrapper.get('[data-testid="buy-food-btn-thermal-spring-water"]').trigger('click');
     await flushPromises();
@@ -277,6 +315,10 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     const wrapper1 = mount(VirtualCreaturesGame);
     await flushPromises();
 
+    // Since active companion is already an Adult, initial banner greets player caring for adult Ignisauro (never the egg message!)
+    expect(wrapper1.get('[data-testid="feedback-banner"]').text()).toContain('Cuidando de Ignisauro (adulto · Nv. 16)!');
+    expect(wrapper1.get('[data-testid="feedback-banner"]').text()).not.toContain('ovo ancestral misterioso');
+
     expect(wrapper1.find('[data-testid="incubator-status-banner"]').exists()).toBe(true);
 
     // Quick HUD Collection Switcher opens before hatching too: shows ONLY 1 starter dinosaur + Nursery egg shortcut
@@ -351,6 +393,8 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await flushPromises();
     expect(wrapper2.get('[data-testid="active-character-name"]').text()).toBe('Ignis Filho');
     expect(wrapper2.get('[data-testid="active-stage-badge"]').text()).toBe('baby');
+    expect(wrapper2.get('[data-testid="feedback-banner"]').text()).toContain('Cuidando de Ignis Filho (baby · Nv. 1)!');
+    expect(wrapper2.get('[data-testid="feedback-banner"]').text()).not.toContain('ovo ancestral misterioso');
 
     await wrapper2.get('[data-testid="nav-tab-genetics"]').trigger('click');
     await wrapper2.get('[data-testid="subtab-nursery"]').trigger('click');
@@ -359,5 +403,34 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     expect(wrapper2.find('[data-testid="confirm-hatch-btn-egg-e2e-1"]').exists()).toBe(false);
 
     wrapper2.unmount();
+
+    // Mount 3: deceased active creature greets with revive message and revives on click
+    const deceasedSnap = {
+      ...seededSnap,
+      characters: {
+        ...seededSnap.characters,
+        ignisauro: {
+          ...seededSnap.characters.ignisauro,
+          needs: {
+            ...seededSnap.characters.ignisauro.needs,
+            health: 0
+          },
+          runtime: {
+            ...seededSnap.characters.ignisauro.runtime,
+            currentStage: 'adulto' as const,
+            healthCondition: 'deceased' as const,
+            causeOfDeath: 'neglect_or_disease' as const
+          }
+        }
+      }
+    };
+    storageMap.set('pixelforge_virtual_creatures_save_v1', JSON.stringify(deceasedSnap));
+    const wrapper3 = mount(VirtualCreaturesGame);
+    await flushPromises();
+    expect(wrapper3.get('[data-testid="feedback-banner"]').text()).toContain('descansou. Use o botão Reviver');
+    await wrapper3.get('[data-testid="revive-creature-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper3.get('[data-testid="feedback-banner"]').text()).toContain('renasceu com saúde total');
+    wrapper3.unmount();
   });
 });
