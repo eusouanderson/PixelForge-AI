@@ -1400,7 +1400,6 @@ onUnmounted(() => {
             <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-400">
               Dieta Individual de {{ activeSpecies.displayName }}
             </h2>
-            
           </div>
 
           <div

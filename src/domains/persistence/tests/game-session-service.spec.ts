@@ -857,8 +857,12 @@ describe('GameSessionService application use cases', () => {
     expect(rec4.draws).toBe(1);
     expect(rec4.currentStreak).toBe(0);
 
-    // Fallback when active character is somehow missing
-    const missingSnap = { ...start, activeCharacterId: 'unknown' as unknown as import('@/domains/characters/types').CharacterId };
+    // Fallback when active character is somehow missing and battleArchive is undefined
+    const missingSnap = {
+      ...start,
+      battleArchive: undefined,
+      activeCharacterId: 'unknown' as unknown as import('@/domains/characters/types').CharacterId
+    };
     const fallbackSnap = recordBattleResultUseCase(missingSnap, historyVictory, nextWallet, 6000);
     expect(fallbackSnap.battleArchive?.length).toBe(1);
   });

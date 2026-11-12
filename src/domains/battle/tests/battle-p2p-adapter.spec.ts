@@ -93,6 +93,9 @@ describe('Battle P2P Adapter', () => {
     expect(sent.type).toBe('HANDSHAKE');
     expect(sent.payload).toHaveProperty('battleEnvelope');
     expect((sent.payload as { battleEnvelope: BattleP2PMessage }).battleEnvelope.type).toBe('BATTLE_INVITE');
+
+    adapter.disconnect();
+    expect(adapter.getConnectionStatus()).toBe('idle');
   });
 
   it('unwraps incoming battle envelopes from underlying transport and delivers to handlers', () => {
@@ -127,8 +130,57 @@ describe('Battle P2P Adapter', () => {
       timestampMs: Date.now()
     });
 
+    // Simulate incoming messages without battleEnvelope to test guard branches
+    underlying.messageHandler?.({
+      type: 'HANDSHAKE',
+      senderId: 'remote-p2',
+      sessionId: 's1',
+      payload: null,
+      timestampMs: Date.now()
+    });
+    underlying.messageHandler?.({
+      type: 'HANDSHAKE',
+      senderId: 'remote-p2',
+      sessionId: 's1',
+      payload: 'string-payload',
+      timestampMs: Date.now()
+    });
+    underlying.messageHandler?.({
+      type: 'HANDSHAKE',
+      senderId: 'remote-p2',
+      sessionId: 's1',
+      payload: { otherField: true },
+      timestampMs: Date.now()
+    });
+
     expect(received.length).toBe(1);
     expect(received[0].type).toBe('BATTLE_INVITE_ACCEPT');
+  });
+
+  it('binds minimal transport without optional status and peers callbacks', () => {
+    const minimal: P2PTransportPort = {
+      localPeerId: 'p-min',
+      connect: async () => {},
+      disconnect: () => {},
+      send: () => {},
+      onMessage: () => () => {},
+      onError: () => () => {}
+    };
+    const adapter = new BattleP2PAdapter({ localPeerId: 'p-min', transportOverride: minimal });
+    expect(adapter.localPeerId).toBe('p-min');
+
+    // Send before connect with no channel
+    const standaloneAdapter = new BattleP2PAdapter();
+    standaloneAdapter.sendBattleMessage({
+      protocolVersion: '1.0.0',
+      messageId: 'm-unconnected',
+      type: 'BATTLE_CANCEL',
+      senderId: 'p1',
+      sessionId: 's1',
+      sequence: 1,
+      payload: {},
+      timestampMs: Date.now()
+    });
   });
 
   it('propagates errors and status updates from underlying transport', () => {
@@ -146,6 +198,12 @@ describe('Battle P2P Adapter', () => {
     expect(receivedErr).toBeDefined();
     expect((receivedErr as unknown as Error)?.message).toBe('Falha de sinal Bluetooth');
     expect(adapter.getConnectionStatus()).toBe('failed');
+
+    underlying.statusHandler?.('connected');
+    expect(adapter.getConnectionStatus()).toBe('connected');
+
+    const unbindErr = adapter.onError(() => {});
+    unbindErr();
   });
 
   it('propagates discovered peers mapped to battle opponent DTO', () => {
@@ -155,7 +213,7 @@ describe('Battle P2P Adapter', () => {
     });
 
     let peersCount = 0;
-    adapter.onPeersChange((peers) => {
+    const unbindPeers = adapter.onPeersChange((peers) => {
       peersCount = peers.length;
     });
 
@@ -173,6 +231,8 @@ describe('Battle P2P Adapter', () => {
     expect(peersCount).toBe(1);
     expect(adapter.getDiscoveredPeers().length).toBe(1);
     expect(adapter.getDiscoveredPeers()[0].playerName).toBe('Adversário');
+
+    unbindPeers();
   });
 
   it('delegates connectToPeer, acceptConnection, and rejectConnection to underlying transport', async () => {
@@ -206,7 +266,7 @@ describe('Battle P2P Adapter', () => {
     expect(statusUpdated).toBe('connected');
 
     const received: BattleP2PMessage[] = [];
-    adapter2.onBattleMessage((msg) => {
+    const unbindMsg = adapter2.onBattleMessage((msg) => {
       received.push(msg);
     });
 
@@ -221,7 +281,31 @@ describe('Battle P2P Adapter', () => {
       timestampMs: Date.now()
     });
 
+    // Reconnect on already connected adapter to test channel closing
+    await adapter1.connect('ROOM-FALLBACK-RECONNECT');
+
+    // Deliver broadcast message directly to handler (including self and null data branches)
+    const bc2 = (adapter2 as unknown as { channel?: { onmessage?: (e: unknown) => void } }).channel;
+    if (bc2?.onmessage) {
+      bc2.onmessage({ data: { senderId: 'p1', type: 'BATTLE_HELLO' } });
+      bc2.onmessage({ data: { senderId: adapter2.localPeerId, type: 'BATTLE_HELLO' } });
+      bc2.onmessage({ data: null });
+    }
+
+    // Call connection delegation methods without underlying transport
+    await adapter1.connectToPeer('ep-fallback');
+    await adapter1.acceptConnection('ep-fallback');
+    await adapter1.rejectConnection('ep-fallback');
+
+    // Trigger onmessageerror fallback branch
+    const bc = (adapter1 as unknown as { channel?: { onmessageerror?: () => void } }).channel;
+    if (bc?.onmessageerror) {
+      bc.onmessageerror();
+      expect(adapter1.getConnectionStatus()).toBe('failed');
+    }
+
     // Unsubscribe handlers
+    unbindMsg();
     unbindStatus();
     adapter1.disconnect();
     adapter2.disconnect();

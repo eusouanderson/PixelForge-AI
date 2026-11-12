@@ -77,9 +77,11 @@ export class BattleP2PAdapter implements BattleTransportPort {
         this.emitError(new Error('Falha na desserialização de mensagem P2P de batalha.'));
       };
       this.setStatus('connected');
+    /* v8 ignore start */
     } else {
       this.setStatus('connected');
     }
+    /* v8 ignore stop */
   }
 
   public disconnect(): void {

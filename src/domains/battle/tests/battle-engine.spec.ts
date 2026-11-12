@@ -54,11 +54,21 @@ describe('Battle Engine Domain', () => {
     const fFull = initializeFighterRuntime(fullHealthAdult, 'f-full');
     const fPartial = initializeFighterRuntime(partialHealthAdult, 'f-partial');
     const fBaby = initializeFighterRuntime(baby, 'f-baby');
+    const fEgg = initializeFighterRuntime(createMockParticipant({ stage: 'ovo' }), 'f-egg');
 
     expect(fFull.maxHp).toBeGreaterThan(fBaby.maxHp);
+    expect(fEgg.maxHp).toBeGreaterThan(0);
     expect(fFull.maxStamina).toBeGreaterThan(fBaby.maxStamina);
     expect(fFull.currentHp).toBe(fFull.maxHp);
     expect(fPartial.currentHp).toBe(Math.round(fPartial.maxHp * 0.9));
+
+    // Also simulate battle with custom stage to cover stage maturity fallback
+    const eggBattle = simulateBattle(
+      createMockParticipant({ stage: 'ovo', attributes: { strength: 10, defense: 10, agility: 10, intelligence: 10, endurance: 10, elementalAffinity: 10 } }),
+      createMockParticipant({ stage: 'adulto' }),
+      'egg-seed'
+    );
+    expect(eggBattle.events.length).toBeGreaterThan(0);
   });
 
   it('runs deterministic simulation: identical seed yields identical battle events and winner', () => {
@@ -125,42 +135,49 @@ describe('Battle Engine Domain', () => {
   });
 
   it('handles draw when ticks expire with identical remaining HP ratio', () => {
-    // Zero attack damage custom simulation
+    // Huge HP pools ensure ticks reach MAX_SIMULATION_TICKS without knockout
     const p1 = createMockParticipant({
       peerId: 'p1',
       stage: 'adulto',
-      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 99, elementalAffinity: 1 }
+      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 9999, elementalAffinity: 1 }
     });
     const p2 = createMockParticipant({
       peerId: 'p2',
       stage: 'adulto',
-      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 99, elementalAffinity: 1 }
+      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 9999, elementalAffinity: 1 }
     });
 
     const result = simulateBattle(p1, p2, 'draw-seed-test-123');
-    expect(result.events.length).toBeGreaterThan(5);
+    expect(result.durationTicks).toBe(121);
+    expect(result.isDraw).toBe(true);
+    expect(result.winnerPeerId).toBeNull();
   });
 
   it('handles timeout resolution when HP ratios differ at tick limit', () => {
-    // Both high defense, low power, but f1 starts with more HP
+    // Both high endurance so battle reaches 120 ticks, but p1 has 100% health, p2 has 50% health
     const p1 = createMockParticipant({
       peerId: 'p1',
       stage: 'adulto',
-      attributes: { strength: 1, defense: 80, agility: 10, intelligence: 10, endurance: 80, elementalAffinity: 1 }
+      needs: { hunger: 100, thirst: 100, energy: 100, happiness: 100, hygiene: 100, health: 100 },
+      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 9999, elementalAffinity: 1 }
     });
     const p2 = createMockParticipant({
       peerId: 'p2',
       stage: 'adulto',
-      needs: { hunger: 50, thirst: 50, energy: 50, happiness: 50, hygiene: 50, health: 50 }, // lower starting HP ratio
-      attributes: { strength: 1, defense: 80, agility: 10, intelligence: 10, endurance: 80, elementalAffinity: 1 }
+      needs: { hunger: 50, thirst: 50, energy: 50, happiness: 50, hygiene: 50, health: 50 }, // starts with 50% HP ratio
+      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 9999, elementalAffinity: 1 }
     });
 
     const result1 = simulateBattle(p1, p2, 'timeout-p1-wins-seed');
-    expect(result1.events.some((e) => e.type === 'match_end')).toBe(true);
+    expect(result1.durationTicks).toBe(121);
+    expect(result1.isDraw).toBe(false);
+    expect(result1.winnerPeerId).toBe('p1');
 
     // Opposite: p2 starts with more HP ratio
     const result2 = simulateBattle(p2, p1, 'timeout-p2-wins-seed');
-    expect(result2.events.some((e) => e.type === 'match_end')).toBe(true);
+    expect(result2.durationTicks).toBe(121);
+    expect(result2.isDraw).toBe(false);
+    expect(result2.winnerPeerId).toBe('p1'); // p1 has 100% health in this call as fighter 2
   });
 
   it('triggers rest action when stamina is depleted to zero', () => {

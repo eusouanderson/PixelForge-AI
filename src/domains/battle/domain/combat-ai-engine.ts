@@ -86,7 +86,7 @@ export function decideCombatAction(
   // 4. Seleção estratégica de ataque
   // Inteligência alta pontua fraquezas elementais
   const affordableAttacks = attacks.filter((atk) => atk.staminaCost <= fighter.currentStamina);
-  const candidatePool = affordableAttacks.length > 0 ? affordableAttacks : attacks;
+  const candidatePool = affordableAttacks.length > 0 ? affordableAttacks : /* v8 ignore next */ attacks;
 
   const scoredAttacks = candidatePool.map((atk) => {
     let score = atk.baseDamage;

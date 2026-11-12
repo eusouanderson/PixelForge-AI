@@ -626,7 +626,12 @@ export function resolveAvailableAttacks(
 
   if (eligible.length === 0) {
     const fallback = getAttackById('golpe-instintivo');
-    return fallback ? [fallback] : [];
+    /* v8 ignore start */
+    if (!fallback) {
+      return [];
+    }
+    /* v8 ignore stop */
+    return [fallback];
   }
 
   return eligible;

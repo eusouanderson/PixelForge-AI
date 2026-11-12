@@ -127,8 +127,9 @@ describe('Battle Service Application', () => {
     expect(simA.events.length).toBe(simB.events.length);
     expect(simA.fighter1FinalHp).toBe(simB.fighter1FinalHp);
 
-    // 3. Claim rewards
+    // 3. Claim rewards for winner and loser
     const walletA: WalletState = { amberCoins: 200, totalEarned: 200, totalSpent: 60 };
+    const walletB: WalletState = { amberCoins: 200, totalEarned: 200, totalSpent: 60 };
     const settled = new Set<string>();
 
     const claimResA = serviceA.claimReward(walletA, settled);
@@ -136,6 +137,12 @@ describe('Battle Service Application', () => {
     expect(claimResA.history).toBeDefined();
     expect(serviceA.getState().phase).toBe('reward_claimed');
 
+    const claimResB = serviceB.claimReward(walletB, settled);
+    expect(claimResB.success).toBe(true);
+    expect(claimResB.history?.result).toBe('defeat');
+
+    // Double dispose to cover null unbind branch
+    serviceA.dispose();
     serviceA.dispose();
     serviceB.dispose();
   });
@@ -149,7 +156,7 @@ describe('Battle Service Application', () => {
     const serviceB = new BattleService(tB);
 
     const pA = createParticipant('peer-A', 'ignisauro');
-    serviceA.sendBattleInvite(pA, 50, 'peer-B');
+    serviceA.sendBattleInvite(pA, 50);
     expect(serviceB.getState().phase).toBe('selecting_creature');
 
     serviceB.rejectBattleInvite();
@@ -205,5 +212,45 @@ describe('Battle Service Application', () => {
         timestampMs: Date.now()
       });
     }
+
+    // Guard on checkAndExecuteSimulation when missing remote participant
+    const pSolo = createParticipant('peer-solo', 'ignisauro');
+    service.acceptBattleInvite(pSolo);
+    expect(service.getState().phase).toBe('syncing_seed');
+    expect(service.getState().simulationResult).toBeNull();
+
+    // Fallthrough on unknown message type
+    for (const h of t.messageHandlers) {
+      h({
+        protocolVersion: '1.0.0',
+        messageId: 'm-unknown',
+        type: 'UNKNOWN' as unknown as BattleP2PMessage['type'],
+        senderId: 'other',
+        sessionId: 's',
+        sequence: 1,
+        payload: {},
+        timestampMs: Date.now()
+      });
+    }
+
+    // Draw scenario for claimReward
+    const tDrawA = new MockBattleTransport('peer-d1');
+    const tDrawB = new MockBattleTransport('peer-d2');
+    tDrawA.link(tDrawB);
+    const serviceDrawA = new BattleService(tDrawA);
+    const serviceDrawB = new BattleService(tDrawB);
+    serviceDrawA.sendBattleInvite({
+      ...pSolo,
+      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 9999, elementalAffinity: 1 }
+    }, 50, 'peer-d2');
+    serviceDrawB.acceptBattleInvite({
+      ...pSolo,
+      peerId: 'peer-d2',
+      attributes: { strength: 1, defense: 99, agility: 10, intelligence: 10, endurance: 9999, elementalAffinity: 1 }
+    });
+    expect(serviceDrawA.getState().simulationResult?.isDraw).toBe(true);
+    const drawClaim = serviceDrawA.claimReward(wallet, new Set());
+    expect(drawClaim.history?.result).toBe('draw');
+    expect(drawClaim.history?.combatXpGained).toBe(40);
   });
 });

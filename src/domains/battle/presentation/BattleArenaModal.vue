@@ -173,16 +173,16 @@
                 :style="
                   selectedWager === amt
                     ? {
-                        backgroundColor: theme.primaryColor,
-                        color: '#ffffff',
-                        borderColor: theme.highlightColor,
-                        boxShadow: theme.accentGlow
-                      }
+                      backgroundColor: theme.primaryColor,
+                      color: '#ffffff',
+                      borderColor: theme.highlightColor,
+                      boxShadow: theme.accentGlow
+                    }
                     : {
-                        backgroundColor: theme.cardBackground,
-                        color: '#cbd5e1',
-                        borderColor: theme.borderSubtleColor
-                      }
+                      backgroundColor: theme.cardBackground,
+                      color: '#cbd5e1',
+                      borderColor: theme.borderSubtleColor
+                    }
                 "
                 :disabled="wallet.amberCoins < amt"
                 :data-testid="`wager-btn-${amt}`"
@@ -416,7 +416,10 @@ const props = withDefaults(
     readonly embedded?: boolean;
   }>(),
   {
-    embedded: false
+    embedded: false,
+    transportOverride: undefined,
+    battleArchive: () => [],
+    theme: undefined
   }
 );
 

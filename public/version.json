@@ -13,14 +13,14 @@
     "available": true,
     "version": "1.11.0",
     "bundleUrl": "https://eusouanderson.github.io/PixelForge-AI/web-bundle.zip",
-    "checksum": "5831840b4386a8db482b767525df4bf035d5bd516ef2f076f939f0544ddf99ea",
-    "sizeBytes": 2346780
+    "checksum": "bcbbafb868620dd79a09ba2c2805ed417205e9ba6d678e7940cc3f973ac0744b",
+    "sizeBytes": 2465601
   },
   "androidUpdate": {
     "available": true,
     "version": "1.11.0",
     "apkUrl": "https://github.com/eusouanderson/PixelForge-AI/releases/download/v1.11.0/pixelforge-virtual-creatures-v1.11.0.apk",
-    "checksum": "956c50c7f0b99453c3d6f6ea951921df7d699e12dec117656fef017699b47a2e",
-    "sizeBytes": 8323485
+    "checksum": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sizeBytes": 0
   }
 }
