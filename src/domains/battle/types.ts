@@ -1,4 +1,5 @@
 import type { AttributeKind, CharacterAttributes } from '@/domains/attributes/types';
+import type { NearbyDiagnosticLogEntry } from '@/domains/breeding/types';
 import type {
   CharacterId,
   CharacterLifeStage,
@@ -259,4 +260,7 @@ export interface BattleTransportPort {
   rejectConnection?(endpointId: string): Promise<void>;
   onStatusChange?(handler: (status: string) => void): () => void;
   onPeersChange?(handler: (peers: readonly BattleDiscoveredOpponent[]) => void): () => void;
+  getDiagnosticLogs?(): readonly NearbyDiagnosticLogEntry[];
+  onDiagnosticLog?(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void;
+  getActiveEndpointId?(): string | null;
 }

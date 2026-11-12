@@ -70,37 +70,140 @@
           <span>⚠️</span> {{ sessionState.errorMessage }}
         </div>
 
-        <!-- 1. Discovery & Setup View (idle or discovering or selecting_creature) -->
-        <div v-if="sessionState.phase === 'idle' || sessionState.phase === 'discovering' || sessionState.phase === 'opponent_found' || sessionState.phase === 'selecting_creature'" class="flex flex-col gap-3">
-          <!-- Room Channel & Search -->
+        <!-- 1. Discovery & Setup View (idle, discovering, opponent_found, selecting_creature, or failed) -->
+        <div v-if="sessionState.phase === 'idle' || sessionState.phase === 'discovering' || sessionState.phase === 'opponent_found' || sessionState.phase === 'selecting_creature' || sessionState.phase === 'failed'" class="flex flex-col gap-3">
+          <!-- Connection Bar (Matches Genetics Standard) -->
           <div
-            class="border rounded-xl p-3 flex flex-col gap-2 transition-colors duration-500"
+            class="p-3 border rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs transition-colors duration-500"
             :style="{
               backgroundColor: theme.cardDarkBackground,
               borderColor: theme.borderSubtleColor
             }"
           >
-            <label class="text-[11px] font-bold uppercase tracking-wider" :style="{ color: theme.highlightColor }">
-              Código da Sala da Arena
-            </label>
             <div class="flex items-center gap-2">
+              <span
+                class="w-2.5 h-2.5 rounded-full"
+                :class="
+                  isConnected
+                    ? 'bg-emerald-400 animate-pulse'
+                    : isFailed
+                      ? 'bg-rose-500'
+                      : isDiscovering
+                        ? 'bg-amber-400 animate-pulse'
+                        : 'bg-amber-400'
+                "
+              ></span>
+              <span class="text-slate-300 font-mono">
+                Status:
+                <strong :class="isFailed ? 'text-rose-400' : 'text-white'">
+                  {{ connectionStatusLabel }}
+                </strong>
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Canal / Sala:</span>
               <input
                 v-model="roomChannelCode"
                 type="text"
-                class="flex-1 min-w-0 bg-slate-900/90 border rounded-lg px-3 py-1.5 text-xs text-white font-mono uppercase focus:outline-none"
-                :style="{ borderColor: theme.borderSubtleColor }"
+                aria-label="Código da sala da arena"
+                class="w-28 px-2 py-1 border rounded-lg font-mono text-center text-xs text-white"
+                :style="{
+                  backgroundColor: theme.cardBackground,
+                  borderColor: theme.borderSubtleColor,
+                  color: theme.primaryColor
+                }"
                 placeholder="BATALHA-777"
                 data-testid="battle-channel-input"
               />
               <button
                 type="button"
-                class="px-3 py-1.5 rounded-lg text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 shrink-0 active:scale-95"
-                :style="{ backgroundColor: theme.primaryColor }"
                 data-testid="start-battle-discovery-btn"
+                class="px-3 py-1 font-bold rounded-lg text-xs text-white shadow-sm transition active:scale-95 hover:brightness-110 flex items-center gap-1"
+                :style="{ backgroundColor: theme.primaryColor }"
                 @click="startDiscovery"
               >
-                <span>🔍</span> Buscar
+                <span>🔍</span>
+                {{ isFailed ? 'Tentar Novamente' : isDiscovering ? 'Buscando...' : 'Buscar' }}
               </button>
+              <button
+                type="button"
+                data-testid="battle-logs-toggle-btn"
+                class="px-2 py-1 rounded-lg border text-[11px] font-mono text-slate-300 hover:text-white transition"
+                :style="{
+                  backgroundColor: theme.cardBackground,
+                  borderColor: showDiagnosticLogs ? theme.primaryColor : theme.borderSubtleColor
+                }"
+                @click="showDiagnosticLogs = !showDiagnosticLogs"
+              >
+                📋 Logs ({{ diagnosticLogs.length }})
+              </button>
+            </div>
+          </div>
+
+          <!-- Collapsible P2P Live Diagnostic Logs -->
+          <div
+            v-if="showDiagnosticLogs"
+            data-testid="battle-diagnostic-logs"
+            class="p-3 rounded-2xl border text-[10px] font-mono space-y-2 transition-colors"
+            :style="{
+              backgroundColor: theme.cardDarkBackground,
+              borderColor: theme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="font-bold text-slate-200">
+                🔍 Telemetria P2P ({{ transport.localPeerId.slice(0, 12) }} · fase: {{ sessionState.phase }})
+              </span>
+              <button
+                type="button"
+                data-testid="battle-copy-logs-btn"
+                class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                @click="handleCopyLogs"
+              >
+                {{ copiedLogs ? '✓ Copiado' : 'Copiar' }}
+              </button>
+            </div>
+            <div class="max-h-36 overflow-y-auto space-y-1 bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+              <div v-if="diagnosticLogs.length === 0" class="text-slate-500 italic">
+                Nenhum evento P2P registrado ainda. Toque em Buscar.
+              </div>
+              <div
+                v-for="(entry, idx) in diagnosticLogs"
+                :key="idx"
+                :class="
+                  entry.level === 'error'
+                    ? 'text-rose-400'
+                    : entry.level === 'warn'
+                      ? 'text-amber-300'
+                      : 'text-emerald-300'
+                "
+              >
+                [{{ formatLogTime(entry.timestampMs) }}] {{ entry.message }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Helpful error banner when connection failed -->
+          <div
+            v-if="isFailed"
+            data-testid="connection-error-banner"
+            class="p-3 rounded-2xl border border-rose-500/40 bg-rose-950/30 text-rose-200 text-xs flex items-start gap-2.5 shadow-inner"
+          >
+            <span class="text-base leading-none">⚠️</span>
+            <div class="space-y-1.5 flex-1">
+              <div class="font-bold text-rose-300">Falha ao iniciar conexão P2P na Arena:</div>
+              <p class="text-[11px] text-rose-100/90 leading-relaxed">
+                {{ sessionState.errorMessage || 'Não foi possível iniciar o rádio Nearby. Verifique se o Bluetooth e a Localização (GPS) estão ativados nas configurações rápidas do Android e se as permissões de dispositivos por perto foram concedidas.' }}
+              </p>
+              <div class="text-[10px] text-slate-300 bg-slate-900/70 p-2 rounded-xl border border-slate-700/60">
+                <span class="font-bold text-amber-300">💡 Como resolver no aparelho:</span>
+                <ul class="list-disc list-inside mt-1 space-y-0.5 text-slate-300">
+                  <li>Ative o <strong>Bluetooth</strong> no painel de atalhos do Android.</li>
+                  <li>Ative a <strong>Localização (GPS)</strong> no painel de atalhos.</li>
+                  <li>Autorize a permissão de <strong>Dispositivos Próximos</strong> nas permissões do app.</li>
+                  <li>Para testar no PC / Navegador Web: abra duas abas com o mesmo código de sala.</li>
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -232,11 +335,12 @@
             </div>
           </div>
 
-          <!-- Discovered Opponents List -->
+          <!-- Discovered Opponents List (Google Nearby) -->
           <div v-else class="flex flex-col gap-2">
-            <span class="text-xs font-bold uppercase tracking-wider" :style="{ color: theme.highlightColor }">
-              Treinadores Próximos ({{ discoveredOpponents.length }})
-            </span>
+            <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider" :style="{ color: theme.highlightColor }">
+              <span>📡 Treinadores Próximos (Google Nearby)</span>
+              <span class="font-mono text-emerald-400">{{ discoveredOpponents.length }} encontrado(s)</span>
+            </div>
             <div
               v-if="discoveredOpponents.length === 0"
               class="p-4 border rounded-xl text-center text-xs text-slate-400 italic"
@@ -245,12 +349,12 @@
                 borderColor: theme.borderSubtleColor
               }"
             >
-              Buscando desafiantes próximos na mesma sala...
+              {{ isDiscovering ? 'Buscando desafiantes próximos na mesma sala...' : 'Toque em Buscar para procurar desafiantes próximos via Google Nearby.' }}
             </div>
             <div v-else class="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-0.5" tabindex="0" role="region" aria-label="Lista de treinadores próximos">
               <div
                 v-for="opp in discoveredOpponents"
-                :key="opp.peerId"
+                :key="opp.endpointId || opp.peerId"
                 class="p-2.5 border rounded-xl flex items-center justify-between text-xs transition-colors"
                 :style="{
                   backgroundColor: theme.cardDarkBackground,
@@ -259,16 +363,20 @@
               >
                 <div class="flex items-center gap-2">
                   <span class="w-2 h-2 rounded-full animate-pulse" :style="{ backgroundColor: theme.primaryColor }"></span>
-                  <span class="font-bold text-slate-200">{{ opp.playerName }}</span>
+                  <div>
+                    <div class="font-bold text-slate-200">{{ opp.playerName }}</div>
+                    <div class="text-[10px] text-slate-400 font-mono">{{ opp.endpointId ? `ID: ${opp.endpointId}` : 'Web P2P' }}</div>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  class="px-3 py-1 rounded-lg font-bold text-white shadow-sm transition-all active:scale-95"
+                  class="px-3 py-1 rounded-lg font-bold text-white shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   :style="{ backgroundColor: theme.primaryColor }"
                   :data-testid="`challenge-peer-${opp.peerId}`"
-                  @click="sendInvite(opp.peerId)"
+                  :disabled="isPairingWithPeer(opp.endpointId)"
+                  @click="handleConnectToOpponent(opp)"
                 >
-                  Desafiar
+                  {{ isPairingWithPeer(opp.endpointId) ? 'Conectando...' : 'Desafiar' }}
                 </button>
               </div>
             </div>
@@ -389,6 +497,8 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import type { WalletState } from '@/domains/economy/types';
 import type { CharacterSaveRecord } from '@/domains/persistence/types';
 import type { CreatureTheme } from '@/domains/characters/types';
+import type { NearbyDiagnosticLogEntry } from '@/domains/breeding/types';
+import { NearbyConnectionsP2PAdapter } from '@/domains/breeding/infrastructure/nearby-connections-adapter';
 import { getCharacterSpeciesById } from '@/domains/characters/domain/character-registry';
 import { generateCreatureTheme } from '@/domains/characters/domain/creature-theme-engine';
 import type {
@@ -458,25 +568,133 @@ const selectedWager = ref(50);
 
 const initialSpeciesId = (props.activeCreature.runtime?.characterId ?? props.activeCreature.id ?? 'ignisauro') as import('@/domains/characters/types').CharacterId;
 const initialSpecies = getCharacterSpeciesById(initialSpeciesId) || getCharacterSpeciesById('ignisauro');
+const playerName = props.activeCreature.runtime?.customNickname || initialSpecies.name;
+
+const nearbyAdapter = new NearbyConnectionsP2PAdapter({
+  playerName
+});
 
 const transport: BattleTransportPort =
   props.transportOverride ??
   new BattleP2PAdapter({
-    playerName: props.activeCreature.runtime?.customNickname || initialSpecies.name
+    playerName,
+    transportOverride: nearbyAdapter
   });
 
 const battleService = new BattleService(transport);
 const sessionState = ref<BattleSessionState>(battleService.getState());
+const nearbyStatus = ref<string>(transport.getConnectionStatus?.() ?? 'idle');
 const discoveredOpponents = ref<readonly BattleDiscoveredOpponent[]>([]);
+const diagnosticLogs = ref<readonly NearbyDiagnosticLogEntry[]>(transport.getDiagnosticLogs?.() ?? []);
+const showDiagnosticLogs = ref(false);
+const copiedLogs = ref(false);
+const pendingPeerEndpointId = ref<string | null>(null);
 
-battleService.subscribe((next) => {
+const unsubscribeService = battleService.subscribe((next) => {
   sessionState.value = next;
 });
 
-if (transport.onPeersChange) {
-  transport.onPeersChange((peers) => {
-    discoveredOpponents.value = peers;
-  });
+const unsubscribeStatus = transport.onStatusChange?.((s) => {
+  nearbyStatus.value = s;
+  if (s === 'connected' || s === 'failed' || s === 'disconnected' || s === 'idle') {
+    pendingPeerEndpointId.value = null;
+  }
+});
+
+const unsubscribePeers = transport.onPeersChange?.((peers) => {
+  discoveredOpponents.value = peers;
+});
+
+const unsubscribeLogs = transport.onDiagnosticLog?.((logs) => {
+  diagnosticLogs.value = logs;
+});
+
+const isPairingWithPeer = (endpointId?: string): boolean => {
+  if (!endpointId) return false;
+  return (
+    pendingPeerEndpointId.value === endpointId ||
+    transport.getActiveEndpointId?.() === endpointId ||
+    nearbyStatus.value === 'connection_requested' ||
+    nearbyStatus.value === 'connection_pending' ||
+    nearbyStatus.value === 'connecting' ||
+    nearbyStatus.value === 'authenticating'
+  );
+};
+
+const isConnected = computed(() =>
+  Boolean(sessionState.value.remotePeerId) ||
+  sessionState.value.phase === 'wager_negotiation' ||
+  sessionState.value.phase === 'awaiting_confirmation' ||
+  sessionState.value.phase === 'syncing_seed' ||
+  sessionState.value.phase === 'battle_running' ||
+  sessionState.value.phase === 'battle_completed' ||
+  sessionState.value.phase === 'reward_claimed'
+);
+
+const isFailed = computed(() =>
+  sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed'
+);
+
+const isDiscovering = computed(() =>
+  nearbyStatus.value === 'discovering' ||
+  nearbyStatus.value === 'starting_discovery' ||
+  nearbyStatus.value === 'checking_environment' ||
+  nearbyStatus.value === 'requesting_permissions' ||
+  sessionState.value.phase === 'discovering'
+);
+
+const connectionStatusLabel = computed(() => {
+  if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') {
+    return 'Falha na conexão';
+  }
+  if (sessionState.value.phase === 'cancelled') {
+    return 'Cancelado';
+  }
+  if (
+    nearbyStatus.value === 'connected' ||
+    isConnected.value
+  ) {
+    return 'Adversário Conectado!';
+  }
+  if (nearbyStatus.value === 'authenticating') {
+    return 'Autenticando sessão segura...';
+  }
+  if (
+    nearbyStatus.value === 'connecting' ||
+    nearbyStatus.value === 'connection_requested' ||
+    nearbyStatus.value === 'connection_pending'
+  ) {
+    return 'Conectando ao dispositivo...';
+  }
+  if (nearbyStatus.value === 'player_found') {
+    return 'Desafiante encontrado!';
+  }
+  if (isDiscovering.value) {
+    return 'Procurando desafiantes próximos (Nearby)...';
+  }
+  return 'Aguardando busca';
+});
+
+function formatLogTime(timestampMs: number): string {
+  const date = new Date(timestampMs);
+  return date.toTimeString().slice(0, 8);
+}
+
+async function handleCopyLogs(): Promise<void> {
+  const text = diagnosticLogs.value
+    .map((entry) => `[${formatLogTime(entry.timestampMs)}] [${entry.level}] ${entry.message}`)
+    .join('\n');
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    }
+    copiedLogs.value = true;
+    setTimeout(() => {
+      copiedLogs.value = false;
+    }, 2000);
+  } catch {
+    copiedLogs.value = false;
+  }
 }
 
 const activeSpecies = computed(() => {
@@ -538,7 +756,27 @@ const isDraw = computed(() => {
 });
 
 async function startDiscovery(): Promise<void> {
+  pendingPeerEndpointId.value = null;
   await battleService.startDiscovery(roomChannelCode.value);
+}
+
+async function handleConnectToOpponent(opp: BattleDiscoveredOpponent): Promise<void> {
+  if (opp.endpointId && isPairingWithPeer(opp.endpointId)) return;
+  if (opp.endpointId) {
+    pendingPeerEndpointId.value = opp.endpointId;
+  }
+  if (transport.connectToPeer && opp.endpointId && transport.getActiveEndpointId?.() !== opp.endpointId) {
+    try {
+      await transport.connectToPeer(opp.endpointId);
+    } catch {
+      // handled by transport
+    } finally {
+      if (nearbyStatus.value !== 'connection_requested' && nearbyStatus.value !== 'connecting') {
+        pendingPeerEndpointId.value = null;
+      }
+    }
+  }
+  sendInvite(opp.peerId);
 }
 
 function sendInvite(targetPeerId: string): void {
@@ -579,6 +817,10 @@ function handleClose(): void {
 }
 
 onBeforeUnmount(() => {
+  unsubscribeService();
+  unsubscribeStatus?.();
+  unsubscribePeers?.();
+  unsubscribeLogs?.();
   battleService.dispose();
 });
 </script>
