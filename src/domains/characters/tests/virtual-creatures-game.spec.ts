@@ -361,7 +361,9 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
 
     expect(wrapper1.find('[data-testid="incubator-status-banner"]').exists()).toBe(true);
 
-    // Quick HUD Collection Switcher opens before hatching too: shows ONLY 1 starter dinosaur + Nursery egg shortcut
+    // Collection Switcher in Sheet tab opens before hatching too: shows ONLY 1 starter dinosaur + Nursery egg shortcut
+    await wrapper1.get('[data-testid="nav-tab-sheet"]').trigger('click');
+    await flushPromises();
     await wrapper1.get('[data-testid="open-collection-modal-btn"]').trigger('click');
     await flushPromises();
     expect(wrapper1.find('[data-testid="collection-switcher-modal"]').exists()).toBe(true);
@@ -417,7 +419,9 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     expect(wrapper1.get('[data-testid="active-character-name"]').text()).toBe('Ignisauro');
     expect(wrapper1.get('[data-testid="active-stage-badge"]').text()).toBe('adulto');
 
-    // Switch back to newborn using the always-visible HUD Collection Switcher modal
+    // Switch back to newborn using the Collection Switcher in Sheet tab
+    await wrapper1.get('[data-testid="nav-tab-sheet"]').trigger('click');
+    await flushPromises();
     await wrapper1.get('[data-testid="open-collection-modal-btn"]').trigger('click');
     await flushPromises();
     expect(wrapper1.get('[data-testid="collection-switcher-modal"]').text()).toContain('Meus Dinossauros (2)');
@@ -472,5 +476,83 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     await flushPromises();
     expect(wrapper3.get('[data-testid="feedback-banner"]').text()).toContain('renasceu com saúde total');
     wrapper3.unmount();
+  });
+
+  it('opens Battle Arena modal, validates sleep/egg guards, starts discovery and settles battle outcomes', async () => {
+    vi.useFakeTimers();
+    const startMs = new Date('2026-11-11T18:00:00Z').getTime();
+    vi.setSystemTime(startMs);
+
+    const storageMap = new Map<string, string>();
+    const fakeStorage = {
+      getItem: (k: string) => storageMap.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        storageMap.set(k, v);
+      },
+      removeItem: (k: string) => {
+        storageMap.delete(k);
+      },
+      clear: () => {
+        storageMap.clear();
+      }
+    };
+    Object.defineProperty(window, 'localStorage', { value: fakeStorage, configurable: true });
+
+    const baseSnap = createNewGameSaveSnapshot(startMs, 'ignisauro');
+    const adultSnap = {
+      ...baseSnap,
+      characters: {
+        ...baseSnap.characters,
+        ignisauro: {
+          ...baseSnap.characters.ignisauro,
+          runtime: {
+            ...baseSnap.characters.ignisauro.runtime,
+            currentStage: 'adulto' as const,
+            healthCondition: 'healthy' as const
+          },
+          progression: {
+            ...baseSnap.characters.ignisauro.progression,
+            currentStage: 'adulto' as const,
+            level: 16
+          }
+        }
+      }
+    };
+    storageMap.set('pixelforge_virtual_creatures_save_v1', JSON.stringify(adultSnap));
+
+    const wrapper = mount(VirtualCreaturesGame);
+    await flushPromises();
+
+    // 1. Verify header does not contain arena or switcher button
+    expect(wrapper.find('[data-testid="open-battle-arena-btn"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="open-collection-modal-btn"]').exists()).toBe(false);
+
+    // 2. Open Arena from bottom navigation bar tab
+    const arenaTab = wrapper.find('[data-testid="nav-tab-arena"]');
+    expect(arenaTab.exists()).toBe(true);
+    await arenaTab.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="tab-content-arena"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="battle-arena-modal"]').exists()).toBe(true);
+
+    // Switch to feed tab -> arena div hides, only bottom content switches
+    await wrapper.find('[data-testid="nav-tab-feed"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="tab-content-arena"]').exists()).toBe(false);
+
+    // 3. Verify Activities tab does not contain the old arena banner card
+    await wrapper.find('[data-testid="nav-tab-activities"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="enter-arena-activities-btn"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="activities-arena-banner-card"]').exists()).toBe(false);
+
+    // 4. Return to Arena tab and verify dynamic theme styling
+    await wrapper.find('[data-testid="nav-tab-arena"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="tab-content-arena"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="battle-arena-modal"]').exists()).toBe(true);
+
+    wrapper.unmount();
   });
 });

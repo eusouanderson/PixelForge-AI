@@ -279,7 +279,8 @@ export function createNewGameSaveSnapshot(
     wallet: createInitialWallet(),
     settings: createDefaultSettings(),
     incubator: [],
-    genealogyArchive: []
+    genealogyArchive: [],
+    battleArchive: []
   };
 }
 
@@ -579,7 +580,8 @@ export function validateAndMigrateSaveSnapshot(
         ? { ...fresh.settings, ...candidate.settings }
         : fresh.settings,
     incubator: normalizedIncubator,
-    genealogyArchive: Array.isArray(candidate.genealogyArchive) ? candidate.genealogyArchive : []
+    genealogyArchive: Array.isArray(candidate.genealogyArchive) ? candidate.genealogyArchive : [],
+    battleArchive: Array.isArray(candidate.battleArchive) ? candidate.battleArchive : []
   };
 }
 

@@ -18,6 +18,7 @@ import {
   warmIncubatingEggUseCase,
   hatchBredEggAtomicUseCase,
   hatchBredEggUseCase,
+  recordBattleResultUseCase,
   listOwnedCreatures
 } from '../application/game-session-service';
 
@@ -777,5 +778,92 @@ describe('GameSessionService application use cases', () => {
     const hatchedP2p = hatchBredEggAtomicUseCase(readyP2p, 'egg-p2p-real-1', 7400, 'Pyro Filhote');
     expect(hatchedP2p.success).toBe(true);
     expect(hatchedP2p.snapshot.collection?.[hatchedP2p.hatchedCreatureId!]?.runtime.currentStage).toBe('baby');
+  });
+
+  it('records battle outcomes, updates combat XP, streaks, levels, and appends to battle archive', () => {
+    const start = createNewGameSaveSnapshot(1000, 'ignisauro');
+    const historyVictory = {
+      id: 'h-1',
+      timestampMs: 2000,
+      battleId: 'b-1',
+      localPlayerId: 'p-local',
+      opponentPlayerId: 'p-remote',
+      opponentName: 'Adversário',
+      localCreatureSpecies: 'ignisauro' as const,
+      opponentCreatureSpecies: 'glacissauro' as const,
+      result: 'victory' as const,
+      wagerAmount: 50,
+      rewardCoins: 90,
+      combatXpGained: 120,
+      roundsCount: 8
+    };
+
+    const nextWallet = { amberCoins: 240, totalEarned: 290, totalSpent: 50 };
+    const snap1 = recordBattleResultUseCase(start, historyVictory, nextWallet, 2000);
+
+    expect(snap1.battleArchive?.length).toBe(1);
+    expect(snap1.wallet.amberCoins).toBe(240);
+    const rec1 = snap1.characters.ignisauro.battleRecord!;
+    expect(rec1.totalBattles).toBe(1);
+    expect(rec1.wins).toBe(1);
+    expect(rec1.losses).toBe(0);
+    expect(rec1.currentStreak).toBe(1);
+    expect(rec1.bestStreak).toBe(1);
+    expect(rec1.combatXp).toBe(120);
+    expect(rec1.combatLevel).toBe(1);
+    expect(rec1.recentOpponents.length).toBe(1);
+
+    // Second battle: victory -> level up at 240 XP (level 2)
+    const historyVictory2 = {
+      ...historyVictory,
+      id: 'h-2',
+      battleId: 'b-2'
+    };
+    const snap2 = recordBattleResultUseCase(snap1, historyVictory2, { amberCoins: 330, totalEarned: 380, totalSpent: 50 }, 3000);
+    const rec2 = snap2.characters.ignisauro.battleRecord!;
+    expect(rec2.totalBattles).toBe(2);
+    expect(rec2.wins).toBe(2);
+    expect(rec2.currentStreak).toBe(2);
+    expect(rec2.bestStreak).toBe(2);
+    expect(rec2.combatXp).toBe(240);
+    expect(rec2.combatLevel).toBe(2);
+
+    // Third battle: defeat resets currentStreak
+    const historyDefeat = {
+      ...historyVictory,
+      id: 'h-3',
+      battleId: 'b-3',
+      result: 'defeat' as const,
+      combatXpGained: 25
+    };
+    const snap3 = recordBattleResultUseCase(snap2, historyDefeat, snap2.wallet, 4000);
+    const rec3 = snap3.characters.ignisauro.battleRecord!;
+    expect(rec3.totalBattles).toBe(3);
+    expect(rec3.losses).toBe(1);
+    expect(rec3.currentStreak).toBe(0);
+    expect(rec3.bestStreak).toBe(2);
+
+    // Fourth battle: draw preserves currentStreak
+    const historyDraw = {
+      ...historyVictory,
+      id: 'h-4',
+      battleId: 'b-4',
+      result: 'draw' as const,
+      combatXpGained: 40
+    };
+    const snap4 = recordBattleResultUseCase(snap3, historyDraw, snap3.wallet, 5000);
+    const rec4 = snap4.characters.ignisauro.battleRecord!;
+    expect(rec4.totalBattles).toBe(4);
+    expect(rec4.draws).toBe(1);
+    expect(rec4.currentStreak).toBe(0);
+
+    // Fallback when active character is somehow missing and battleArchive is undefined
+    const missingSnap = {
+      ...start,
+      battleArchive: undefined,
+      activeCharacterId: 'unknown' as unknown as import('@/domains/characters/types').CharacterId
+    };
+    const fallbackSnap = recordBattleResultUseCase(missingSnap, historyVictory, nextWallet, 6000);
+    expect(fallbackSnap.battleArchive?.length).toBe(1);
   });
 });

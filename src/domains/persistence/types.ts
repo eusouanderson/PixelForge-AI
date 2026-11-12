@@ -7,6 +7,7 @@ import type { WalletState } from '@/domains/economy/types';
 import type { GameSettingsState } from '@/domains/settings/types';
 import type { CreatureGenome } from '@/domains/genetics/types';
 import type { BredEggRecord, BreedingHistoryRecord } from '@/domains/breeding/types';
+import type { BattleHistoryRecord, CharacterBattleRecord } from '@/domains/battle/types';
 
 export interface ClockPort {
   nowMs(): number;
@@ -20,6 +21,7 @@ export interface CharacterSaveRecord {
   readonly attributes: CharacterAttributes;
   readonly progression: ProgressionState;
   readonly genetics: CreatureGenome;
+  readonly battleRecord?: CharacterBattleRecord;
 }
 
 export interface OwnedCreatureEntry {
@@ -43,6 +45,7 @@ export interface GameSaveSnapshot {
   readonly settings: GameSettingsState;
   readonly incubator: readonly BredEggRecord[];
   readonly genealogyArchive: readonly BreedingHistoryRecord[];
+  readonly battleArchive?: readonly BattleHistoryRecord[];
 }
 
 export interface EggActionResult {
