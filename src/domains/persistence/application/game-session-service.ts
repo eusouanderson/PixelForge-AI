@@ -508,7 +508,11 @@ export function recordBreedingResultUseCase(
   let nextIncubator = snapshot.incubator;
 
   if (bredEggIfWon && !snapshot.incubator.some((e) => e.id === bredEggIfWon.id)) {
-    const normalizedEgg = normalizeBredEggRecord(bredEggIfWon, ownerId, snapshot.collection);
+    const normalizedEgg = normalizeBredEggRecord(
+      { ...bredEggIfWon, ownerId },
+      ownerId,
+      snapshot.collection
+    );
     nextIncubator = [...snapshot.incubator, normalizedEgg];
   }
 

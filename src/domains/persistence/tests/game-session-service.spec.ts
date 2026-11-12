@@ -694,5 +694,44 @@ describe('GameSessionService application use cases', () => {
     // Hatching starter egg updates active starter cleanly too
     const starterHatched = hatchCharacterEggUseCase(base, 5300);
     expect(starterHatched.characters.ignisauro.runtime.currentStage).toBe('baby');
+
+    // Egg produced by P2P BreedingService carries ephemeral 'peer-...' ownerId, which MUST bind to local playerId on save
+    const p2pEggResult = recordBreedingResultUseCase(
+      base,
+      {
+        sessionId: 'sess-p2p-bind',
+        timestampMs: 7000,
+        sireGenomeId: sire.genomeId,
+        damGenomeId: dam.genomeId,
+        sireSpecies: 'ignisauro',
+        damSpecies: 'terrassauro',
+        offspringGenomeId: offspringGenome.genomeId,
+        offspringSpecies: hatchedSpecies,
+        winnerPeerId: 'peer-z9x8c7v',
+        isLocalWinner: true,
+        mutationCount: 0
+      },
+      {
+        id: 'egg-p2p-real-1',
+        ownerId: 'peer-z9x8c7v',
+        genome: offspringGenome,
+        targetSpecies: hatchedSpecies,
+        status: 'available',
+        incubationProgress: 0,
+        maxIncubationHours: 1 / 60,
+        isWarm: true,
+        createdAtMs: 7000,
+        isReadyToHatch: false
+      },
+      7000
+    );
+    expect(p2pEggResult.incubator[0].ownerId).toBe('local-player');
+    const startedP2p = startEggIncubationUseCase(p2pEggResult, 'egg-p2p-real-1', 7100);
+    expect(startedP2p.success).toBe(true);
+    let readyP2p = warmIncubatingEggUseCase(startedP2p.snapshot, 'egg-p2p-real-1', 7200).snapshot;
+    readyP2p = warmIncubatingEggUseCase(readyP2p, 'egg-p2p-real-1', 7300).snapshot;
+    const hatchedP2p = hatchBredEggAtomicUseCase(readyP2p, 'egg-p2p-real-1', 7400, 'Pyro Filhote');
+    expect(hatchedP2p.success).toBe(true);
+    expect(hatchedP2p.snapshot.collection?.[hatchedP2p.hatchedCreatureId!]?.runtime.currentStage).toBe('baby');
   });
 });

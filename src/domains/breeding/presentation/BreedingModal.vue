@@ -122,6 +122,7 @@
               <input
                 v-model="roomChannelCode"
                 type="text"
+                aria-label="Código da sala de reprodução"
                 class="w-28 px-2 py-1 border rounded-lg font-mono text-center text-xs"
                 :style="{
                   backgroundColor: theme.cardBackground,
@@ -260,7 +261,7 @@
           </div>
 
           <!-- Animation View if running or completed -->
-          <div v-if="sessionState.phase === 'breeding_started' || sessionState.phase === 'animation_running' || sessionState.phase === 'completed'" class="my-2">
+          <div v-if="sessionState.phase === 'breeding_started' || sessionState.phase === 'animation_running' || sessionState.phase === 'completed'" class="my-2 space-y-3">
             <breeding-animation-canvas
               v-if="selectedSire && selectedDam"
               :sire-species="selectedSire.species"
@@ -272,6 +273,78 @@
               :initial-scene="sessionState.animationSceneIndex"
               @scene-change="handleSceneChanged"
             />
+
+            <!-- Post-Breeding Guidance & Quick Action Card -->
+            <div
+              v-if="sessionState.phase === 'completed' && sessionState.ownership?.isLocalWinner && sessionState.producedEgg"
+              data-testid="breeding-egg-created-card"
+              class="p-4 rounded-2xl border-2 border-emerald-500/50 bg-emerald-950/30 space-y-3 shadow-lg"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-xs font-bold uppercase text-emerald-300">
+                    🥚 Ovo Guardado no Berçário!
+                  </div>
+                  <div class="text-sm font-black text-white capitalize">
+                    {{ getSpeciesDisplayName(sessionState.producedEgg.targetSpecies) }}
+                    · Gen {{ sessionState.producedEgg.genome.generation }}
+                    ({{ sessionState.producedEgg.genome.sex === 'male' ? '♂ Macho' : '♀ Fêmea' }})
+                  </div>
+                  <p class="text-[11px] text-slate-300 mt-0.5">
+                    Inicie a incubação para gerar o novo filhote na sua coleção e cuidar dele!
+                  </p>
+                </div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  data-testid="post-breeding-incubate-btn"
+                  class="flex-1 min-w-[180px] py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black uppercase shadow-md transition active:scale-95"
+                  @click="handlePostBreedingGoToNursery(sessionState.producedEgg.id)"
+                >
+                  {{ isEggStillAvailable(sessionState.producedEgg.id) ? '🔥 Iniciar Incubação no Berçário' : '🥚 Abrir no Berçário' }}
+                </button>
+                <button
+                  type="button"
+                  data-testid="new-breeding-session-btn"
+                  class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold uppercase transition"
+                  @click="handleNewBreedingSession"
+                >
+                  🔄 Nova Reprodução
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-else-if="sessionState.phase === 'completed'"
+              data-testid="breeding-partner-won-card"
+              class="p-4 rounded-2xl border border-sky-500/40 bg-sky-950/25 space-y-2.5"
+            >
+              <div class="text-xs font-bold uppercase text-sky-300">
+                🤝 Reprodução P2P Concluída!
+              </div>
+              <p class="text-[11px] text-slate-300">
+                No sorteio justo entre os dispositivos, seu parceiro ficou com o ovo desta rodada. A linhagem foi registrada na sua Árvore Genealógica.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  data-testid="post-breeding-lineage-btn"
+                  class="flex-1 min-w-[160px] py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold uppercase transition"
+                  @click="activeTab = 'lineage'"
+                >
+                  🌳 Ver Árvore Genealógica
+                </button>
+                <button
+                  type="button"
+                  data-testid="new-breeding-session-btn"
+                  class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold uppercase transition"
+                  @click="handleNewBreedingSession"
+                >
+                  🔄 Nova Reprodução
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Normal Selection & Compatibility Area -->
@@ -615,6 +688,7 @@
                   v-model="pendingHatchNickname"
                   type="text"
                   maxlength="24"
+                  aria-label="Apelido opcional do filhote"
                   :data-testid="`hatch-nickname-input-${egg.id}`"
                   class="w-full px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white"
                   placeholder="Apelido opcional do filhote..."
@@ -663,7 +737,7 @@
                 v-else
                 type="button"
                 :data-testid="`hatch-ready-btn-${egg.id}`"
-                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md animate-bounce transition-all active:scale-95"
+                class="w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md animate-pulse transition-all active:scale-95"
                 @click="openHatchPreview(egg.id)"
               >
                 ✨ Chocar Ovo Agora!
@@ -694,9 +768,20 @@
                   Ovo: {{ egg.id }} → Criatura: {{ egg.hatchedCreatureId ?? 'Registrada' }}
                 </div>
               </div>
-              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[10px] font-bold uppercase">
-                ✓ Eclodido
-              </span>
+              <div class="flex items-center gap-2">
+                <button
+                  v-if="egg.hatchedCreatureId"
+                  type="button"
+                  :data-testid="`focus-hatched-record-btn-${egg.id}`"
+                  class="px-2 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black uppercase transition"
+                  @click="handleFocusHatchedCreature(egg.hatchedCreatureId)"
+                >
+                  Cuidar
+                </button>
+                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[10px] font-bold uppercase">
+                  ✓ Eclodido
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1002,9 +1087,12 @@ const localCreature = computed(() => {
 
 function handleSelectLocalCreature(): void {
   if (localCreature.value) {
+    const plainGenome = JSON.parse(
+      JSON.stringify(localCreature.value.genetics)
+    ) as import('@/domains/genetics/types').CreatureGenome;
     breedingService.selectLocalCreature(
       localCreature.value.speciesId,
-      localCreature.value.genetics,
+      plainGenome,
       localCreature.value.name
     );
   }
@@ -1034,12 +1122,8 @@ watch(
 );
 
 watch(nearbyStatus, (status) => {
-  if (status === 'connected' && localCreature.value) {
-    breedingService.selectLocalCreature(
-      localCreature.value.speciesId,
-      localCreature.value.genetics,
-      localCreature.value.name
-    );
+  if (status === 'connected') {
+    handleSelectLocalCreature();
   }
 });
 
@@ -1138,6 +1222,7 @@ async function handleCopyLogs(): Promise<void> {
 }
 
 async function handleConnect(): Promise<void> {
+  hasPersistedResult.value = false;
   pendingPeerEndpointId.value = null;
   if (!selectedLocalCreatureId.value) {
     selectedLocalCreatureId.value =
@@ -1147,6 +1232,25 @@ async function handleConnect(): Promise<void> {
   if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') {
     return;
   }
+  handleSelectLocalCreature();
+}
+
+function isEggStillAvailable(eggId: string): boolean {
+  const egg = incubatorEggs.value.find((item) => item.id === eggId);
+  return Boolean(egg && getEggStatus(egg) === 'available');
+}
+
+function handlePostBreedingGoToNursery(eggId: string): void {
+  if (isEggStillAvailable(eggId)) {
+    handleStartIncubation(eggId);
+  }
+  activeTab.value = 'nursery';
+}
+
+function handleNewBreedingSession(): void {
+  hasPersistedResult.value = false;
+  pendingPeerEndpointId.value = null;
+  breedingService.resetSession();
   handleSelectLocalCreature();
 }
 

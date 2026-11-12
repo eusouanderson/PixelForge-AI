@@ -388,6 +388,35 @@ describe('Two-Device Nearby P2P Breeding Integration Simulation', () => {
       { timeout: 3000 }
     );
 
+    // Sync emitted saves back into both wrappers (as VirtualCreaturesGame.vue does in production!)
+    const updatedA = (wrapperA.emitted('update-save') as GameSaveSnapshot[][])[0][0];
+    const updatedB = (wrapperB.emitted('update-save') as GameSaveSnapshot[][])[0][0];
+    await wrapperA.setProps({ saveSnapshot: updatedA });
+    await wrapperB.setProps({ saveSnapshot: updatedB });
+
+    // Exactly one wrapper won the egg; verify post-breeding CTA works cleanly and winner can incubate its real P2P egg!
+    const winnerWrapper = updatedA.incubator.length > 0 ? wrapperA : wrapperB;
+    const winnerSave = updatedA.incubator.length > 0 ? updatedA : updatedB;
+    const loserWrapper = updatedA.incubator.length > 0 ? wrapperB : wrapperA;
+    const wonEggId = winnerSave.incubator[0].id;
+    expect(winnerSave.incubator[0].ownerId).toBe('local-player');
+
+    expect(winnerWrapper.find('[data-testid="breeding-egg-created-card"]').exists()).toBe(true);
+    expect(loserWrapper.find('[data-testid="breeding-partner-won-card"]').exists()).toBe(true);
+
+    // Clicking post-breeding CTA incubates the P2P-won egg immediately and switches to Nursery!
+    await winnerWrapper.get('[data-testid="post-breeding-incubate-btn"]').trigger('click');
+    const winnerUpdates = winnerWrapper.emitted('update-save') as GameSaveSnapshot[][];
+    const afterIncubateStart = winnerUpdates[winnerUpdates.length - 1][0];
+    expect(resolveEggStatus(afterIncubateStart.incubator[0])).toBe('incubating');
+    await winnerWrapper.setProps({ saveSnapshot: afterIncubateStart });
+    expect(winnerWrapper.find('[data-testid="nursery-tab-panel"]').exists()).toBe(true);
+    expect(winnerWrapper.get(`[data-testid="egg-status-${wonEggId}"]`).text()).toContain('Incubando');
+
+    // Non-winner can reset for a new breeding session cleanly without invalid state transition
+    await loserWrapper.get('[data-testid="new-breeding-session-btn"]').trigger('click');
+    expect(loserWrapper.find('[data-testid="p2p-connect-btn"]').exists()).toBe(true);
+
     wrapperA.unmount();
     wrapperB.unmount();
   });
@@ -629,9 +658,11 @@ describe('Two-Device Nearby P2P Breeding Integration Simulation', () => {
     expect(currentSave.collection?.[createdCreatureId]?.runtime.currentStage).toBe('baby');
     expect(currentSave.collection?.[createdCreatureId]?.runtime.customNickname).toBe('Brotinho');
 
-    // Step 4: Navigate to care for the newborn baby
+    // Step 4: Navigate to care for the newborn baby via celebration button and hatched registry button
     await wrapper.get('[data-testid="go-to-hatched-baby-btn"]').trigger('click');
     expect(wrapper.emitted('focus-creature')?.[0]).toEqual([createdCreatureId]);
+    await wrapper.get('[data-testid="focus-hatched-record-btn-egg-ui-1"]').trigger('click');
+    expect(wrapper.emitted('focus-creature')?.[1]).toEqual([createdCreatureId]);
 
     wrapper.unmount();
   });

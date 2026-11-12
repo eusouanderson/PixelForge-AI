@@ -80,6 +80,7 @@ const sceneController = new BabylonCreatureSceneController();
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
 const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings' | 'genetics'>('feed');
 const breedingInitialTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
+const isCollectionModalOpen = ref<boolean>(false);
 const showGenealogyModal = ref<boolean>(false);
 const feedbackBanner = ref<string>(
   '🥚 Um ovo ancestral misterioso surgiu no Santuário Elemental! Aguarde alguns minutos para vê-lo rachar e abrir.'
@@ -120,8 +121,14 @@ const activeDisplayName = computed(
   () => activeRecord.value.runtime.customNickname || activeSpecies.value.displayName
 );
 const ownedCreatures = computed(() => listOwnedCreatures(saveState.value));
+const activeIncubatorEggs = computed(() =>
+  saveState.value.incubator.filter((e) => resolveEggStatus(e) !== 'hatched')
+);
+const hasReadyNurseryEgg = computed(() =>
+  activeIncubatorEggs.value.some((e) => resolveEggStatus(e) === 'ready_to_hatch')
+);
 const incubatorBannerInfo = computed(() => {
-  const activeEggs = saveState.value.incubator.filter((e) => resolveEggStatus(e) !== 'hatched');
+  const activeEggs = activeIncubatorEggs.value;
   if (activeEggs.length === 0) return null;
   const readyEggs = activeEggs.filter((e) => resolveEggStatus(e) === 'ready_to_hatch');
   if (readyEggs.length > 0) {
@@ -469,6 +476,7 @@ async function handleSelectActiveSpecies(speciesId: CharacterId): Promise<void> 
 }
 
 async function handleSelectOwnedCreature(creatureId: string): Promise<void> {
+  isCollectionModalOpen.value = false;
   if (activeCreatureId.value === creatureId) return;
   const prev = saveState.value;
   saveState.value = selectActiveCreatureUseCase(saveState.value, creatureId, Date.now());
@@ -479,7 +487,26 @@ async function handleSelectOwnedCreature(creatureId: string): Promise<void> {
   await persistCurrentState(prev);
 }
 
+function handleOpenNurseryFromCollection(): void {
+  isCollectionModalOpen.value = false;
+  breedingInitialTab.value = 'nursery';
+  activeMobileTab.value = 'genetics';
+}
+
+function formatCollectionEggStatus(egg: import('@/domains/breeding/types').BredEggRecord): string {
+  const status = resolveEggStatus(egg);
+  if (status === 'ready_to_hatch') {
+    return '✨ Pronto para nascer!';
+  }
+  if (status === 'incubating') {
+    const pct = Math.min(100, Math.round((egg.incubationProgress / egg.maxIncubationHours) * 100));
+    return `🔥 Incubando (${pct}%)`;
+  }
+  return '🥚 Disponível no Berçário';
+}
+
 async function handleFocusHatchedCreature(creatureId: string): Promise<void> {
+  isCollectionModalOpen.value = false;
   const prev = saveState.value;
   saveState.value = selectActiveCreatureUseCase(saveState.value, creatureId, Date.now());
   manualAnimOverride.value = null;
@@ -544,6 +571,7 @@ async function handleVisibilityOrAppStateChange(isForeground: boolean): Promise<
     }
     return;
   }
+  await persistCurrentState();
   await careNotificationService.setAppForeground(false, saveState.value, now);
 }
 
@@ -781,7 +809,27 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              data-testid="open-collection-modal-btn"
+              class="relative flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-bold shadow-sm transition active:scale-95 hover:brightness-110"
+              :style="{
+                backgroundColor: creatureTheme.cardBackground,
+                borderColor: creatureTheme.borderColor,
+                color: creatureTheme.primaryColor
+              }"
+              title="Trocar Dinossauro / Coleção"
+              @click="isCollectionModalOpen = true"
+            >
+              <span>🐉</span>
+              <span>{{ ownedCreatures.length }}</span>
+              <span
+                v-if="activeIncubatorEggs.length > 0"
+                class="w-2 h-2 rounded-full"
+                :class="hasReadyNurseryEgg ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'"
+              />
+            </button>
             <div
               data-testid="wallet-coins"
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold shadow-sm"
@@ -811,6 +859,7 @@ onUnmounted(() => {
         <canvas
           ref="babylonCanvasRef"
           data-testid="babylon-viewport-canvas"
+          tabindex="0"
           class="absolute inset-0 w-full h-full block"
         />
 
@@ -875,152 +924,154 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <!-- Discreet Update Notification Banners -->
-      <div
-        v-if="updaterState.status === 'ready_to_reload'"
-        data-testid="web-update-ready-banner"
-        class="px-3.5 py-2 bg-emerald-950/90 border-b border-emerald-700 text-xs text-emerald-200 flex items-center justify-between gap-2 shadow-sm"
-      >
-        <div class="flex items-center gap-1.5 truncate">
-          <sparkles-icon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span class="truncate">Atualização {{ updaterState.availableManifest?.version }} pronta para aplicar!</span>
-        </div>
-        <button
-          type="button"
-          data-testid="reload-to-apply-btn"
-          class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
-          @click="handleApplyWebReload"
-        >
-          Reiniciar
-        </button>
-      </div>
-
-      <div
-        v-else-if="updaterState.status === 'ready_to_install_apk' || updaterState.status === 'native_update_required'"
-        data-testid="apk-update-banner"
-        class="px-3.5 py-2 bg-amber-950/90 border-b border-amber-700 text-xs text-amber-200 flex items-center justify-between gap-2 shadow-sm"
-      >
-        <div class="flex items-center gap-1.5 truncate">
-          <sparkles-icon class="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span class="truncate">APK Android {{ updaterState.availableManifest?.version }} disponível!</span>
-        </div>
-        <button
-          type="button"
-          data-testid="install-apk-btn"
-          class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
-          @click="handleInstallApk"
-        >
-          Instalar
-        </button>
-      </div>
-
-      <!-- Feedback Banner & Emergency Actions -->
-      <!-- Dynamic Feedback Action Banner -->
-      <div
-        data-testid="feedback-banner"
-        class="px-3.5 py-2 border-b text-xs text-emerald-300 flex items-center justify-between gap-2 transition-colors duration-500"
-        :style="{
-          backgroundColor: creatureTheme.cardDarkBackground,
-          borderBottomColor: creatureTheme.borderSubtleColor
-        }"
-      >
-        <span>{{ feedbackBanner }}</span>
-        <button
-          v-if="activeRecord.runtime.healthCondition === 'deceased' || displayedAnimation === 'morte'"
-          type="button"
-          data-testid="revive-creature-btn"
-          class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
-          @click="handleReviveCharacter"
-        >
-          Reviver
-        </button>
-        <button
-          v-else-if="activeRecord.runtime.currentStage === 'ovo' && saveState.settings.developerModeEnabled"
-          type="button"
-          data-testid="hatch-egg-btn"
-          class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
-          @click="handleHatchEgg"
-        >
-          Eclodir Agora (Dev)
-        </button>
-      </div>
-
-      <!-- Clinical Alert Box for Active Diseases -->
-      <div
-        v-if="activeRecord.runtime.activeDiseases.length > 0"
-        data-testid="active-diseases-alert"
-        class="px-3.5 py-2 bg-rose-950/90 border-b border-rose-800 text-xs text-rose-200 space-y-1"
-      >
-        <div class="font-bold uppercase text-rose-300 text-[11px]">
-          ⚠ Enfermidades Diagnosticadas — Tratamento Necessário:
-        </div>
+      <!-- Discreet Update & Status Notification Banners -->
+      <section aria-label="Avisos, Atualizações e Feedback" class="shrink-0">
         <div
-          v-for="disease in activeRecord.runtime.activeDiseases"
-          :key="disease.id"
-          class="text-[11px] flex flex-col p-1.5 rounded border border-rose-800/70"
-          :style="{ backgroundColor: creatureTheme.cardDarkBackground }"
+          v-if="updaterState.status === 'ready_to_reload'"
+          data-testid="web-update-ready-banner"
+          class="px-3.5 py-2 bg-emerald-950/90 border-b border-emerald-700 text-xs text-emerald-200 flex items-center justify-between gap-2 shadow-sm"
         >
-          <span class="font-bold text-rose-300">{{ disease.name }}</span>
-          <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
-          <span class="text-amber-300 font-semibold text-[10px] mt-0.5">
-            Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
-          </span>
+          <div class="flex items-center gap-1.5 truncate">
+            <sparkles-icon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span class="truncate">Atualização {{ updaterState.availableManifest?.version }} pronta para aplicar!</span>
+          </div>
+          <button
+            type="button"
+            data-testid="reload-to-apply-btn"
+            class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
+            @click="handleApplyWebReload"
+          >
+            Reiniciar
+          </button>
         </div>
-      </div>
 
-      <!-- Incubator Quick Status Banner -->
-      <div
-        v-if="incubatorBannerInfo"
-        data-testid="incubator-status-banner"
-        class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
-        :class="
-          incubatorBannerInfo.isReady
-            ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200'
-            : 'bg-amber-950/80 border-amber-700/70 text-amber-200'
-        "
-      >
-        <span class="truncate font-medium">{{ incubatorBannerInfo.text }}</span>
-        <button
-          type="button"
-          data-testid="open-nursery-banner-btn"
-          class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
-          @click="breedingInitialTab = 'nursery'; activeMobileTab = 'genetics'"
+        <div
+          v-else-if="updaterState.status === 'ready_to_install_apk' || updaterState.status === 'native_update_required'"
+          data-testid="apk-update-banner"
+          class="px-3.5 py-2 bg-amber-950/90 border-b border-amber-700 text-xs text-amber-200 flex items-center justify-between gap-2 shadow-sm"
         >
-          Berçário
-        </button>
-      </div>
-
-      <!-- Discreet Urgent Care Banner When Near or At Critical Level -->
-      <div
-        v-if="notificationState.activeBannerText"
-        data-testid="care-alert-banner"
-        class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
-        :class="
-          notificationState.evaluation.activeCriticalCount > 0
-            ? 'bg-rose-950/90 border-rose-700 text-rose-200'
-            : 'bg-amber-950/85 border-amber-700 text-amber-200'
-        "
-      >
-        <div class="flex items-center gap-1.5 min-w-0">
-          <bell-icon class="w-3.5 h-3.5 shrink-0" />
-          <span class="text-[11px] font-medium truncate">{{ notificationState.activeBannerText }}</span>
+          <div class="flex items-center gap-1.5 truncate">
+            <sparkles-icon class="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span class="truncate">APK Android {{ updaterState.availableManifest?.version }} disponível!</span>
+          </div>
+          <button
+            type="button"
+            data-testid="install-apk-btn"
+            class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[10px] shrink-0 shadow-sm"
+            @click="handleInstallApk"
+          >
+            Instalar
+          </button>
         </div>
-        <button
-          type="button"
-          data-testid="care-alert-action-btn"
-          class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
-          @click="
-            activeMobileTab =
-              notificationState.evaluation.immediateAlerts[0]?.reason === 'energy' ||
-              notificationState.evaluation.immediateAlerts[0]?.reason === 'happiness' ||
-              notificationState.evaluation.immediateAlerts[0]?.reason === 'hygiene'
-                ? 'activities'
-                : 'feed'
+
+        <!-- Feedback Banner & Emergency Actions -->
+        <!-- Dynamic Feedback Action Banner -->
+        <div
+          data-testid="feedback-banner"
+          class="px-3.5 py-2 border-b text-xs text-emerald-300 flex items-center justify-between gap-2 transition-colors duration-500"
+          :style="{
+            backgroundColor: creatureTheme.cardDarkBackground,
+            borderBottomColor: creatureTheme.borderSubtleColor
+          }"
+        >
+          <span>{{ feedbackBanner }}</span>
+          <button
+            v-if="activeRecord.runtime.healthCondition === 'deceased' || displayedAnimation === 'morte'"
+            type="button"
+            data-testid="revive-creature-btn"
+            class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
+            @click="handleReviveCharacter"
+          >
+            Reviver
+          </button>
+          <button
+            v-else-if="activeRecord.runtime.currentStage === 'ovo' && saveState.settings.developerModeEnabled"
+            type="button"
+            data-testid="hatch-egg-btn"
+            class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase text-[11px] shrink-0 shadow-sm"
+            @click="handleHatchEgg"
+          >
+            Eclodir Agora (Dev)
+          </button>
+        </div>
+
+        <!-- Clinical Alert Box for Active Diseases -->
+        <div
+          v-if="activeRecord.runtime.activeDiseases.length > 0"
+          data-testid="active-diseases-alert"
+          class="px-3.5 py-2 bg-rose-950/90 border-b border-rose-800 text-xs text-rose-200 space-y-1"
+        >
+          <div class="font-bold uppercase text-rose-300 text-[11px]">
+            ⚠ Enfermidades Diagnosticadas — Tratamento Necessário:
+          </div>
+          <div
+            v-for="disease in activeRecord.runtime.activeDiseases"
+            :key="disease.id"
+            class="text-[11px] flex flex-col p-1.5 rounded border border-rose-800/70"
+            :style="{ backgroundColor: creatureTheme.cardDarkBackground }"
+          >
+            <span class="font-bold text-rose-300">{{ disease.name }}</span>
+            <span class="text-slate-300 text-[10px]">{{ disease.description }}</span>
+            <span class="text-amber-300 font-semibold text-[10px] mt-0.5">
+              Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Incubator Quick Status Banner -->
+        <div
+          v-if="incubatorBannerInfo"
+          data-testid="incubator-status-banner"
+          class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
+          :class="
+            incubatorBannerInfo.isReady
+              ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200'
+              : 'bg-amber-950/80 border-amber-700/70 text-amber-200'
           "
         >
-          Cuidar
-        </button>
-      </div>
+          <span class="truncate font-medium">{{ incubatorBannerInfo.text }}</span>
+          <button
+            type="button"
+            data-testid="open-nursery-banner-btn"
+            class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
+            @click="breedingInitialTab = 'nursery'; activeMobileTab = 'genetics'"
+          >
+            Berçário
+          </button>
+        </div>
+
+        <!-- Discreet Urgent Care Banner When Near or At Critical Level -->
+        <div
+          v-if="notificationState.activeBannerText"
+          data-testid="care-alert-banner"
+          class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
+          :class="
+            notificationState.evaluation.activeCriticalCount > 0
+              ? 'bg-rose-950/90 border-rose-700 text-rose-200'
+              : 'bg-amber-950/85 border-amber-700 text-amber-200'
+          "
+        >
+          <div class="flex items-center gap-1.5 min-w-0">
+            <bell-icon class="w-3.5 h-3.5 shrink-0" />
+            <span class="text-[11px] font-medium truncate">{{ notificationState.activeBannerText }}</span>
+          </div>
+          <button
+            type="button"
+            data-testid="care-alert-action-btn"
+            class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
+            @click="
+              activeMobileTab =
+                notificationState.evaluation.immediateAlerts[0]?.reason === 'energy' ||
+                notificationState.evaluation.immediateAlerts[0]?.reason === 'happiness' ||
+                notificationState.evaluation.immediateAlerts[0]?.reason === 'hygiene'
+                  ? 'activities'
+                  : 'feed'
+            "
+          >
+            Cuidar
+          </button>
+        </div>
+      </section>
 
       <!-- 6 Normalized Need Bars (0 to 100) -->
       <section
@@ -1931,7 +1982,7 @@ onUnmounted(() => {
               : 'text-slate-400 hover:text-slate-200'
           "
           
-          @click="activeMobileTab = 'genetics'"
+          @click="breedingInitialTab = 'breeding'; activeMobileTab = 'genetics'"
         >
           <span class="text-sm leading-none">🧬</span>
           <span>Genética</span>
@@ -1952,6 +2003,145 @@ onUnmounted(() => {
           <span>Ajustes</span>
         </button>
       </nav>
+
+      <!-- Owned Dinosaur Collection & Egg Nursery Quick Switcher Modal -->
+      <section
+        v-if="isCollectionModalOpen"
+        data-testid="collection-switcher-modal"
+        aria-label="Coleção de Dinossauros"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4"
+        @click.self="isCollectionModalOpen = false"
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="collection-modal-title"
+          class="w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+          :style="{
+            backgroundColor: creatureTheme.containerBackground,
+            borderColor: creatureTheme.borderColor
+          }"
+        >
+          <div
+            class="px-4 py-3 border-b flex items-center justify-between"
+            :style="{
+              backgroundColor: creatureTheme.headerBackground,
+              borderBottomColor: creatureTheme.borderColor
+            }"
+          >
+            <div>
+              <h2 id="collection-modal-title" class="text-sm font-black uppercase text-white flex items-center gap-1.5">
+                <span>🐉</span>
+                <span>Meus Dinossauros ({{ ownedCreatures.length }})</span>
+              </h2>
+              <p class="text-[11px] text-slate-400">
+                Troque de dinossauro ativo para alimentar, cuidar e evoluir.
+              </p>
+            </div>
+            <button
+              type="button"
+              data-testid="close-collection-modal-btn"
+              aria-label="Fechar coleção"
+              class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700"
+              @click="isCollectionModalOpen = false"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="p-4 overflow-y-auto space-y-3">
+            <div class="space-y-2">
+              <button
+                v-for="entry in ownedCreatures"
+                :key="entry.creatureId"
+                type="button"
+                :data-testid="`modal-collection-creature-${entry.creatureId}`"
+                class="w-full p-2.5 rounded-xl border text-left flex items-center justify-between gap-2 transition hover:brightness-110"
+                :style="{
+                  backgroundColor:
+                    activeCreatureId === entry.creatureId
+                      ? creatureTheme.cardDarkBackground
+                      : creatureTheme.cardBackground,
+                  borderColor:
+                    activeCreatureId === entry.creatureId
+                      ? creatureTheme.primaryColor
+                      : creatureTheme.borderSubtleColor
+                }"
+                @click="handleSelectOwnedCreature(entry.creatureId)"
+              >
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div
+                    class="w-6 h-6 rounded-lg shrink-0 border border-white/20"
+                    :style="{ backgroundColor: entry.record.genetics.phenotype.colors.base }"
+                  />
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">
+                      {{ entry.record.runtime.customNickname || getCharacterSpeciesById(entry.speciesId).displayName }}
+                      ({{ entry.record.genetics.sex === 'male' ? '♂' : '♀' }})
+                    </div>
+                    <div class="text-[10px] text-slate-300 truncate">
+                      Fase: <strong class="capitalize">{{ entry.record.runtime.currentStage }}</strong> · Gen {{ entry.record.genetics.generation }} · Nv.{{ entry.record.progression.level }}
+                    </div>
+                    <div
+                      v-if="entry.record.genetics.parents"
+                      class="text-[10px] text-amber-300 truncate"
+                    >
+                      Pais: {{ entry.record.genetics.parents.sireName }} × {{ entry.record.genetics.parents.damName }}
+                    </div>
+                  </div>
+                </div>
+                <span
+                  class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase shrink-0"
+                  :class="
+                    activeCreatureId === entry.creatureId
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-slate-800 text-slate-200 border border-slate-700'
+                  "
+                >
+                  {{ activeCreatureId === entry.creatureId ? 'Ativo' : 'Cuidar' }}
+                </span>
+              </button>
+            </div>
+
+            <div
+              v-if="activeIncubatorEggs.length > 0"
+              data-testid="collection-modal-eggs-section"
+              class="pt-2 border-t space-y-2"
+              :style="{ borderTopColor: creatureTheme.borderSubtleColor }"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-amber-300">
+                  🥚 Ovos no Berçário ({{ activeIncubatorEggs.length }})
+                </span>
+                <button
+                  type="button"
+                  data-testid="collection-modal-open-nursery-btn"
+                  class="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black uppercase transition"
+                  @click="handleOpenNurseryFromCollection"
+                >
+                  Abrir Berçário
+                </button>
+              </div>
+              <div
+                v-for="egg in activeIncubatorEggs"
+                :key="egg.id"
+                class="p-2 rounded-xl border text-[11px] flex items-center justify-between gap-2"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
+                <span class="font-bold text-white capitalize">
+                  🥚 {{ getCharacterSpeciesById(egg.targetSpecies).displayName }} (Gen {{ egg.genome.generation }})
+                </span>
+                <span class="text-amber-300 font-mono text-[10px]">
+                  {{ formatCollectionEggStatus(egg) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- Interactive Genealogy Tree Modal -->
       <genealogy-tree-modal

@@ -89,10 +89,16 @@ describe('persistence domain engine, offline simulation, and save repository', (
     const evolvedOffline = simulateOfflineProgressOnSnapshot(readyToEvolve, 100000 + 14_400_000);
     expect(evolvedOffline.characters.ignisauro.runtime.currentStage).toBe('crianca');
 
+    // Fresh snapshot starts with ONLY 1 creature (starter) and never auto-hatches unowned species offline
+    expect(listOwnedCreatures(snapshot)).toHaveLength(1);
+    expect(listOwnedCreatures(snapshot)[0].speciesId).toBe('ignisauro');
+
     // Simulating neglect (many hours offline) triggers diseases and eventually death by neglect/disease
     const neglected = simulateOfflineProgressOnSnapshot(snapshot, 100000 + 48 * 3600 * 1000);
     expect(neglected.characters.ignisauro.runtime.activeDiseases?.length).toBeGreaterThan(0);
     expect(neglected.characters.ignisauro.runtime.causeOfDeath).toBe('neglect_or_disease');
+    expect(neglected.characters.glacissauro.runtime.currentStage).toBe('ovo');
+    expect(listOwnedCreatures(neglected)).toHaveLength(1);
 
     // Simulating reaching 720 hours (30 days = 1 real-life month) causes natural death by old age
     const elderlySnap: typeof snapshot = {
@@ -233,6 +239,22 @@ describe('persistence domain engine, offline simulation, and save repository', (
       })
     ).toBe('incubating');
 
+    const normalizedPeerEgg = normalizeBredEggRecord(
+      {
+        id: 'e-peer',
+        ownerId: 'peer-ephemeral-123',
+        genome,
+        targetSpecies: 'ignisauro',
+        incubationProgress: 0,
+        maxIncubationHours: 0.05,
+        isWarm: true,
+        createdAtMs: 1000,
+        isReadyToHatch: false
+      },
+      'local-player'
+    );
+    expect(normalizedPeerEgg.ownerId).toBe('local-player');
+
     const normalizedBadHours = normalizeBredEggRecord(
       {
         id: 'e2',
@@ -353,8 +375,8 @@ describe('persistence domain engine, offline simulation, and save repository', (
     const migratedNoCharId = validateAndMigrateSaveSnapshot(legacyNoCollection, 120_000);
     expect(migratedNoCharId.characters.ignisauro.id).toBe('ignisauro');
 
-    // Owned list keeps unlocked species when active creature lives in collection
-    const withUnlockedStarter = {
+    // Owned list NEVER exposes unowned species even if legacy save progressed them past 'ovo'
+    const withUnownedProgressedSpecies = {
       ...startSnap,
       starterCharacterId: 'ignisauro' as const,
       activeCharacterId: 'glacissauro' as const,
@@ -373,7 +395,35 @@ describe('persistence domain engine, offline simulation, and save repository', (
         }
       }
     };
-    const ownedUnlocked = listOwnedCreatures(withUnlockedStarter);
-    expect(ownedUnlocked.some((e) => e.speciesId === 'glacissauro' && e.source === 'starter')).toBe(true);
+    const ownedFiltered = listOwnedCreatures(withUnownedProgressedSpecies);
+    expect(ownedFiltered).toHaveLength(2);
+    expect(ownedFiltered.some((e) => e.speciesId === 'glacissauro' && e.source === 'starter')).toBe(false);
+
+    // When active creature IS a starter override (e.g. Dev preview), it appears alongside starter + collection and sorts non-active by createdAtMs
+    const secondCollectionBaby = {
+      ...reloaded!.collection![babyId],
+      id: 'baby-extra-2',
+      runtime: {
+        ...reloaded!.collection![babyId].runtime,
+        createdAtMs: 5000
+      }
+    };
+    const withDevStarterOverride = {
+      ...startSnap,
+      starterCharacterId: 'ignisauro' as const,
+      activeCharacterId: 'glacissauro' as const,
+      activeCreatureInstanceId: 'glacissauro',
+      collection: {
+        [babyId]: reloaded!.collection![babyId],
+        'baby-extra-2': secondCollectionBaby
+      }
+    };
+    const devSortedOwned = listOwnedCreatures(withDevStarterOverride);
+    expect(devSortedOwned).toHaveLength(4);
+    expect(devSortedOwned[0].creatureId).toBe('glacissauro');
+    const offlineDevOverride = simulateOfflineProgressOnSnapshot(withDevStarterOverride, 1000 + 3 * 3600_000);
+    expect(offlineDevOverride.characters.ignisauro.runtime.currentStage).toBe('baby');
+    expect(offlineDevOverride.characters.glacissauro.runtime.currentStage).toBe('baby');
+    expect(offlineDevOverride.characters.terrassauro.runtime.currentStage).toBe('ovo');
   });
 });

@@ -373,4 +373,48 @@ describe('Breeding: Application Service & Protocol', () => {
     expect(service.getState().errorMessage).toBe('Permissões de Nearby não concedidas.');
     service.dispose();
   });
+
+  it('resets completed, cancelled, and mid-animation sessions safely for repeated breeding', async () => {
+    const transportA = new DirectLinkedMockP2PAdapter('peer-repeat-a');
+    const transportB = new DirectLinkedMockP2PAdapter('peer-repeat-b');
+    transportA.link(transportB);
+
+    const serviceA = new BreedingService(transportA, 'repeat-session-1');
+    const serviceB = new BreedingService(transportB, 'repeat-session-1');
+
+    serviceA.selectLocalCreature('ignisauro', maleIgnis);
+    serviceB.selectLocalCreature('terrassauro', femaleTerras);
+    serviceA.setLocalReady(true);
+    serviceB.setLocalReady(true);
+
+    // Immediately during animation_running before reveal completes, resetSession clears data safely
+    expect(serviceA.getState().phase).toBe('animation_running');
+    serviceA.resetSession();
+    expect(serviceA.getState().remoteParticipant).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    // After completed phase, openDiscovery cleanly transitions completed -> idle -> discovering
+    const transportC = new DirectLinkedMockP2PAdapter('peer-repeat-c');
+    const transportD = new DirectLinkedMockP2PAdapter('peer-repeat-d');
+    transportC.link(transportD);
+    const serviceC = new BreedingService(transportC, 'repeat-session-2');
+    const serviceD = new BreedingService(transportD, 'repeat-session-2');
+
+    serviceC.selectLocalCreature('ignisauro', maleIgnis);
+    serviceD.selectLocalCreature('terrassauro', femaleTerras);
+    serviceC.setLocalReady(true);
+    serviceD.setLocalReady(true);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(serviceC.getState().phase).toBe('completed');
+
+    await serviceC.openDiscovery('second-room');
+    expect(serviceC.getState().phase).toBe('discovering');
+    expect(serviceC.getState().producedEgg).toBeNull();
+    expect(serviceC.getState().historyRecord).toBeNull();
+
+    serviceA.dispose();
+    serviceB.dispose();
+    serviceC.dispose();
+    serviceD.dispose();
+  });
 });

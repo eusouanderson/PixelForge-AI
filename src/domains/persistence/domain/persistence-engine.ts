@@ -112,9 +112,12 @@ export function normalizeBredEggRecord(
         incubationProgress: clampedProgress
       });
 
+  const normalizedOwnerId =
+    !egg.ownerId || egg.ownerId.startsWith('peer-') ? fallbackOwnerId : egg.ownerId;
+
   return {
     ...egg,
-    ownerId: egg.ownerId ?? fallbackOwnerId,
+    ownerId: normalizedOwnerId,
     status: rawStatus,
     incubationProgress: clampedProgress,
     maxIncubationHours,
@@ -184,10 +187,9 @@ export function listOwnedCreatures(snapshot: GameSaveSnapshot): readonly OwnedCr
   for (const species of listAllCharacterSpecies()) {
     const rec = snapshot.characters[species.id];
     const isStarter = species.id === starterId;
-    const isUnlocked = rec.runtime.currentStage !== 'ovo';
     const isActiveStarter = activeCtx.source === 'starter' && species.id === snapshot.activeCharacterId;
 
-    if (isStarter || isUnlocked || isActiveStarter) {
+    if (isStarter || isActiveStarter) {
       entries.push({
         creatureId: rec.id ?? species.id,
         speciesId: species.id,
@@ -386,10 +388,20 @@ export function simulateOfflineProgressOnSnapshot(
   const elapsedHours = Math.round((elapsedMinutes / 60) * 10) / 10;
   const eggMinutes = Math.floor(EGG_INCUBATION_DURATION_MS / 60000);
   const activeCtx = resolveActiveCreatureContext(snapshot);
+  const starterId = snapshot.starterCharacterId ?? snapshot.activeCharacterId;
   const updatedCharacters = {} as Record<CharacterId, CharacterSaveRecord>;
 
   for (const species of listAllCharacterSpecies()) {
     const prevRecord = snapshot.characters[species.id];
+    const isOwnedStarterOrActive =
+      species.id === starterId ||
+      (activeCtx.source === 'starter' && species.id === snapshot.activeCharacterId);
+
+    if (!isOwnedStarterOrActive) {
+      updatedCharacters[species.id] = prevRecord;
+      continue;
+    }
+
     const shouldDefer = Boolean(
       options.deferActiveEggHatch &&
         activeCtx.source === 'starter' &&

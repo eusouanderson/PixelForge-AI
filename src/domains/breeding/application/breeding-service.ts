@@ -10,7 +10,7 @@ import {
   resolveFairOwnership,
   verifyCommitment
 } from '../domain/consensus-engine';
-import { transitionBreedingPhase } from '../domain/breeding-state-machine';
+import { canTransition, transitionBreedingPhase } from '../domain/breeding-state-machine';
 import type {
   BredEggRecord,
   BreedingHistoryRecord,
@@ -98,19 +98,20 @@ export class BreedingService {
     });
   }
 
-  public async openDiscovery(channelCode: string): Promise<void> {
-    if (this.state.phase === 'failed') {
-      this.setPhase('idle');
-    }
+  public resetSession(): void {
     this.localSeed = '';
     this.localSalt = '';
     this.hasSentCommitment = false;
     this.remoteCommitment = null;
     this.lastAutoSyncedPeerId = null;
+    if (canTransition(this.state.phase, 'idle') && this.state.phase !== 'idle') {
+      this.setPhase('idle');
+    }
     this.updateState((prev) => ({
       remotePeerId: null,
       remoteParticipant: null,
       compatibility: null,
+      animationSceneIndex: 0,
       producedEgg: null,
       ownership: null,
       historyRecord: null,
@@ -119,6 +120,10 @@ export class BreedingService {
         ? { ...prev.localParticipant, isReady: false }
         : null
     }));
+  }
+
+  public async openDiscovery(channelCode: string): Promise<void> {
+    this.resetSession();
 
     await this.transport.connect(channelCode);
     if (this.state.phase === 'failed') {
@@ -402,6 +407,10 @@ export class BreedingService {
         phase: 'failed',
         errorMessage: 'Falha de validação criptográfica: compromisso adulterado.'
       }));
+      return;
+    }
+
+    if (!this.localSeed) {
       return;
     }
 

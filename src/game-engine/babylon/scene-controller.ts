@@ -81,12 +81,17 @@ export class BabylonCreatureSceneController implements CreatureSceneControllerPo
       this.engine = new Engine(config.canvas, false, {
         preserveDrawingBuffer: false,
         stencil: false,
-        powerPreference: 'high-performance'
+        powerPreference: 'high-performance',
+        canvasTabIndex: 0
       });
     } else {
       this.engine = new NullEngine();
     }
     /* v8 ignore stop */
+
+    // Keep the 3D canvas keyboard-accessible without positive tabindex values (axe-core tabindex rule).
+    this.engine.canvasTabIndex = 0;
+    config.canvas.setAttribute('tabindex', '0');
 
     this.scene = new Scene(this.engine);
     const camera = new ArcRotateCamera(

@@ -13,7 +13,7 @@ Todo código de domínio, aplicação e infraestrutura segue o ciclo estrito:
 
 ## 2. Metas e Thresholds de Cobertura (100%)
 
-Configurados em [`vitest.config.ts`](file:///home/bob/PixelForge-AI/vitest.config.ts):
+Configurados em [`vitest.config.ts`](../vitest.config.ts):
 
 - **Statements**: `100%`
 - **Branches**: `100%`
@@ -29,8 +29,10 @@ Configurados em [`vitest.config.ts`](file:///home/bob/PixelForge-AI/vitest.confi
 
 ## 3. Camadas de Teste
 
-1. **Testes Unitários de Domínio e Infraestrutura**: Validam cálculos de necessidades, dietas, atributos, progressão, economia, simulação temporal determinística (`ClockPort`), migrações de save e rasterização `PixelBuffer`/`Canvas2dRenderer`.
-2. **Testes de Validação de Assets ([`examples.spec.ts`](file:///home/bob/PixelForge-AI/src/core/domain/validation/examples.spec.ts))**: Validam todos os **432 arquivos JSON** das 8 criaturas contra o schema Zod.
-3. **Testes de Arquitetura ([`architecture.spec.ts`](file:///home/bob/PixelForge-AI/src/shared/architecture.spec.ts) + `dependency-cruiser`)**: Garantem a existência do `types.ts` em cada domínio, ausência de `any` e respeito às fronteiras entre camadas.
-4. **Testes E2E e Acessibilidade (`Playwright` + `@axe-core/playwright`)**: Validam a experiência mobile portrait-first (`412×915`), troca de personagens, alimentação, cuidados, ficha individual e contraste/acessibilidade.
-
+1. **Testes Unitários de Domínio e Infraestrutura**: Validam cálculos de necessidades, dietas, atributos, progressão, economia, genética, protocolo P2P (`Commit-Reveal`), notificações críticas, atualizador OTA, simulação temporal determinística (`ClockPort`), migrações de save e rasterização/upscaling `PixelBuffer`/`Canvas2dRenderer`.
+2. **Testes de Validação de Assets ([`examples.spec.ts`](../src/core/domain/validation/examples.spec.ts))**: Validam todos os **594 arquivos JSON** das **11 espécies** contra o schema Zod.
+3. **Testes de Simulação P2P e UI ([`two-peer-nearby-simulation.spec.ts`](../src/domains/breeding/tests/two-peer-nearby-simulation.spec.ts) e [`virtual-creatures-game.spec.ts`](../src/domains/characters/tests/virtual-creatures-game.spec.ts))**: Exercitam pareamento Nearby simulado entre dois aparelhos, geração do ovo, incubação, nascimento na coleção e troca de dinossauro ativo.
+4. **Testes de Arquitetura ([`architecture.spec.ts`](../src/shared/architecture.spec.ts) + `dependency-cruiser`)**: Garantem a existência do `types.ts` em cada domínio, ausência de `any`, zero dependências circulares e respeito às fronteiras DDD.
+5. **Testes E2E Mobile e Acessibilidade (`Playwright` + `@axe-core/playwright`)**:
+   - [`e2e/virtual-creatures.spec.ts`](../e2e/virtual-creatures.spec.ts): Valida viewport mobile (`412×915`), ovo inicial, modo dev, cuidados, ficha individual e acessibilidade.
+   - [`e2e/breeding-lifecycle.spec.ts`](../e2e/breeding-lifecycle.spec.ts): Valida em duas abas reais de Chromium via `BroadcastChannel` o cruzamento P2P, incubação do ovo ganho, eclosão para `baby`, alimentação, troca entre criatura inicial e filhote no modal do HUD e persistência pós-reload.
