@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createNewGameSaveSnapshot } from '../domain/persistence-engine';
+import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
+import { crossGenomes } from '@/domains/genetics/domain/inheritance-engine';
+import { createNewGameSaveSnapshot, resolveEggStatus } from '../domain/persistence-engine';
 import {
   selectActiveCharacterUseCase,
+  selectActiveCreatureUseCase,
   feedActiveCharacterUseCase,
   performCharacterActivityUseCase,
   purchaseFoodItemUseCase,
@@ -9,8 +12,13 @@ import {
   hatchCharacterEggUseCase,
   updateSettingsUseCase,
   recordBreedingResultUseCase,
+  startEggIncubationUseCase,
   advanceIncubationUseCase,
-  hatchBredEggUseCase
+  advanceAllIncubatingEggsUseCase,
+  warmIncubatingEggUseCase,
+  hatchBredEggAtomicUseCase,
+  hatchBredEggUseCase,
+  listOwnedCreatures
 } from '../application/game-session-service';
 
 describe('GameSessionService application use cases', () => {
@@ -354,37 +362,337 @@ describe('GameSessionService application use cases', () => {
       isReadyToHatch: false
     };
 
-    // 1. Record breeding result with egg won
+    // 1. Record breeding result with egg won -> starts as 'available'
     const withEgg = recordBreedingResultUseCase(snap, historyRecord, egg, 1600);
     expect(withEgg.incubator).toHaveLength(1);
+    expect(resolveEggStatus(withEgg.incubator[0])).toBe('available');
     expect(withEgg.genealogyArchive).toHaveLength(1);
+
+    // Duplicate record of same egg id does not create duplicate egg entry
+    const dedupedEgg = recordBreedingResultUseCase(withEgg, historyRecord, egg, 1650);
+    expect(dedupedEgg.incubator).toHaveLength(1);
 
     // Record breeding result when remote won (no egg for local)
     const withoutEgg = recordBreedingResultUseCase(withEgg, { ...historyRecord, isLocalWinner: false }, null, 1700);
     expect(withoutEgg.incubator).toHaveLength(1);
     expect(withoutEgg.genealogyArchive).toHaveLength(2);
 
-    // 2. Advance incubation
-    const advanced1 = advanceIncubationUseCase(withEgg, 'egg-test-1', 60, 1800); // 1 hour
+    // Cannot advance or hatch while still 'available' (incubation not started)
+    const ignoredBeforeStart = advanceIncubationUseCase(withEgg, 'egg-test-1', 60, 1750);
+    expect(ignoredBeforeStart.incubator[0].incubationProgress).toBe(0);
+    const prematureHatch = hatchBredEggAtomicUseCase(withEgg, 'egg-test-1', 1760);
+    expect(prematureHatch.success).toBe(false);
+    expect(prematureHatch.snapshot.incubator).toHaveLength(1);
+
+    // Ownership validation prevents incubating or hatching another player's egg
+    const wrongOwnerIncubate = startEggIncubationUseCase(withEgg, 'egg-test-1', 1770, 'other-player');
+    expect(wrongOwnerIncubate.success).toBe(false);
+    expect(wrongOwnerIncubate.message).toContain('outro jogador');
+
+    // 2. Start incubation safely -> status 'incubating', cannot start twice
+    const started = startEggIncubationUseCase(withEgg, 'egg-test-1', 1780);
+    expect(started.success).toBe(true);
+    expect(resolveEggStatus(started.snapshot.incubator[0])).toBe('incubating');
+    expect(started.snapshot.incubator[0].incubationStartedAtMs).toBe(1780);
+
+    const doubleStart = startEggIncubationUseCase(started.snapshot, 'egg-test-1', 1790);
+    expect(doubleStart.success).toBe(false);
+    expect(doubleStart.message).toContain('já está em processo de incubação');
+
+    // 3. Advance incubation
+    const advanced1 = advanceIncubationUseCase(started.snapshot, 'egg-test-1', 60, 1800); // 1 hour
     expect(advanced1.incubator[0].incubationProgress).toBe(1);
     expect(advanced1.incubator[0].isReadyToHatch).toBe(false);
 
-    // Other egg id ignored
-    const unchanged = advanceIncubationUseCase(withEgg, 'other-id', 60, 1800);
-    expect(unchanged.incubator[0].incubationProgress).toBe(0);
+    // Warming advances progress smoothly
+    const warmed = warmIncubatingEggUseCase(advanced1, 'egg-test-1', 1820);
+    expect(warmed.success).toBe(true);
+    expect(warmed.snapshot.incubator[0].incubationProgress).toBeGreaterThan(1);
 
-    const readyEggSnap = advanceIncubationUseCase(advanced1, 'egg-test-1', 60, 1900); // 2 hours
+    // Other egg id & non-positive elapsed ignored cleanly
+    const unchanged = advanceIncubationUseCase(started.snapshot, 'other-id', 60, 1800);
+    expect(unchanged.incubator[0].incubationProgress).toBe(0);
+    expect(advanceIncubationUseCase(started.snapshot, 'egg-test-1', 0, 1800)).toBe(started.snapshot);
+    expect(advanceAllIncubatingEggsUseCase(started.snapshot, 0, 1800)).toBe(started.snapshot);
+
+    // Premature hatch while incubating fails & preserves egg
+    const prematureDuringIncubating = hatchBredEggAtomicUseCase(advanced1, 'egg-test-1', 1850);
+    expect(prematureDuringIncubating.success).toBe(false);
+    expect(prematureDuringIncubating.snapshot.incubator).toHaveLength(1);
+
+    const readyEggSnap = advanceAllIncubatingEggsUseCase(advanced1, 60, 1900); // 2 hours
     expect(readyEggSnap.incubator[0].incubationProgress).toBe(2);
     expect(readyEggSnap.incubator[0].isReadyToHatch).toBe(true);
+    expect(resolveEggStatus(readyEggSnap.incubator[0])).toBe('ready_to_hatch');
 
-    // 3. Hatch bred egg
-    const hatchedSnap = hatchBredEggUseCase(readyEggSnap, 'egg-test-1', 2000);
-    expect(hatchedSnap.incubator).toHaveLength(0);
-    expect(hatchedSnap.characters.ignisauro.runtime.currentStage).toBe('baby');
-    expect(hatchedSnap.characters.ignisauro.genetics).toBe(dummyGenome);
+    // Starting or warming already-ready egg refuses cleanly
+    expect(startEggIncubationUseCase(readyEggSnap, 'egg-test-1', 1950).success).toBe(false);
+    expect(warmIncubatingEggUseCase(readyEggSnap, 'egg-test-1', 1950).success).toBe(false);
+
+    // 4. Hatch bred egg atomically -> creates creature in collection, preserves parent & retains egg as 'hatched'
+    const hatchedResult = hatchBredEggAtomicUseCase(readyEggSnap, 'egg-test-1', 2000, 'Faísca Jr.');
+    expect(hatchedResult.success).toBe(true);
+    expect(hatchedResult.hatchedCreatureId).toBeDefined();
+    const childId = hatchedResult.hatchedCreatureId!;
+    const hatchedSnap = hatchedResult.snapshot;
+
+    // Parent ignisauro in characters is NOT overwritten!
+    expect(hatchedSnap.characters.ignisauro.runtime.currentStage).toBe('ovo');
+    expect(hatchedSnap.characters.ignisauro.id).toBe('ignisauro');
+
+    // Egg remains tracked as 'hatched' with hatchedCreatureId link
+    expect(hatchedSnap.incubator).toHaveLength(1);
+    expect(resolveEggStatus(hatchedSnap.incubator[0])).toBe('hatched');
+    expect(hatchedSnap.incubator[0].hatchedCreatureId).toBe(childId);
+
+    // Newborn exists in collection with BABY stage, nickname, originEggId and preserved genome
+    const newborn = hatchedSnap.collection?.[childId];
+    expect(newborn).toBeDefined();
+    expect(newborn?.originEggId).toBe('egg-test-1');
+    expect(newborn?.runtime.currentStage).toBe('baby');
+    expect(newborn?.runtime.customNickname).toBe('Faísca Jr.');
+    expect(newborn?.genetics).toBe(dummyGenome);
+    expect(hatchedSnap.activeCreatureInstanceId).toBe(childId);
+
+    // Cannot hatch or incubate or warm a hatched egg a second time
+    expect(hatchBredEggUseCase(hatchedSnap, 'egg-test-1', 2050)).toBe(hatchedSnap);
+    expect(startEggIncubationUseCase(hatchedSnap, 'egg-test-1', 2050).success).toBe(false);
+    expect(warmIncubatingEggUseCase(hatchedSnap, 'egg-test-1', 2050).success).toBe(false);
 
     // Hatch non-existent egg returns snapshot untouched
     const fallbackSnap = hatchBredEggUseCase(hatchedSnap, 'non-existent-egg', 2100);
     expect(fallbackSnap).toBe(hatchedSnap);
+  });
+
+  it('integrates hatched bred offspring with normal feeding, activities, revival, collection selection, and egg validation guards', () => {
+    const base = createNewGameSaveSnapshot(1000, 'ignisauro');
+    const sire = createGenesisGenome('ignisauro', 'male', 1000, 'sire-g');
+    const dam = createGenesisGenome('terrassauro', 'female', 1000, 'dam-g');
+    const offspringGenome = crossGenomes(sire, dam, 2000, {}, 'child-gen-2');
+    const hatchedSpecies = offspringGenome.species;
+
+    const bredSnap = recordBreedingResultUseCase(
+      base,
+      {
+        sessionId: 'sess-full',
+        timestampMs: 2500,
+        sireGenomeId: sire.genomeId,
+        damGenomeId: dam.genomeId,
+        sireSpecies: 'ignisauro',
+        damSpecies: 'terrassauro',
+        offspringGenomeId: offspringGenome.genomeId,
+        offspringSpecies: hatchedSpecies,
+        winnerPeerId: 'local-player',
+        isLocalWinner: true,
+        mutationCount: offspringGenome.mutations.length
+      },
+      {
+        id: 'egg-full-1',
+        ownerId: 'local-player',
+        genome: offspringGenome,
+        targetSpecies: hatchedSpecies,
+        status: 'available',
+        incubationProgress: 0,
+        maxIncubationHours: 0.05,
+        isWarm: true,
+        createdAtMs: 2500,
+        isReadyToHatch: false
+      },
+      2500
+    );
+
+    // Warm on 'available' egg cleanly starts incubation
+    const autoStarted = warmIncubatingEggUseCase(bredSnap, 'egg-full-1', 2600);
+    expect(autoStarted.success).toBe(true);
+    expect(resolveEggStatus(autoStarted.snapshot.incubator[0])).toBe('incubating');
+
+    // Warm to finish incubation
+    let cur = autoStarted.snapshot;
+    for (let i = 0; i < 6; i++) {
+      cur = warmIncubatingEggUseCase(cur, 'egg-full-1', 2700 + i * 100).snapshot;
+    }
+    expect(resolveEggStatus(cur.incubator[0])).toBe('ready_to_hatch');
+
+    const hatchRes = hatchBredEggAtomicUseCase(cur, 'egg-full-1', 4000);
+    expect(hatchRes.success).toBe(true);
+    const babyId = hatchRes.hatchedCreatureId!;
+
+    // Owned collection now has BOTH founder ignisauro AND newborn bred offspring
+    const owned = listOwnedCreatures(hatchRes.snapshot);
+    expect(owned.length).toBeGreaterThanOrEqual(2);
+    expect(owned.some((c) => c.creatureId === babyId && c.source === 'collection')).toBe(true);
+
+    // Care workflow works identically on hatched collection baby (feed, activity, revive, switch)
+    const fedBaby = feedActiveCharacterUseCase(hatchRes.snapshot, 'thermal-spring-water', 4100);
+    expect(fedBaby.success).toBe(true);
+    expect(fedBaby.snapshot.collection?.[babyId].progression.totalXpEarned).toBeGreaterThan(0);
+
+    const trainedBaby = performCharacterActivityUseCase(fedBaby.snapshot, 'purifying-bath', 4200);
+    expect(trainedBaby.success).toBe(true);
+
+    // Switch back to starter ignisauro and then back to baby; invalid ID is a safe no-op
+    const switchedStarter = selectActiveCreatureUseCase(trainedBaby.snapshot, 'ignisauro', 4300);
+    expect(switchedStarter.activeCreatureInstanceId).toBe('ignisauro');
+    expect(selectActiveCreatureUseCase(switchedStarter, 'does-not-exist', 4350)).toBe(switchedStarter);
+
+    const backToBaby = selectActiveCreatureUseCase(switchedStarter, babyId, 4400);
+    expect(backToBaby.activeCreatureInstanceId).toBe(babyId);
+    const revivedBaby = reviveDeceasedCharacterUseCase(backToBaby, 4500);
+    expect(revivedBaby.collection?.[babyId].runtime.healthCondition).toBe('healthy');
+
+    // Guard validations: missing / wrong owner / invalid egg / duplicate collection collision
+    expect(startEggIncubationUseCase(hatchRes.snapshot, 'missing-egg', 5000).success).toBe(false);
+    expect(warmIncubatingEggUseCase(hatchRes.snapshot, 'missing-egg', 5000).success).toBe(false);
+
+    const invalidEggSnap = {
+      ...base,
+      incubator: [
+        {
+          id: 'bad-egg',
+          ownerId: 'local-player',
+          genome: offspringGenome,
+          targetSpecies: hatchedSpecies,
+          status: 'available' as const,
+          incubationProgress: 0,
+          maxIncubationHours: 0,
+          isWarm: true,
+          createdAtMs: 1000,
+          isReadyToHatch: false
+        }
+      ]
+    };
+    expect(startEggIncubationUseCase(invalidEggSnap, 'bad-egg', 5100).success).toBe(false);
+
+    // Collision suffix guard when both base creature-id and -2 are already occupied
+    const readyManualSnap = {
+      ...base,
+      playerId: undefined,
+      collection: {
+        'creature-egg-coll': {
+          ...hatchRes.hatchedRecord!,
+          originEggId: 'other-egg-1'
+        },
+        'creature-egg-coll-2': {
+          ...hatchRes.hatchedRecord!,
+          originEggId: 'other-egg-2'
+        }
+      },
+      incubator: [
+        {
+          id: 'egg-coll',
+          genome: sire,
+          targetSpecies: 'ignisauro' as const,
+          status: 'ready_to_hatch' as const,
+          incubationProgress: 1,
+          maxIncubationHours: 1,
+          isWarm: true,
+          createdAtMs: 1000,
+          isReadyToHatch: true
+        }
+      ]
+    };
+    const collisionHatch = hatchBredEggAtomicUseCase(readyManualSnap, 'egg-coll', 5200);
+    expect(collisionHatch.success).toBe(true);
+    expect(collisionHatch.hatchedCreatureId).toBe('creature-egg-coll-3');
+
+    // Hatching when collection is initially undefined and egg has no parents works cleanly
+    const noCollectionSnap = {
+      ...base,
+      collection: undefined,
+      incubator: readyManualSnap.incubator
+    };
+    const firstFromUndefined = hatchBredEggAtomicUseCase(noCollectionSnap, 'egg-coll', 5250);
+    expect(firstFromUndefined.success).toBe(true);
+    expect(firstFromUndefined.hatchedCreatureId).toBe('creature-egg-coll');
+
+    // Guard against duplicate creature creation if collection already links to originEggId
+    const staleReadyDuplicate = {
+      ...base,
+      collection: {
+        'existing-child': {
+          ...firstFromUndefined.hatchedRecord!,
+          originEggId: 'egg-coll'
+        }
+      },
+      incubator: readyManualSnap.incubator
+    };
+    const duplicateBlocked = hatchBredEggAtomicUseCase(staleReadyDuplicate, 'egg-coll', 5260);
+    expect(duplicateBlocked.success).toBe(false);
+    expect(duplicateBlocked.message).toContain('já eclodiu');
+
+    // recordBreedingResultUseCase with missing playerId falls back to local-player
+    const fallbackOwnerRecord = recordBreedingResultUseCase(
+      { ...base, playerId: undefined },
+      {
+        sessionId: 'sess-owner',
+        timestampMs: 5270,
+        sireGenomeId: sire.genomeId,
+        damGenomeId: dam.genomeId,
+        sireSpecies: 'ignisauro',
+        damSpecies: 'terrassauro',
+        offspringGenomeId: offspringGenome.genomeId,
+        offspringSpecies: hatchedSpecies,
+        winnerPeerId: 'local-player',
+        isLocalWinner: true,
+        mutationCount: 0
+      },
+      {
+        id: 'egg-no-owner',
+        genome: offspringGenome,
+        targetSpecies: hatchedSpecies,
+        incubationProgress: 0,
+        maxIncubationHours: 0.05,
+        isWarm: true,
+        createdAtMs: 5270,
+        isReadyToHatch: false
+      },
+      5270
+    );
+    expect(fallbackOwnerRecord.incubator[0].ownerId).toBe('local-player');
+
+    // Multi-egg incubator preserves sibling eggs cleanly across start, warm, and hatch transitions
+    const multiEggSnap = {
+      ...base,
+      incubator: [
+        {
+          id: 'egg-multi-1',
+          ownerId: 'local-player',
+          genome: offspringGenome,
+          targetSpecies: hatchedSpecies,
+          status: 'available' as const,
+          incubationProgress: 0,
+          maxIncubationHours: 1 / 60,
+          isWarm: true,
+          createdAtMs: 6000,
+          isReadyToHatch: false
+        },
+        {
+          id: 'egg-multi-2',
+          ownerId: 'local-player',
+          genome: sire,
+          targetSpecies: 'ignisauro' as const,
+          status: 'available' as const,
+          incubationProgress: 0,
+          maxIncubationHours: 1 / 60,
+          isWarm: true,
+          createdAtMs: 6001,
+          isReadyToHatch: false
+        }
+      ]
+    };
+    const m1 = startEggIncubationUseCase(multiEggSnap, 'egg-multi-1', 6100).snapshot;
+    expect(resolveEggStatus(m1.incubator[1])).toBe('available');
+    const m2 = warmIncubatingEggUseCase(m1, 'egg-multi-1', 6200).snapshot;
+    expect(resolveEggStatus(m2.incubator[1])).toBe('available');
+    const m3 = warmIncubatingEggUseCase(m2, 'egg-multi-1', 6300).snapshot;
+    expect(resolveEggStatus(m3.incubator[0])).toBe('ready_to_hatch');
+    const m4 = hatchBredEggAtomicUseCase(m3, 'egg-multi-1', 6400);
+    expect(m4.success).toBe(true);
+    expect(resolveEggStatus(m4.snapshot.incubator[0])).toBe('hatched');
+    expect(resolveEggStatus(m4.snapshot.incubator[1])).toBe('available');
+
+    // Hatching starter egg updates active starter cleanly too
+    const starterHatched = hatchCharacterEggUseCase(base, 5300);
+    expect(starterHatched.characters.ignisauro.runtime.currentStage).toBe('baby');
   });
 });

@@ -50,15 +50,20 @@ import {
 import { getCharacterEnvironmentConfig } from '@/domains/environments/domain/environment-registry';
 import {
   createNewGameSaveSnapshot,
+  listOwnedCreatures,
+  resolveActiveCreatureContext,
+  resolveEggStatus,
   simulateOfflineProgressOnSnapshot
 } from '@/domains/persistence/domain/persistence-engine';
 import { LocalStorageGameSaveRepository } from '@/domains/persistence/infrastructure/local-storage-save-repository';
 import {
+  advanceAllIncubatingEggsUseCase,
   feedActiveCharacterUseCase,
   hatchCharacterEggUseCase,
   performCharacterActivityUseCase,
   purchaseFoodItemUseCase,
   reviveDeceasedCharacterUseCase,
+  selectActiveCreatureUseCase,
   updateSettingsUseCase
 } from '@/domains/persistence/application/game-session-service';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
@@ -74,6 +79,7 @@ const sceneController = new BabylonCreatureSceneController();
 
 const saveState = ref<GameSaveSnapshot>(createNewGameSaveSnapshot(Date.now()));
 const activeMobileTab = ref<'feed' | 'activities' | 'sheet' | 'settings' | 'genetics'>('feed');
+const breedingInitialTab = ref<'breeding' | 'nursery' | 'lineage'>('breeding');
 const showGenealogyModal = ref<boolean>(false);
 const feedbackBanner = ref<string>(
   '🥚 Um ovo ancestral misterioso surgiu no Santuário Elemental! Aguarde alguns minutos para vê-lo rachar e abrir.'
@@ -83,6 +89,7 @@ const spriteOverlayCanvasRef = ref<HTMLCanvasElement | null>(null);
 const frameToggle = ref<1 | 2 | 3 | 4>(1);
 const manualAnimOverride = ref<CharacterAnimationName | null>(null);
 const nowClockMs = ref<number>(Date.now());
+const lastIncubationTickMs = ref<number>(Date.now());
 const isHatchAnimationPlaying = ref<boolean>(false);
 
 let spriteTimer: ReturnType<typeof setInterval> | null = null;
@@ -104,15 +111,52 @@ const allFoods = listAllFoods();
 const allActivities = listAllActivities();
 
 const allAvailableSpecies = listAllCharacterSpecies();
-const activeCharacterId = computed<CharacterId>(() => saveState.value.activeCharacterId);
+const activeContext = computed(() => resolveActiveCreatureContext(saveState.value));
+const activeCharacterId = computed<CharacterId>(() => activeContext.value.speciesId);
+const activeCreatureId = computed<string>(() => activeContext.value.creatureId);
 const activeSpecies = computed(() => getCharacterSpeciesById(activeCharacterId.value));
-const creatureTheme = computed(() =>
-  generateCreatureTheme(
+const activeRecord = computed(() => activeContext.value.record);
+const activeDisplayName = computed(
+  () => activeRecord.value.runtime.customNickname || activeSpecies.value.displayName
+);
+const ownedCreatures = computed(() => listOwnedCreatures(saveState.value));
+const incubatorBannerInfo = computed(() => {
+  const activeEggs = saveState.value.incubator.filter((e) => resolveEggStatus(e) !== 'hatched');
+  if (activeEggs.length === 0) return null;
+  const readyEggs = activeEggs.filter((e) => resolveEggStatus(e) === 'ready_to_hatch');
+  if (readyEggs.length > 0) {
+    const speciesName = getCharacterSpeciesById(readyEggs[0].targetSpecies).displayName;
+    return {
+      isReady: true,
+      text: `🐣 ${readyEggs.length} ovo(s) de ${speciesName} pronto(s) para nascer no Berçário!`
+    };
+  }
+  const incubatingEggs = activeEggs.filter((e) => resolveEggStatus(e) === 'incubating');
+  if (incubatingEggs.length > 0) {
+    const egg = incubatingEggs[0];
+    const pct = Math.min(100, Math.round((egg.incubationProgress / egg.maxIncubationHours) * 100));
+    const speciesName = getCharacterSpeciesById(egg.targetSpecies).displayName;
+    return {
+      isReady: false,
+      text: `🔥 Ovo de ${speciesName} incubando (${pct}%)`
+    };
+  }
+  const speciesName = getCharacterSpeciesById(activeEggs[0].targetSpecies).displayName;
+  return {
+    isReady: false,
+    text: `🥚 Ovo de ${speciesName} disponível no Berçário para iniciar incubação`
+  };
+});
+const creatureTheme = computed(() => {
+  const genetics = activeRecord.value.genetics;
+  if (genetics?.parents) {
+    return generateCreatureTheme(genetics.phenotype.colors.base, genetics.phenotype.colors.crest);
+  }
+  return generateCreatureTheme(
     activeSpecies.value.visualTraits.primaryColors.base,
     activeSpecies.value.visualTraits.primaryColors.highlight
-  )
-);
-const activeRecord = computed(() => saveState.value.characters[activeCharacterId.value]);
+  );
+});
 const activeEnvironment = computed(() => getCharacterEnvironmentConfig(activeCharacterId.value));
 const activeParticles = computed(() => getCharacterParticleConfig(activeCharacterId.value));
 const totalPower = computed(() => computeTotalPowerRating(activeRecord.value.attributes));
@@ -146,11 +190,15 @@ const displayedAnimation = computed<CharacterAnimationName>(() => {
 const currentSpriteArt = computed(() => {
   const maxFrames = displayedStage.value === 'ovo' ? 4 : 2;
   const f = ((frameToggle.value - 1) % maxFrames) + 1;
+  const geneticColors = activeRecord.value.genetics?.parents
+    ? activeRecord.value.genetics.phenotype.colors
+    : undefined;
   return spriteRepo.getSpriteFrame(
     activeCharacterId.value,
     displayedStage.value,
     displayedAnimation.value,
-    f
+    f,
+    geneticColors
   );
 });
 
@@ -178,11 +226,18 @@ const attributeEntries = computed(() => {
   ] as const;
 });
 
-async function persistCurrentState(): Promise<void> {
-  if (saveState.value.settings.autoSaveEnabled) {
-    await saveRepo.saveSnapshot(saveState.value);
+async function persistCurrentState(previousSnapshot?: GameSaveSnapshot): Promise<void> {
+  try {
+    if (saveState.value.settings.autoSaveEnabled) {
+      await saveRepo.saveSnapshot(saveState.value);
+    }
+    await careNotificationService.syncFromSnapshot(saveState.value, Date.now());
+  } catch {
+    if (previousSnapshot) {
+      saveState.value = previousSnapshot;
+    }
+    feedbackBanner.value = '⚠ Falha ao salvar os dados localmente. Estado anterior restaurado com segurança.';
   }
-  await careNotificationService.syncFromSnapshot(saveState.value, Date.now());
 }
 
 const overlayDimensions = computed(() =>
@@ -403,21 +458,51 @@ async function handleResetToBundledVersion(): Promise<void> {
 }
 
 async function handleSelectActiveSpecies(speciesId: CharacterId): Promise<void> {
-  if (saveState.value.activeCharacterId === speciesId) return;
-  saveState.value = {
-    ...saveState.value,
-    activeCharacterId: speciesId
-  };
+  if (activeCreatureId.value === speciesId) return;
+  const prev = saveState.value;
+  saveState.value = selectActiveCreatureUseCase(saveState.value, speciesId, Date.now());
   manualAnimOverride.value = null;
   frameToggle.value = 1;
   syncBabylonEnvironment();
-  feedbackBanner.value = `Companheiro alterado para ${activeSpecies.value.displayName}!`;
-  await persistCurrentState();
+  feedbackBanner.value = `Companheiro alterado para ${activeDisplayName.value}!`;
+  await persistCurrentState(prev);
+}
+
+async function handleSelectOwnedCreature(creatureId: string): Promise<void> {
+  if (activeCreatureId.value === creatureId) return;
+  const prev = saveState.value;
+  saveState.value = selectActiveCreatureUseCase(saveState.value, creatureId, Date.now());
+  manualAnimOverride.value = null;
+  frameToggle.value = 1;
+  syncBabylonEnvironment();
+  feedbackBanner.value = `Agora cuidando de ${activeDisplayName.value} (${activeRecord.value.runtime.currentStage})!`;
+  await persistCurrentState(prev);
+}
+
+async function handleFocusHatchedCreature(creatureId: string): Promise<void> {
+  const prev = saveState.value;
+  saveState.value = selectActiveCreatureUseCase(saveState.value, creatureId, Date.now());
+  manualAnimOverride.value = null;
+  frameToggle.value = 1;
+  activeMobileTab.value = 'feed';
+  breedingInitialTab.value = 'breeding';
+  syncBabylonEnvironment();
+  sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
+  feedbackBanner.value = `🐣 Bem-vindo à coleção, ${activeDisplayName.value}! Cuide e alimente seu novo Baby!`;
+  await persistCurrentState(prev);
 }
 
 async function handleUpdateSave(newSnapshot: GameSaveSnapshot): Promise<void> {
+  const prevSnapshot = saveState.value;
+  const prevCtx = resolveActiveCreatureContext(prevSnapshot);
+  const nextCtx = resolveActiveCreatureContext(newSnapshot);
   saveState.value = newSnapshot;
-  await persistCurrentState();
+  if (prevCtx.creatureId !== nextCtx.creatureId || prevCtx.speciesId !== nextCtx.speciesId) {
+    manualAnimOverride.value = null;
+    frameToggle.value = 1;
+    syncBabylonEnvironment();
+  }
+  await persistCurrentState(prevSnapshot);
 }
 
 watch(
@@ -445,7 +530,7 @@ async function handleVisibilityOrAppStateChange(isForeground: boolean): Promise<
   const now = Date.now();
   nowClockMs.value = now;
   if (isForeground) {
-    const activeWasEgg = saveState.value.characters[saveState.value.activeCharacterId]?.runtime.currentStage === 'ovo';
+    const activeWasEgg = resolveActiveCreatureContext(saveState.value).record.runtime.currentStage === 'ovo';
     saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, now, {
       deferActiveEggHatch: activeWasEgg
     });
@@ -484,7 +569,7 @@ onMounted(async () => {
   nowClockMs.value = nowOnMount;
   const loaded = await saveRepo.loadSave();
   if (loaded) {
-    const wasEgg = loaded.characters[loaded.activeCharacterId]?.runtime.currentStage === 'ovo';
+    const wasEgg = resolveActiveCreatureContext(loaded).record.runtime.currentStage === 'ovo';
     const offlineElapsed = Math.max(0, nowOnMount - loaded.lastSavedAtMs);
     saveState.value = simulateOfflineProgressOnSnapshot(loaded, nowOnMount, {
       deferActiveEggHatch: wasEgg && offlineElapsed < 30 * 60 * 1000
@@ -523,14 +608,41 @@ onMounted(async () => {
     startEggHatchSequence();
   }
 
+  lastIncubationTickMs.value = Date.now();
   incubationClockTimer = setInterval(() => {
-    nowClockMs.value = Date.now();
+    const tickNow = Date.now();
+    const deltaMs = Math.max(0, tickNow - lastIncubationTickMs.value);
+    lastIncubationTickMs.value = tickNow;
+    nowClockMs.value = tickNow;
+
     if (
       displayedStage.value === 'ovo' &&
       !isHatchAnimationPlaying.value &&
       eggRemainingMs.value <= 0
     ) {
       startEggHatchSequence();
+    }
+
+    if (deltaMs > 0 && saveState.value.incubator.some((egg) => resolveEggStatus(egg) === 'incubating')) {
+      const prevReadyCount = saveState.value.incubator.filter(
+        (egg) => resolveEggStatus(egg) === 'ready_to_hatch'
+      ).length;
+      const updatedSnap = advanceAllIncubatingEggsUseCase(
+        saveState.value,
+        deltaMs / 60000,
+        tickNow
+      );
+      if (updatedSnap !== saveState.value) {
+        saveState.value = updatedSnap;
+        const nextReadyCount = updatedSnap.incubator.filter(
+          (egg) => resolveEggStatus(egg) === 'ready_to_hatch'
+        ).length;
+        if (nextReadyCount > prevReadyCount) {
+          feedbackBanner.value = '🐣 Um ovo do Berçário concluiu a incubação e está pronto para nascer!';
+          sceneController.triggerReactiveParticles(createReactiveParticleBurst('evolution'));
+          void persistCurrentState();
+        }
+      }
     }
   }, 1000);
 
@@ -639,7 +751,7 @@ onUnmounted(() => {
                   data-testid="active-character-name"
                   class="text-sm font-bold tracking-tight uppercase text-white"
                 >
-                  {{ activeSpecies.displayName }}
+                  {{ activeDisplayName }}
                 </h1>
                 <span
                   class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full border"
@@ -854,6 +966,28 @@ onUnmounted(() => {
             Remédio indicado: {{ getFoodById(disease.remedyFoodId).name }}
           </span>
         </div>
+      </div>
+
+      <!-- Incubator Quick Status Banner -->
+      <div
+        v-if="incubatorBannerInfo"
+        data-testid="incubator-status-banner"
+        class="px-3.5 py-2 border-b text-xs flex items-center justify-between gap-2"
+        :class="
+          incubatorBannerInfo.isReady
+            ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200'
+            : 'bg-amber-950/80 border-amber-700/70 text-amber-200'
+        "
+      >
+        <span class="truncate font-medium">{{ incubatorBannerInfo.text }}</span>
+        <button
+          type="button"
+          data-testid="open-nursery-banner-btn"
+          class="px-2 py-1 rounded bg-slate-900/80 hover:bg-slate-800 border border-current text-[10px] font-bold uppercase shrink-0"
+          @click="breedingInitialTab = 'nursery'; activeMobileTab = 'genetics'"
+        >
+          Berçário
+        </button>
       </div>
 
       <!-- Discreet Urgent Care Banner When Near or At Critical Level -->
@@ -1104,6 +1238,61 @@ onUnmounted(() => {
           data-testid="tab-content-sheet"
           class="space-y-3"
         >
+          <!-- Coleção de Dinossauros do Jogador -->
+          <div
+            data-testid="player-collection-card"
+            class="p-3 rounded-xl border space-y-2 transition-colors duration-500"
+            :style="{
+              backgroundColor: creatureTheme.cardBackground,
+              borderColor: creatureTheme.borderSubtleColor
+            }"
+          >
+            <div class="flex items-center justify-between">
+              <h2 class="text-xs font-bold uppercase text-emerald-400">
+                Minha Coleção de Dinossauros
+              </h2>
+              <span class="text-[11px] font-mono text-amber-300">
+                {{ ownedCreatures.length }} criatura(s)
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto pr-0.5">
+              <button
+                v-for="entry in ownedCreatures"
+                :key="entry.creatureId"
+                type="button"
+                :data-testid="`collection-creature-${entry.creatureId}`"
+                class="p-2 rounded-lg border text-left flex items-center justify-between gap-2 transition"
+                :style="{
+                  backgroundColor: activeCreatureId === entry.creatureId ? creatureTheme.cardDarkBackground : 'transparent',
+                  borderColor: activeCreatureId === entry.creatureId ? creatureTheme.primaryColor : creatureTheme.borderSubtleColor
+                }"
+                @click="handleSelectOwnedCreature(entry.creatureId)"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <div
+                    class="w-4 h-4 rounded-full shrink-0 border border-white/20"
+                    :style="{ backgroundColor: entry.record.genetics.phenotype.colors.base }"
+                  />
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">
+                      {{ entry.record.runtime.customNickname || getCharacterSpeciesById(entry.speciesId).displayName }}
+                      ({{ entry.record.genetics.sex === 'male' ? '♂' : '♀' }})
+                    </div>
+                    <div class="text-[10px] text-slate-400 truncate">
+                      {{ entry.record.runtime.currentStage }} · Gen {{ entry.record.genetics.generation }} · Nv.{{ entry.record.progression.level }}
+                    </div>
+                  </div>
+                </div>
+                <span
+                  class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0"
+                  :class="activeCreatureId === entry.creatureId ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-300'"
+                >
+                  {{ activeCreatureId === entry.creatureId ? 'Ativo' : 'Cuidar' }}
+                </span>
+              </button>
+            </div>
+          </div>
+
           <div
             class="p-3 rounded-xl border space-y-1.5 transition-colors duration-500"
             :style="{
@@ -1113,7 +1302,7 @@ onUnmounted(() => {
           >
             <div class="flex items-center justify-between">
               <h2 class="text-sm font-bold uppercase text-emerald-400">
-                Ficha Oficial — {{ activeSpecies.displayName }}
+                Ficha Oficial — {{ activeDisplayName }}
               </h2>
               <span class="text-xs font-bold text-amber-300">
                 Poder Total: {{ totalPower }}
@@ -1130,8 +1319,21 @@ onUnmounted(() => {
                   borderColor: creatureTheme.borderSubtleColor
                 }"
               >
-                <span class="text-slate-400 block text-[10px] uppercase">Espécie</span>
-                <strong>{{ activeSpecies.species }}</strong>
+                <span class="text-slate-400 block text-[10px] uppercase">Espécie · Geração</span>
+                <strong>{{ activeSpecies.species }} (Gen {{ activeRecord.genetics.generation }})</strong>
+              </div>
+              <div
+                v-if="activeRecord.originEggId"
+                class="p-2 rounded-lg border transition-colors duration-500"
+                :style="{
+                  backgroundColor: creatureTheme.cardDarkBackground,
+                  borderColor: creatureTheme.borderSubtleColor
+                }"
+              >
+                <span class="text-slate-400 block text-[10px] uppercase">Origem Genética</span>
+                <strong class="font-mono text-amber-300">
+                  {{ activeRecord.genetics.parents ? `${activeRecord.genetics.parents.sireName} × ${activeRecord.genetics.parents.damName}` : activeRecord.originEggId }}
+                </strong>
               </div>
               <div
                 class="p-2 rounded-lg border transition-colors duration-500"
@@ -1244,7 +1446,9 @@ onUnmounted(() => {
           <breeding-modal
             :save-snapshot="saveState"
             :creature-theme="creatureTheme"
+            :initial-subtab="breedingInitialTab"
             @update-save="handleUpdateSave"
+            @focus-creature="handleFocusHatchedCreature"
           />
         </div>
 
@@ -1587,9 +1791,9 @@ onUnmounted(() => {
                   :data-testid="`select-species-${species.id}`"
                   class="p-2 rounded-lg border text-left flex items-center gap-2 transition-all duration-200"
                   :style="{
-                    backgroundColor: activeCharacterId === species.id ? creatureTheme.cardDarkBackground : 'transparent',
-                    borderColor: activeCharacterId === species.id ? creatureTheme.primaryColor : creatureTheme.borderSubtleColor,
-                    boxShadow: activeCharacterId === species.id ? creatureTheme.accentGlow : 'none'
+                    backgroundColor: activeCreatureId === species.id ? creatureTheme.cardDarkBackground : 'transparent',
+                    borderColor: activeCreatureId === species.id ? creatureTheme.primaryColor : creatureTheme.borderSubtleColor,
+                    boxShadow: activeCreatureId === species.id ? creatureTheme.accentGlow : 'none'
                   }"
                   @click="handleSelectActiveSpecies(species.id)"
                 >

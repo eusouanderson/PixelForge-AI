@@ -65,10 +65,14 @@ describe('Breeding: Application Service & Protocol', () => {
     // Exactly one device produces the egg!
     if (stateA.ownership?.isLocalWinner) {
       expect(stateA.producedEgg).not.toBeNull();
+      expect(stateA.producedEgg?.status).toBe('available');
+      expect(stateA.producedEgg?.ownerId).toBe('peer-alpha');
       expect(stateB.producedEgg).toBeNull();
     } else {
       expect(stateA.producedEgg).toBeNull();
       expect(stateB.producedEgg).not.toBeNull();
+      expect(stateB.producedEgg?.status).toBe('available');
+      expect(stateB.producedEgg?.ownerId).toBe('peer-beta');
     }
 
     // Both hold the complete genealogical record

@@ -47,15 +47,22 @@ export interface BreedingParticipant {
   readonly isReady: boolean;
 }
 
+export type EggIncubationStatus = 'available' | 'incubating' | 'ready_to_hatch' | 'hatched';
+
 export interface BredEggRecord {
   readonly id: string;
+  readonly ownerId?: string;
   readonly genome: CreatureGenome;
   readonly targetSpecies: CharacterId;
+  readonly status?: EggIncubationStatus;
   readonly incubationProgress: number;
   readonly maxIncubationHours: number;
   readonly isWarm: boolean;
   readonly createdAtMs: number;
+  readonly incubationStartedAtMs?: number;
   readonly isReadyToHatch: boolean;
+  readonly hatchedAtMs?: number;
+  readonly hatchedCreatureId?: string;
 }
 
 export interface BreedingHistoryRecord {

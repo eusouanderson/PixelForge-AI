@@ -1,4 +1,5 @@
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
+import { resolveActiveCreatureContext } from '@/domains/persistence/domain/persistence-engine';
 import {
   evaluateCharacterCareAlerts,
   formatCareSummaryBanner
@@ -177,14 +178,15 @@ export class CareNotificationService {
       return false;
     }
 
-    const activeRecord = snapshot.characters[snapshot.activeCharacterId];
-    const name = activeRecord.runtime.customNickname || snapshot.activeCharacterId;
+    const activeCtx = resolveActiveCreatureContext(snapshot);
+    const activeRecord = activeCtx.record;
+    const name = activeRecord.runtime.customNickname || activeCtx.speciesId;
     const sent = await this.port.showNow(
       {
         id: 1999,
         reason: 'hunger',
         severity: 'warning',
-        characterId: snapshot.activeCharacterId,
+        characterId: activeCtx.speciesId,
         characterName: name,
         title: `🔔 PixelForge: Alertas ativos para ${name}!`,
         body: 'Você será avisado automaticamente com o app fechado ou minimizado quando uma necessidade se aproximar do nível crítico.',

@@ -2,6 +2,7 @@ import { getCharacterSpeciesById } from '@/domains/characters/domain/character-r
 import { DEFAULT_DECAY_RATES_PER_HOUR } from '@/domains/pet-needs/domain/pet-needs-engine';
 import type { NeedDecayRatesPerHour } from '@/domains/pet-needs/types';
 import type { GameSaveSnapshot } from '@/domains/persistence/types';
+import { resolveActiveCreatureContext } from '@/domains/persistence/domain/persistence-engine';
 import type {
   CareAlertReason,
   CareAlertSeverity,
@@ -115,8 +116,9 @@ export function evaluateCharacterCareAlerts(
   snapshot: GameSaveSnapshot,
   nowMs: number
 ): CareNotificationEvaluation {
-  const charId = snapshot.activeCharacterId;
-  const record = snapshot.characters[charId];
+  const activeCtx = resolveActiveCreatureContext(snapshot);
+  const charId = activeCtx.speciesId;
+  const record = activeCtx.record;
   const species = getCharacterSpeciesById(charId);
   const characterName = record.runtime.customNickname || species.displayName;
 

@@ -16,7 +16,10 @@ import {
   resolveCharacterAnimation,
   appendCharacterCareLog
 } from '../domain/character-state-engine';
-import { CharacterSpriteRepository } from '../infrastructure/character-sprite-repository';
+import {
+  CharacterSpriteRepository,
+  applyPaletteOverridesToSprite
+} from '../infrastructure/character-sprite-repository';
 
 describe('characters domain registry, state engine, and sprite repository', () => {
   it('registers all 11 real canonical dinosaur species with distinct traits, diets, particles, and environments', () => {
@@ -278,5 +281,34 @@ describe('characters domain registry, state engine, and sprite repository', () =
 
     const frameOut = repo.getSpriteFrame('umbrassauro', 'adulto', 'morte', 99);
     expect(frameOut.metadata?.creatureName).toBe('Umbrassauro');
+
+    // Genetic palette override clones palette cleanly for baby stage without mutating original JSON
+    const originalBaby = repo.getSpriteFrame('ignisauro', 'baby', 'idle', 1);
+    expect(applyPaletteOverridesToSprite(originalBaby)).toBe(originalBaby);
+
+    const geneticBaby = repo.getSpriteFrame('ignisauro', 'baby', 'idle', 1, {
+      base: '#38bdf8',
+      belly: '#fef08a',
+      crest: '#c084fc',
+      eye: '#f43f5e'
+    });
+    expect(geneticBaby).not.toBe(originalBaby);
+    expect(geneticBaby.palette.dino_base).toBe('#38bdf8');
+    expect(geneticBaby.palette.dino_eye).toBe('#f43f5e');
+    const partialPaletteBaby = applyPaletteOverridesToSprite(
+      {
+        ...originalBaby,
+        palette: { dino_base: '#111111' }
+      },
+      {
+        base: '#38bdf8',
+        belly: '#fef08a',
+        crest: '#c084fc',
+        eye: '#f43f5e'
+      }
+    );
+    expect(partialPaletteBaby.palette.dino_base).toBe('#38bdf8');
+    expect(partialPaletteBaby.palette.dino_eye).toBeUndefined();
+    expect(originalBaby.palette.dino_base).toBe('#c2410c');
   });
 });

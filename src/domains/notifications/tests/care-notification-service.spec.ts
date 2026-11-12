@@ -208,5 +208,18 @@ describe('CareNotificationService', () => {
 
     const afterReq = await service.requestPermissionAndSync(makeSnapshot({ hunger: 90 }), NOW_MS);
     expect(afterReq.permission).toBe('granted');
+
+    // Notifications work identically when active creature lives in collection (bred offspring)
+    const snap = makeSnapshot({ nickname: 'Pyro Baby', hunger: 12 });
+    const bredSnap: GameSaveSnapshot = {
+      ...snap,
+      activeCreatureInstanceId: 'creature-egg-notif',
+      collection: {
+        'creature-egg-notif': snap.characters.ignisauro
+      }
+    };
+    promptMock.setShowShouldSucceed(true);
+    expect(await service.sendTestNotification(bredSnap, NOW_MS + 2000)).toBe(true);
+    expect(promptMock.shown[promptMock.shown.length - 1].title).toContain('Pyro Baby');
   });
 });
