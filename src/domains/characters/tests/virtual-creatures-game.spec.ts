@@ -166,13 +166,17 @@ describe('VirtualCreaturesGame Mobile Portrait-First Component Integration', () 
     ).toBe(true);
     expect(wrapper.find('[data-testid="sleep-activity-blocked-notice"]').exists()).toBe(true);
 
-    // Switch to Feed tab: feeding is also blocked and buttons disabled
+    // Switch to Feed tab: feeding is blocked for standard foods, but awakening-fruit is allowed
     await wrapper.get('[data-testid="nav-tab-feed"]').trigger('click');
     await flushPromises();
     expect(wrapper.find('[data-testid="sleep-feed-blocked-notice"]').exists()).toBe(true);
     const feedBtn = wrapper.get('[data-testid="feed-btn-thermal-spring-water"]');
     expect((feedBtn.element as HTMLButtonElement).disabled).toBe(true);
     expect(feedBtn.text()).toBe('Dormindo');
+
+    const awakeningBtn = wrapper.get('[data-testid="feed-btn-awakening-fruit"]');
+    expect((awakeningBtn.element as HTMLButtonElement).disabled).toBe(false);
+    expect(awakeningBtn.text()).toBe('Despertar');
 
     // Switch to Activities tab: activities are also blocked with Dormindo button label
     await wrapper.get('[data-testid="nav-tab-activities"]').trigger('click');

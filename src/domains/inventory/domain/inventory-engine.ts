@@ -20,7 +20,8 @@ export function createStarterInventory(): InventoryState {
       'antiseptic-spore-salve': 2,
       'adrenal-stamina-ampoule': 2,
       'serotonin-aura-nectar': 2,
-      'vitality-herbal-elixir': 4
+      'vitality-herbal-elixir': 4,
+      'awakening-fruit': 1
     }
   };
 }

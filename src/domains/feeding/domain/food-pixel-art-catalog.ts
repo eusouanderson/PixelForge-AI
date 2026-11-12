@@ -936,6 +936,68 @@ export const FOOD_PIXEL_ARTS: Readonly<Record<string, DeclarativePixelArt>> = {
         ]
       }
     ]
+  },
+
+  'awakening-fruit': {
+    version: '1.0.0',
+    name: 'Fruta do Despertar',
+    description: 'Fruto estelar radiante com espículas luminosas que despertam dinossauros do sono profundo.',
+    logicalDimensions: { width: 16, height: 16 },
+    palette: {
+      transparent: '#00000000',
+      stem: '#4d7c0f',
+      leaf: '#84cc16',
+      outer_glow: '#7c3aed',
+      fruit_dark: '#9333ea',
+      fruit_mid: '#c084fc',
+      star_gold: '#f59e0b',
+      star_bright: '#fbbf24',
+      energy_spark: '#ffffff'
+    },
+    layers: [
+      {
+        id: 'awakening_fruit_base',
+        name: 'Fruta do Despertar',
+        visible: true,
+        opacity: 1,
+        zIndex: 1,
+        operations: [
+          // Caule e folhas superiores
+          { type: 'pixel', x: 7, y: 1, color: 'stem' },
+          { type: 'pixel', x: 8, y: 1, color: 'stem' },
+          { type: 'pixel', x: 6, y: 2, color: 'leaf' },
+          { type: 'pixel', x: 9, y: 2, color: 'leaf' },
+          { type: 'pixel', x: 5, y: 3, color: 'leaf' },
+          { type: 'pixel', x: 10, y: 3, color: 'leaf' },
+
+          // Aura / casca mística exterior
+          { type: 'rect', x: 5, y: 4, width: 6, height: 8, color: 'outer_glow' },
+          { type: 'rect', x: 4, y: 5, width: 8, height: 6, color: 'outer_glow' },
+          { type: 'rect', x: 3, y: 6, width: 10, height: 4, color: 'outer_glow' },
+
+          // Pontas da estrela de despertar
+          { type: 'pixel', x: 8, y: 3, color: 'star_bright' },
+          { type: 'pixel', x: 8, y: 13, color: 'star_bright' },
+          { type: 'pixel', x: 2, y: 8, color: 'star_bright' },
+          { type: 'pixel', x: 13, y: 8, color: 'star_bright' },
+
+          // Corpo central da fruta
+          { type: 'rect', x: 5, y: 5, width: 6, height: 6, color: 'fruit_dark' },
+          { type: 'rect', x: 6, y: 6, width: 4, height: 4, color: 'fruit_mid' },
+
+          // Núcleo dourado estelar
+          { type: 'rect', x: 7, y: 7, width: 2, height: 2, color: 'star_gold' },
+          { type: 'pixel', x: 7, y: 7, color: 'star_bright' },
+          { type: 'pixel', x: 8, y: 7, color: 'energy_spark' },
+
+          // Centelhas de energia
+          { type: 'pixel', x: 4, y: 4, color: 'energy_spark' },
+          { type: 'pixel', x: 11, y: 4, color: 'energy_spark' },
+          { type: 'pixel', x: 4, y: 11, color: 'star_bright' },
+          { type: 'pixel', x: 11, y: 11, color: 'star_bright' }
+        ]
+      }
+    ]
   }
 };
 

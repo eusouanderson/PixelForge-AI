@@ -89,7 +89,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'volcanic-caldera',
     particlePresetId: 'ignisauro-magma-embers',
     favoriteFoodIds: ['volcanic-roast-meat'],
-    acceptedFoodIds: ['golden-starburst-sunpeach', 'emerald-crystal-geode', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['golden-starburst-sunpeach', 'emerald-crystal-geode', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['frosted-crystal-berry', 'glowing-swamp-mushroom'],
     baseAttributes: {
       strength: 18,
@@ -139,7 +139,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'glacial-sanctuary',
     particlePresetId: 'glacissauro-frost-crystals',
     favoriteFoodIds: ['frosted-crystal-berry'],
-    acceptedFoodIds: ['sky-winged-cloudberry', 'emerald-crystal-geode', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['sky-winged-cloudberry', 'emerald-crystal-geode', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom'],
     baseAttributes: {
       strength: 14,
@@ -189,7 +189,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'storm-spire-crag',
     particlePresetId: 'electrossauro-volt-sparks',
     favoriteFoodIds: ['plasma-thunder-fruit'],
-    acceptedFoodIds: ['sky-winged-cloudberry', 'golden-starburst-sunpeach', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['sky-winged-cloudberry', 'golden-starburst-sunpeach', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['emerald-crystal-geode', 'crimson-shadow-soulfruit'],
     baseAttributes: {
       strength: 13,
@@ -239,7 +239,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'bioluminescent-bog',
     particlePresetId: 'toxissauro-acid-bubbles',
     favoriteFoodIds: ['glowing-swamp-mushroom'],
-    acceptedFoodIds: ['crimson-shadow-soulfruit', 'volcanic-roast-meat', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['crimson-shadow-soulfruit', 'volcanic-roast-meat', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['golden-starburst-sunpeach', 'frosted-crystal-berry'],
     baseAttributes: {
       strength: 15,
@@ -289,7 +289,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'emerald-cavern-monolith',
     particlePresetId: 'terrassauro-emerald-shards',
     favoriteFoodIds: ['emerald-crystal-geode'],
-    acceptedFoodIds: ['volcanic-roast-meat', 'frosted-crystal-berry', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['volcanic-roast-meat', 'frosted-crystal-berry', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['plasma-thunder-fruit', 'sky-winged-cloudberry'],
     baseAttributes: {
       strength: 19,
@@ -339,7 +339,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'floating-sky-sanctuary',
     particlePresetId: 'aerossauro-zephyr-feathers',
     favoriteFoodIds: ['sky-winged-cloudberry'],
-    acceptedFoodIds: ['plasma-thunder-fruit', 'frosted-crystal-berry', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['plasma-thunder-fruit', 'frosted-crystal-berry', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['emerald-crystal-geode', 'glowing-swamp-mushroom'],
     baseAttributes: {
       strength: 12,
@@ -389,7 +389,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'umbral-obsidian-crypt',
     particlePresetId: 'umbrassauro-crimson-wisps',
     favoriteFoodIds: ['crimson-shadow-soulfruit'],
-    acceptedFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['golden-starburst-sunpeach', 'plasma-thunder-fruit'],
     baseAttributes: {
       strength: 18,
@@ -439,7 +439,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'helios-golden-citadel',
     particlePresetId: 'solassauro-solar-corona',
     favoriteFoodIds: ['golden-starburst-sunpeach'],
-    acceptedFoodIds: ['plasma-thunder-fruit', 'sky-winged-cloudberry', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['plasma-thunder-fruit', 'sky-winged-cloudberry', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['crimson-shadow-soulfruit', 'glowing-swamp-mushroom'],
     baseAttributes: {
       strength: 17,
@@ -489,7 +489,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'flowering-meadow',
     particlePresetId: 'rosassauro-fairy-petals',
     favoriteFoodIds: ['serotonin-aura-nectar', 'golden-starburst-sunpeach'],
-    acceptedFoodIds: ['sky-winged-cloudberry', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['sky-winged-cloudberry', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom'],
     baseAttributes: {
       strength: 10,
@@ -539,7 +539,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'crystal-cavern',
     particlePresetId: 'cristalissauro-prism-shards',
     favoriteFoodIds: ['emerald-crystal-geode', 'thermal-spring-water'],
-    acceptedFoodIds: ['frosted-crystal-berry', 'golden-starburst-sunpeach', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['frosted-crystal-berry', 'golden-starburst-sunpeach', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['glowing-swamp-mushroom', 'crimson-shadow-soulfruit'],
     baseAttributes: {
       strength: 16,
@@ -589,7 +589,7 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
     environmentId: 'cosmic-observatory',
     particlePresetId: 'astrassauro-cosmic-starlight',
     favoriteFoodIds: ['plasma-thunder-fruit', 'sky-winged-cloudberry'],
-    acceptedFoodIds: ['golden-starburst-sunpeach', 'thermal-spring-water', 'vitality-herbal-elixir'],
+    acceptedFoodIds: ['golden-starburst-sunpeach', 'thermal-spring-water', 'vitality-herbal-elixir', 'awakening-fruit'],
     forbiddenFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom'],
     baseAttributes: {
       strength: 12,

@@ -13,6 +13,7 @@ import {
   resolveCharacterAnimation
 } from '@/domains/characters/domain/character-state-engine';
 import { applyNeedsDelta, createInitialNeeds } from '@/domains/pet-needs/domain/pet-needs-engine';
+import type { PetNeedsState } from '@/domains/pet-needs/types';
 import { applyAttributeModifier } from '@/domains/attributes/domain/attributes-engine';
 import {
   addExperience,
@@ -129,7 +130,7 @@ export function feedActiveCharacterUseCase(
     };
   }
 
-  if (charRecord.runtime.sleepState === 'sleeping') {
+  if (charRecord.runtime.sleepState === 'sleeping' && foodId !== 'awakening-fruit') {
     return {
       success: false,
       message: `${species.displayName} está dormindo profundamente e descansando. Não é possível alimentá-lo agora!`,
@@ -154,7 +155,20 @@ export function feedActiveCharacterUseCase(
     charRecord.needs.thirst,
     charRecord.runtime.activeDiseases
   );
-  const nextNeeds = applyNeedsDelta(charRecord.needs, reaction.appliedNeedsDelta);
+  const isAwakeningFruit = foodId === 'awakening-fruit';
+  const wasSleeping = charRecord.runtime.sleepState === 'sleeping';
+
+  const nextNeeds: PetNeedsState = isAwakeningFruit
+    ? {
+        hunger: 20,
+        thirst: 20,
+        energy: 20,
+        happiness: 20,
+        hygiene: 20,
+        health: 20
+      }
+    : applyNeedsDelta(charRecord.needs, reaction.appliedNeedsDelta);
+
   const nextAttributes = applyAttributeModifier(charRecord.attributes, {
     source: 'feeding_bonus',
     deltas: reaction.appliedAttributeDelta
@@ -165,7 +179,9 @@ export function feedActiveCharacterUseCase(
     updatedDiseases = contractDisease(updatedDiseases, reaction.contractedDiseaseId, nowMs);
   }
   let finalMessage = reaction.message;
-  if (reaction.curedDiseaseId) {
+  if (isAwakeningFruit && wasSleeping) {
+    finalMessage = `${species.displayName} despertou do sono com a Fruta do Despertar! Devido ao despertar repentino, todos os status foram reduzidos para níveis baixos (20%).`;
+  } else if (reaction.curedDiseaseId) {
     const cureRes = cureDiseasesWithRemedy(updatedDiseases, reaction.curedDiseaseId);
     updatedDiseases = cureRes.remaining;
     finalMessage = `${reaction.message} Curou ${cureRes.cured.length} enfermidade(s)!`;
@@ -190,11 +206,25 @@ export function feedActiveCharacterUseCase(
     updatedDiseases.length,
     currentAgeHours
   );
+  const nextSleepState = isAwakeningFruit ? 'awake' : charRecord.runtime.sleepState;
+  const nextSleepSession = isAwakeningFruit
+    ? {
+        state: 'awake' as const,
+        startedAtMs: nowMs,
+        durationMinutes: 0,
+        wakeAtMs: nowMs,
+        energyAtStart: 20,
+        targetEnergy: 20,
+        lastEnergyUpdateMs: nowMs
+      }
+    : charRecord.runtime.sleepSession;
+
   const nextAnimation = resolveCharacterAnimation(
     finalStage,
     healthCondition,
     emotionalState,
-    reaction.accepted ? 'comendo' : 'doente'
+    reaction.accepted ? 'comendo' : 'doente',
+    nextSleepState
   );
 
   const nextRuntime = appendCharacterCareLog(
@@ -205,7 +235,9 @@ export function feedActiveCharacterUseCase(
       emotionalState,
       healthCondition,
       currentAnimation: nextAnimation,
-      activeDiseases: updatedDiseases
+      activeDiseases: updatedDiseases,
+      sleepState: nextSleepState,
+      sleepSession: nextSleepSession
     },
     'feed',
     finalMessage,

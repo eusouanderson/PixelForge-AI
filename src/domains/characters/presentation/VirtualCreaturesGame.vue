@@ -215,7 +215,7 @@ const isCreatureAlive = computed<boolean>(
 );
 const sleepSession = computed(() => activeRecord.value.runtime.sleepSession);
 const sleepRemainingMs = computed<number>(() => {
-  if (!sleepSession.value) return 0;
+  if (!sleepSession.value || sleepSession.value.state !== 'sleeping') return 0;
   return Math.max(0, sleepSession.value.wakeAtMs - nowClockMs.value);
 });
 const sleepRemainingFormatted = computed<string>(() => {
@@ -344,7 +344,7 @@ function triggerTemporaryAnimation(anim: CharacterAnimationName, durationMs: num
 }
 
 async function handleFeedCharacter(foodId: string): Promise<void> {
-  if (isSleeping.value) {
+  if (isSleeping.value && foodId !== 'awakening-fruit') {
     feedbackBanner.value = `${activeDisplayName.value} está dormindo profundamente e descansando. Não é possível alimentá-lo agora!`;
     return;
   }
@@ -704,7 +704,8 @@ async function handleVisibilityOrAppStateChange(isForeground: boolean): Promise<
 
     if (isSleeping.value && sleepRemainingMs.value <= 0) {
       saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, now, {
-        deferActiveEggHatch: true
+        deferActiveEggHatch: true,
+        forceEvaluate: true
       });
       feedbackBanner.value = `✨ ${activeDisplayName.value} despertou revitalizado com energia total!`;
       playSoundEffect('happy');
@@ -801,7 +802,8 @@ onMounted(async () => {
 
     if (isSleeping.value && sleepRemainingMs.value <= 0) {
       saveState.value = simulateOfflineProgressOnSnapshot(saveState.value, tickNow, {
-        deferActiveEggHatch: true
+        deferActiveEggHatch: true,
+        forceEvaluate: true
       });
       feedbackBanner.value = `✨ ${activeDisplayName.value} despertou revitalizado com energia total!`;
       playSoundEffect('happy');
@@ -1475,7 +1477,8 @@ onUnmounted(() => {
                     <strong :data-testid="`food-stock-${food.id}`">
                       {{ getItemQuantity(saveState.inventory, food.id) }}
                     </strong>
-                    · Fome +{{ food.nutrition.hungerRestore }} · Saúde +{{ food.nutrition.healthDelta }}
+                    <span v-if="food.id === 'awakening-fruit'"> · Desperta o Dinossauro (Status baixos)</span>
+                    <span v-else> · Fome +{{ food.nutrition.hungerRestore }} · Saúde +{{ food.nutrition.healthDelta }}</span>
                   </p>
                 </div>
               </div>
@@ -1484,12 +1487,12 @@ onUnmounted(() => {
                 <button
                   type="button"
                   :data-testid="`feed-btn-${food.id}`"
-                  :disabled="displayedStage === 'ovo' || isSleeping"
+                  :disabled="displayedStage === 'ovo' || (isSleeping && food.id !== 'awakening-fruit')"
                   class="px-2.5 py-1.5 rounded-md text-xs font-bold uppercase shadow-sm transition"
-                  :class="displayedStage === 'ovo' || isSleeping ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'"
+                  :class="displayedStage === 'ovo' || (isSleeping && food.id !== 'awakening-fruit') ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : (isSleeping && food.id === 'awakening-fruit' ? 'bg-amber-600 hover:bg-amber-500 text-white animate-pulse' : 'bg-emerald-600 hover:bg-emerald-500 text-white')"
                   @click="handleFeedCharacter(food.id)"
                 >
-                  {{ isSleeping ? 'Dormindo' : 'Dar' }}
+                  {{ isSleeping && food.id === 'awakening-fruit' ? 'Despertar' : isSleeping ? 'Dormindo' : 'Dar' }}
                 </button>
                 <button
                   type="button"

@@ -420,6 +420,28 @@ const RAW_FOOD_CATALOG: Readonly<Record<string, Omit<FoodItemDefinition, 'pixelA
       secondary: '#059669',
       highlight: '#a7f3d0'
     }
+  },
+  'awakening-fruit': {
+    id: 'awakening-fruit',
+    name: 'Fruta do Despertar',
+    description: 'Fruto místico e amargo que desperta instantaneamente qualquer dinossauro adormecido. Reduz todos os status para níveis baixos.',
+    category: 'fruit',
+    rarity: 'rare',
+    priceCoins: 100,
+    nutrition: {
+      hungerRestore: 0,
+      thirstRestore: 0,
+      energyDelta: 0,
+      happinessDelta: 0,
+      healthDelta: 0,
+      hygieneDelta: 0
+    },
+    attributeBonus: {},
+    pixelColors: {
+      primary: '#f59e0b',
+      secondary: '#9333ea',
+      highlight: '#fbbf24'
+    }
   }
 };
 
@@ -445,6 +467,7 @@ export function evaluateDietaryPreference(
   species: CharacterSpeciesDefinition,
   foodId: string
 ): DietaryPreference {
+  if (foodId === 'awakening-fruit') return 'accepted';
   if (species.favoriteFoodIds.includes(foodId)) return 'favorite';
   if (species.forbiddenFoodIds.includes(foodId)) return 'forbidden';
   return 'accepted';
@@ -460,6 +483,28 @@ export function feedCharacter(
 ): FeedingReaction {
   const food = getFoodById(foodId);
   const preference = evaluateDietaryPreference(species, foodId);
+
+  if (foodId === 'awakening-fruit') {
+    return {
+      characterId: species.id,
+      foodId,
+      preference: 'accepted',
+      accepted: true,
+      satisfactionLevel: 'satisfied',
+      appliedNeedsDelta: {
+        hunger: 0,
+        thirst: 0,
+        energy: 0,
+        happiness: 0,
+        health: 0,
+        hygiene: 0
+      },
+      appliedAttributeDelta: {},
+      experienceGained: 5,
+      message: `${species.displayName} consumiu a Fruta do Despertar! O forte choque amargo despertou a criatura, deixando todos os seus status em níveis baixos (20%).`,
+      timestampMs
+    };
+  }
 
   // Medicine administration validation
   if (food.category === 'medicine' && food.curesDiseaseId) {

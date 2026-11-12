@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { addItemToInventory, getItemQuantity } from '@/domains/inventory/domain/inventory-engine';
 import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
 import { crossGenomes } from '@/domains/genetics/domain/inheritance-engine';
 import { createNewGameSaveSnapshot, resolveEggStatus } from '../domain/persistence-engine';
@@ -135,6 +136,37 @@ describe('GameSessionService application use cases', () => {
     const sleepFeed = feedActiveCharacterUseCase(sleepingFeedSnap, 'volcanic-roast-meat', 3600);
     expect(sleepFeed.success).toBe(false);
     expect(sleepFeed.message).toContain('dormindo');
+
+    // Feeding awakening-fruit while sleeping succeeds, awakens character, and leaves all needs at 20
+    const snapWithAwakening = {
+      ...sleepingFeedSnap,
+      inventory: addItemToInventory(sleepingFeedSnap.inventory, 'awakening-fruit', 2).state
+    };
+    const awakenFeed = feedActiveCharacterUseCase(snapWithAwakening, 'awakening-fruit', 3700);
+    expect(awakenFeed.success).toBe(true);
+    expect(awakenFeed.message).toContain('despertou');
+    expect(awakenFeed.snapshot.characters.ignisauro.runtime.sleepState).toBe('awake');
+    expect(awakenFeed.snapshot.characters.ignisauro.runtime.sleepSession?.state).toBe('awake');
+    expect(awakenFeed.snapshot.characters.ignisauro.needs).toEqual({
+      hunger: 20,
+      thirst: 20,
+      energy: 20,
+      happiness: 20,
+      hygiene: 20,
+      health: 20
+    });
+
+    // Feeding awakening-fruit while already awake also sets all needs to 20
+    const awakeFeed = feedActiveCharacterUseCase(awakenFeed.snapshot, 'awakening-fruit', 3800);
+    expect(awakeFeed.success).toBe(true);
+    expect(awakeFeed.snapshot.characters.ignisauro.needs).toEqual({
+      hunger: 20,
+      thirst: 20,
+      energy: 20,
+      happiness: 20,
+      hygiene: 20,
+      health: 20
+    });
 
     // Deceased character cannot eat
     snap = {
@@ -285,6 +317,12 @@ describe('GameSessionService application use cases', () => {
     const bought = purchaseFoodItemUseCase(snap, 'volcanic-roast-meat', 2, 2000);
     expect(bought.success).toBe(true);
     expect(bought.snapshot.wallet.amberCoins).toBe(snap.wallet.amberCoins - 50);
+
+    // Purchase awakening-fruit for exactly 100 coins
+    const boughtFruit = purchaseFoodItemUseCase(bought.snapshot, 'awakening-fruit', 1, 2100);
+    expect(boughtFruit.success).toBe(true);
+    expect(boughtFruit.snapshot.wallet.amberCoins).toBe(bought.snapshot.wallet.amberCoins - 100);
+    expect(getItemQuantity(boughtFruit.snapshot.inventory, 'awakening-fruit')).toBeGreaterThanOrEqual(1);
 
     const poorSnap = {
       ...snap,
