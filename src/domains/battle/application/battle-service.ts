@@ -8,7 +8,7 @@ import type {
 } from '../types';
 import { BATTLE_PROTOCOL_VERSION } from '../infrastructure/battle-p2p-adapter';
 import { simulateBattle } from '../domain/battle-engine';
-import { settleBattleOutcome } from '../domain/wager-settlement-engine';
+import { processWagerDeduction, settleBattleOutcome } from '../domain/wager-settlement-engine';
 
 export class BattleService {
   private state: BattleSessionState;
@@ -17,7 +17,7 @@ export class BattleService {
   private unsubscribeErr: (() => void) | null = null;
 
   // Sementes criptográficas para commit-reveal determinístico
-  private localSecretSeed = '';
+  private localSecretSeed: string | null = null;
   private remoteSecretSeed: string | null = null;
   private sequenceCounter = 0;
 
@@ -125,6 +125,20 @@ export class BattleService {
     }));
   }
 
+  public reset(): void {
+    this.localSecretSeed = null;
+    this.remoteSecretSeed = null;
+    this.updateState(() => ({
+      phase: 'idle',
+      errorMessage: null,
+      remotePeerId: null,
+      remotePlayerName: null,
+      remoteParticipant: null,
+      simulationResult: null,
+      historyRecord: null
+    }));
+  }
+
   public claimReward(
     currentWallet: WalletState,
     settledBattleIds: ReadonlySet<string>
@@ -137,8 +151,11 @@ export class BattleService {
     const isWinner = sim.winnerPeerId === this.state.localPeerId;
     const outcome = sim.isDraw ? 'draw' : isWinner ? 'victory' : 'defeat';
 
+    const deductRes = processWagerDeduction(currentWallet, this.state.wagerAmount);
+    const walletAfterDeduct = deductRes.success ? deductRes.wallet : currentWallet;
+
     const settlement = settleBattleOutcome(
-      currentWallet,
+      walletAfterDeduct,
       this.state.wagerAmount,
       outcome,
       sim.battleId,

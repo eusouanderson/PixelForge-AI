@@ -284,13 +284,26 @@ describe('Battle P2P Adapter', () => {
     // Reconnect on already connected adapter to test channel closing
     await adapter1.connect('ROOM-FALLBACK-RECONNECT');
 
-    // Deliver broadcast message directly to handler (including self and null data branches)
+    // Deliver broadcast message directly to handler (including self, hello reply, and null data branches)
+    let peersSeen: readonly import('../types').BattleDiscoveredOpponent[] = [];
+    const unbindPeers2 = adapter2.onPeersChange((peers) => {
+      peersSeen = peers;
+    });
+
     const bc2 = (adapter2 as unknown as { channel?: { onmessage?: (e: unknown) => void } }).channel;
     if (bc2?.onmessage) {
-      bc2.onmessage({ data: { senderId: 'p1', type: 'BATTLE_HELLO' } });
+      bc2.onmessage({ data: { senderId: 'p1', type: 'BATTLE_HELLO', payload: { playerName: 'Treinador P1', isReply: false } } });
+      bc2.onmessage({ data: { senderId: 'p1', type: 'BATTLE_HELLO', payload: { playerName: 'Treinador P1 Atualizado', isReply: true } } });
+      bc2.onmessage({ data: { senderId: 'p1', type: 'BATTLE_INVITE', payload: {} } });
+      bc2.onmessage({ data: { senderId: 'p-other', type: 'BATTLE_HELLO', payload: {} } });
+      bc2.onmessage({ data: { senderId: 'p3', type: 'BATTLE_HELLO' } });
       bc2.onmessage({ data: { senderId: adapter2.localPeerId, type: 'BATTLE_HELLO' } });
       bc2.onmessage({ data: null });
     }
+    expect(adapter2.getDiscoveredPeers().length).toBe(3);
+    expect(adapter2.getDiscoveredPeers()[0].playerName).toBe('Treinador P1 Atualizado');
+    expect(adapter2.getDiscoveredPeers()[1].playerName).toBe('Treinador Próximo');
+    expect(peersSeen.length).toBe(3);
 
     // Call connection delegation methods without underlying transport
     await adapter1.connectToPeer('ep-fallback');
@@ -309,5 +322,7 @@ describe('Battle P2P Adapter', () => {
     unbindStatus();
     adapter1.disconnect();
     adapter2.disconnect();
+    expect(peersSeen.length).toBe(0);
+    unbindPeers2();
   });
 });
