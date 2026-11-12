@@ -119,6 +119,9 @@ export class BreedingService {
     }));
 
     await this.transport.connect(channelCode);
+    if (this.state.phase === 'failed') {
+      return;
+    }
     this.setPhase('discovering');
     this.transport.send({
       type: 'HANDSHAKE',

@@ -19,8 +19,8 @@ export function normalizeNearbyError(e: unknown): Error {
 
 export interface NearbyConnectionsPluginInterface {
   isAvailable(): Promise<{ available: boolean; statusCode?: number; reason?: string }>;
-  checkPermissions(): Promise<{ granted: boolean; missingCount?: number }>;
-  requestPermissions(): Promise<{ granted: boolean; missingCount?: number }>;
+  checkPermissions(): Promise<{ granted: boolean; missingCount?: number; missingDetails?: string }>;
+  requestPermissions(): Promise<{ granted: boolean; missingCount?: number; missingDetails?: string }>;
   startAdvertising(options: { endpointName: string; serviceId?: string }): Promise<{ success: boolean }>;
   stopAdvertising(): Promise<{ success: boolean }>;
   startDiscovery(options?: { serviceId?: string }): Promise<{ success: boolean }>;
@@ -42,6 +42,7 @@ export interface NearbyAdapterOptions {
   readonly playerName?: string;
   readonly pluginOverride?: NearbyConnectionsPluginInterface;
   readonly isNativeOverride?: boolean;
+  readonly postGrantRetryDelayMs?: number;
 }
 
 export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
@@ -68,6 +69,8 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
   private readonly isNative: boolean;
   private readonly plugin: NearbyConnectionsPluginInterface;
   private readonly fallbackAdapter: BroadcastChannelP2PAdapter;
+  private readonly postGrantRetryDelayMs: number;
+  private permissionsJustGranted = false;
   private pluginListeners: Array<{ remove: () => Promise<void> }> = [];
 
   constructor(options: NearbyAdapterOptions = {}) {
@@ -75,6 +78,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     this.playerName = options.playerName ?? 'Treinador Pixel';
     this.plugin = options.pluginOverride ?? NearbyConnections;
     this.isNative = options.isNativeOverride ?? (Capacitor.getPlatform() === 'android');
+    this.postGrantRetryDelayMs = options.postGrantRetryDelayMs ?? 250;
     this.fallbackAdapter = new BroadcastChannelP2PAdapter(this.localPeerId);
 
     // Forward fallback messages when running on web
@@ -169,11 +173,35 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     try {
       this.setStatus('checking_environment');
       const check = await this.plugin.checkPermissions();
-      if (check.granted) return true;
+      if (check.granted) {
+        this.addLog('info', '[permissions] Permissões Nearby já concedidas.');
+        return true;
+      }
 
+      this.addLog(
+        'info',
+        `[permissions] Solicitando permissões Nearby${check.missingDetails ? ` (${check.missingDetails})` : ''}...`
+      );
       this.setStatus('requesting_permissions');
       const req = await this.plugin.requestPermissions();
-      return req.granted;
+      if (req.granted) {
+        this.permissionsJustGranted = true;
+        this.addLog('info', '[permissions] Permissões concedidas na sessão atual.');
+        return true;
+      }
+
+      const recheck = await this.plugin.checkPermissions();
+      if (recheck.granted) {
+        this.permissionsJustGranted = true;
+        this.addLog('info', '[permissions] Permissões confirmadas após rechecagem imediata.');
+        return true;
+      }
+
+      this.addLog(
+        'warn',
+        `[permissions] Permissões ainda ausentes${recheck.missingDetails ? `: ${recheck.missingDetails}` : ''}.`
+      );
+      return false;
     } catch (e) {
       const err = normalizeNearbyError(e);
       this.emitError(err);
@@ -189,6 +217,7 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
     this.activeEndpointId = null;
     this.pendingConnectingEndpointId = null;
     this.discoveredPeers = [];
+    this.permissionsJustGranted = false;
     this.addLog('info', `[connect] Sala: ${channelId} (${this.isNative ? 'Android Nearby' : 'Web BroadcastChannel'})`);
 
     if (!this.isNative) {
@@ -201,17 +230,22 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
 
     const hasPermissions = await this.checkAndRequestPermissions();
     if (!hasPermissions) {
-      this.emitError(
-        new Error(
-          'Permissões de Nearby / Bluetooth não concedidas. Por favor, autorize o acesso a Dispositivos Próximos nas configurações do aparelho.'
-        )
-      );
+      if (this.status !== 'failed') {
+        this.emitError(
+          new Error(
+            'Permissões de Nearby / Bluetooth não concedidas. Por favor, autorize o acesso a Dispositivos Próximos nas configurações do aparelho.'
+          )
+        );
+      }
       return;
     }
 
+    const justGranted = this.permissionsJustGranted;
+    this.permissionsJustGranted = false;
+
     await this.setupNativeListeners();
 
-    try {
+    const startRadioDiscovery = async (): Promise<void> => {
       this.setStatus('starting_discovery');
       await this.plugin.stopAllEndpoints();
       const advertisedName = JSON.stringify({
@@ -225,6 +259,27 @@ export class NearbyConnectionsP2PAdapter implements P2PTransportPort {
       await this.plugin.startDiscovery();
       if (this.status === 'starting_discovery') {
         this.setStatus('discovering');
+      }
+    };
+
+    try {
+      try {
+        await startRadioDiscovery();
+      } catch (firstErr) {
+        const normalized = normalizeNearbyError(firstErr);
+        const isHardwareOff =
+          normalized.message.includes('DESLIGADO') || normalized.message.includes('DESLIGADA');
+        if (!justGranted || isHardwareOff) {
+          throw firstErr;
+        }
+        this.addLog(
+          'warn',
+          `[connect] Rádio Nearby ainda inicializando após permissão (${normalized.message}); tentando novamente...`
+        );
+        if (this.postGrantRetryDelayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, this.postGrantRetryDelayMs));
+        }
+        await startRadioDiscovery();
       }
     } catch (e) {
       const err = normalizeNearbyError(e);

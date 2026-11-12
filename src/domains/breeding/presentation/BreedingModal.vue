@@ -890,6 +890,9 @@ async function handleConnect(): Promise<void> {
     selectedLocalSpeciesId.value = props.saveSnapshot.activeCharacterId ?? availableCreatures.value[0]?.speciesId ?? null;
   }
   await breedingService.openDiscovery(roomChannelCode.value);
+  if (sessionState.value.phase === 'failed' || nearbyStatus.value === 'failed') {
+    return;
+  }
   handleSelectLocalCreature();
 }
 
