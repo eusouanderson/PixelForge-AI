@@ -16,6 +16,7 @@ class MockUnderlyingTransport implements P2PTransportPort {
   public diagnosticLogs: NearbyDiagnosticLogEntry[] = [];
   public logHandler: ((logs: readonly NearbyDiagnosticLogEntry[]) => void) | null = null;
   public activeEndpointId: string | null = null;
+  public getConnectionStatus?: () => NearbyConnectionStatus;
 
   public async connect(_channelId: string): Promise<void> {}
   public disconnect(): void {}
@@ -381,5 +382,64 @@ describe('Battle P2P Adapter', () => {
     });
     expect(logsReceived).toEqual([]);
     unsub();
+  });
+
+  it('queues outgoing battle messages when underlying transport is in discovering/connecting state and flushes them on connected', async () => {
+    const underlying = new MockUnderlyingTransport();
+    let status: NearbyConnectionStatus = 'discovering';
+    underlying.getConnectionStatus = () => status;
+
+    const adapter = new BattleP2PAdapter({
+      localPeerId: 'p1',
+      transportOverride: underlying
+    });
+
+    await adapter.connect('BATALHA-777');
+    // At connect time with status === 'discovering', BATTLE_HELLO was queued
+    expect(underlying.sentMessages.length).toBe(0);
+
+    const inviteMsg: BattleP2PMessage = {
+      protocolVersion: '1.0.0',
+      messageId: 'inv-1',
+      type: 'BATTLE_INVITE',
+      senderId: 'p1',
+      sessionId: 's1',
+      sequence: 1,
+      payload: {},
+      timestampMs: Date.now()
+    };
+    adapter.sendBattleMessage(inviteMsg);
+    // Invite is also queued
+    expect(underlying.sentMessages.length).toBe(0);
+
+    // Transition underlying status to intermediate 'connecting' (covers non-connected branch)
+    underlying.statusHandler?.('connecting');
+    expect(underlying.sentMessages.length).toBe(0);
+
+    // Transition underlying status to 'connected'
+    status = 'connected';
+    underlying.statusHandler?.('connected');
+
+    // Both BATTLE_HELLO and BATTLE_INVITE should be flushed
+    expect(underlying.sentMessages.length).toBe(2);
+    expect((underlying.sentMessages[0].payload as { battleEnvelope: BattleP2PMessage }).battleEnvelope.type).toBe('BATTLE_HELLO');
+    expect((underlying.sentMessages[1].payload as { battleEnvelope: BattleP2PMessage }).battleEnvelope.type).toBe('BATTLE_INVITE');
+
+    // Further messages send immediately
+    adapter.sendBattleMessage({
+      protocolVersion: '1.0.0',
+      messageId: 'acc-1',
+      type: 'BATTLE_INVITE_ACCEPT',
+      senderId: 'p1',
+      sessionId: 's1',
+      sequence: 2,
+      payload: {},
+      timestampMs: Date.now()
+    });
+    expect(underlying.sentMessages.length).toBe(3);
+
+    // Disconnect clears any queue and resets
+    adapter.disconnect();
+    expect(adapter.getConnectionStatus()).toBe('idle');
   });
 });
