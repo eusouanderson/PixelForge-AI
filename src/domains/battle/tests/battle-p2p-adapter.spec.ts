@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { DiscoveredPeer, NearbyConnectionStatus, NearbyDiagnosticLogEntry, P2PMessage, P2PTransportPort } from '@/domains/breeding/types';
 import { BattleP2PAdapter } from '../infrastructure/battle-p2p-adapter';
-import type { BattleP2PMessage } from '../types';
+import type { BattleDiagnosticLogEntry, BattleP2PMessage } from '../types';
 
 class MockUnderlyingTransport implements P2PTransportPort {
   public localPeerId = 'peer-underlying';
@@ -359,7 +359,7 @@ describe('Battle P2P Adapter', () => {
     expect(adapter.getActiveEndpointId()).toBe('endpoint-123');
     expect(adapter.getDiagnosticLogs()).toEqual([{ timestampMs: 1234, level: 'info', message: 'test log' }]);
 
-    let logsReceived: readonly NearbyDiagnosticLogEntry[] = [];
+    let logsReceived: readonly BattleDiagnosticLogEntry[] = [];
     const unsub = adapter.onDiagnosticLog((logs) => {
       logsReceived = logs;
     });
@@ -375,7 +375,7 @@ describe('Battle P2P Adapter', () => {
     expect(adapter.getActiveEndpointId()).toBeNull();
     expect(adapter.getDiagnosticLogs()).toEqual([]);
 
-    let logsReceived: readonly NearbyDiagnosticLogEntry[] = [];
+    let logsReceived: readonly BattleDiagnosticLogEntry[] = [];
     const unsub = adapter.onDiagnosticLog((logs) => {
       logsReceived = logs;
     });
