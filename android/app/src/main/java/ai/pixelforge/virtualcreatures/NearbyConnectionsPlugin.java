@@ -395,6 +395,15 @@ public class NearbyConnectionsPlugin extends Plugin {
         return msg != null && (msg.contains("8003") || msg.contains("STATUS_ALREADY_CONNECTED_TO_ENDPOINT"));
     }
 
+    private boolean isIoErrorStatus(Exception e) {
+        if (e instanceof ApiException) {
+            int code = ((ApiException) e).getStatusCode();
+            return code == ConnectionsStatusCodes.STATUS_ENDPOINT_IO_ERROR;
+        }
+        String msg = e.getMessage();
+        return msg != null && (msg.contains("8012") || msg.contains("STATUS_ENDPOINT_IO_ERROR"));
+    }
+
     private void resolveSuccess(PluginCall call) {
         JSObject ret = new JSObject();
         ret.put("success", true);
@@ -547,7 +556,20 @@ public class NearbyConnectionsPlugin extends Plugin {
             return;
         }
 
-        getOrRefreshConnectionsClient().requestConnection(endpointName, endpointId, connectionLifecycleCallback)
+        attemptRequestConnection(call, endpointName, endpointId, 0);
+    }
+
+    private void attemptRequestConnection(PluginCall call, String endpointName, String endpointId, int attempt) {
+        ConnectionsClient client = attempt > 0 ? refreshConnectionsClient() : getOrRefreshConnectionsClient();
+        if (isDiscovering) {
+            try {
+                client.stopDiscovery();
+                isDiscovering = false;
+                Log.d(TAG, "Discovery pausado para requestConnection");
+            } catch (Exception ignored) {}
+        }
+
+        client.requestConnection(endpointName, endpointId, connectionLifecycleCallback)
                 .addOnSuccessListener(unused -> {
                     JSObject ret = new JSObject();
                     ret.put("success", true);
@@ -559,6 +581,11 @@ public class NearbyConnectionsPlugin extends Plugin {
                         ret.put("success", true);
                         ret.put("alreadyConnected", true);
                         call.resolve(ret);
+                        return;
+                    }
+                    if (attempt < 1 && isIoErrorStatus(e)) {
+                        Log.w(TAG, "requestConnection encontrou STATUS_ENDPOINT_IO_ERROR (8012). Tentando novamente em 350ms...");
+                        mainHandler.postDelayed(() -> attemptRequestConnection(call, endpointName, endpointId, attempt + 1), 350L);
                         return;
                     }
                     call.reject("Falha ao solicitar conexão Nearby: " + e.getMessage(), e);
@@ -574,7 +601,16 @@ public class NearbyConnectionsPlugin extends Plugin {
             return;
         }
 
-        getOrRefreshConnectionsClient().acceptConnection(endpointId, payloadCallback)
+        ConnectionsClient client = getOrRefreshConnectionsClient();
+        if (isDiscovering) {
+            try {
+                client.stopDiscovery();
+                isDiscovering = false;
+                Log.d(TAG, "Discovery pausado para acceptConnection");
+            } catch (Exception ignored) {}
+        }
+
+        client.acceptConnection(endpointId, payloadCallback)
                 .addOnSuccessListener(unused -> {
                     JSObject ret = new JSObject();
                     ret.put("success", true);

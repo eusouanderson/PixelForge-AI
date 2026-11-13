@@ -31,6 +31,7 @@ export class BattleP2PAdapter implements BattleTransportPort {
   private peersHandlers: Array<(peers: readonly BattleDiscoveredOpponent[]) => void> = [];
   private status = 'idle';
   private discoveredOpponents: BattleDiscoveredOpponent[] = [];
+  private pendingOutgoingMessages: BattleP2PMessage[] = [];
 
   constructor(options: BattleP2PAdapterOptions = {}) {
     this.localPeerId = options.localPeerId ?? `peer-${Math.random().toString(36).slice(2, 9)}`;
@@ -106,6 +107,7 @@ export class BattleP2PAdapter implements BattleTransportPort {
   }
 
   public disconnect(): void {
+    this.pendingOutgoingMessages = [];
     if (this.channel) {
       this.channel.close();
       this.channel = null;
@@ -120,8 +122,29 @@ export class BattleP2PAdapter implements BattleTransportPort {
     this.setStatus('idle');
   }
 
+  private shouldQueueMessage(): boolean {
+    const status = this.underlyingTransport?.getConnectionStatus?.();
+    if (status !== undefined) {
+      return status !== 'connected';
+    }
+    return false;
+  }
+
+  private flushPendingMessages(): void {
+    const queued = [...this.pendingOutgoingMessages];
+    this.pendingOutgoingMessages = [];
+    for (const msg of queued) {
+      this.sendBattleMessage(msg);
+    }
+  }
+
   public sendBattleMessage(message: BattleP2PMessage): void {
     if (this.underlyingTransport) {
+      if (this.shouldQueueMessage()) {
+        this.pendingOutgoingMessages.push(message);
+        return;
+      }
+
       // Envelopa mensagem com envelope seguro
       const envelope: P2PMessage<{ readonly battleEnvelope: BattleP2PMessage }> = {
         type: 'HANDSHAKE',
@@ -278,6 +301,9 @@ export class BattleP2PAdapter implements BattleTransportPort {
     if (transport.onStatusChange) {
       transport.onStatusChange((st) => {
         this.setStatus(st);
+        if (st === 'connected') {
+          this.flushPendingMessages();
+        }
       });
     }
 
