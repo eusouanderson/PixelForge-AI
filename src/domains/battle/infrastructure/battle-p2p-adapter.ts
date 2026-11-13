@@ -1,5 +1,6 @@
 import type {
   DiscoveredPeer,
+  NearbyDiagnosticLogEntry,
   P2PMessage,
   P2PTransportPort
 } from '@/domains/breeding/types';
@@ -56,6 +57,18 @@ export class BattleP2PAdapter implements BattleTransportPort {
     if (this.underlyingTransport) {
       await this.underlyingTransport.connect(channelId);
       this.setStatus(this.underlyingTransport.getConnectionStatus?.() ?? 'connected');
+
+      // Anuncia presença na sala P2P/Web
+      this.sendBattleMessage({
+        protocolVersion: BATTLE_PROTOCOL_VERSION,
+        messageId: `hello-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'BATTLE_HELLO',
+        senderId: this.localPeerId,
+        sessionId: this.activeChannelId,
+        sequence: 0,
+        payload: { playerName: this.playerName, isReply: false },
+        timestampMs: Date.now()
+      });
       return;
     }
 
@@ -67,43 +80,7 @@ export class BattleP2PAdapter implements BattleTransportPort {
       this.channel = new globalThis.BroadcastChannel(`battle-${channelId}`);
       this.channel.onmessage = (event: MessageEvent) => {
         const data = event.data as BattleP2PMessage;
-        if (data && data.senderId !== this.localPeerId) {
-          if (data.type === 'BATTLE_HELLO') {
-            const payload = data.payload as { playerName?: string; isReply?: boolean } | undefined;
-            const existingIdx = this.discoveredOpponents.findIndex((o) => o.peerId === data.senderId);
-            const opponentInfo: BattleDiscoveredOpponent = {
-              endpointId: data.senderId,
-              peerId: data.senderId,
-              playerName: payload?.playerName ?? 'Treinador Próximo',
-              avatarSpeciesId: 'ignisauro',
-              discoveredAtMs: Date.now()
-            };
-            if (existingIdx === -1) {
-              this.discoveredOpponents.push(opponentInfo);
-            } else {
-              this.discoveredOpponents[existingIdx] = opponentInfo;
-            }
-            for (const h of this.peersHandlers) {
-              h([...this.discoveredOpponents]);
-            }
-            if (!payload?.isReply) {
-              this.sendBattleMessage({
-                protocolVersion: BATTLE_PROTOCOL_VERSION,
-                messageId: `hello-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                type: 'BATTLE_HELLO',
-                senderId: this.localPeerId,
-                sessionId: this.activeChannelId,
-                sequence: 0,
-                payload: { playerName: this.playerName, isReply: true },
-                timestampMs: Date.now()
-              });
-            }
-          }
-
-          for (const handler of this.messageHandlers) {
-            handler(data);
-          }
-        }
+        this.handleIncomingBattleMessage(data);
       };
       this.channel.onmessageerror = () => {
         this.emitError(new Error('Falha na desserialização de mensagem P2P de batalha.'));
@@ -211,6 +188,22 @@ export class BattleP2PAdapter implements BattleTransportPort {
     }
   }
 
+  public getDiagnosticLogs(): readonly NearbyDiagnosticLogEntry[] {
+    return this.underlyingTransport?.getDiagnosticLogs?.() ?? [];
+  }
+
+  public onDiagnosticLog(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void {
+    if (this.underlyingTransport?.onDiagnosticLog) {
+      return this.underlyingTransport.onDiagnosticLog(handler);
+    }
+    handler([]);
+    return () => {};
+  }
+
+  public getActiveEndpointId(): string | null {
+    return this.underlyingTransport?.getActiveEndpointId?.() ?? null;
+  }
+
   private setStatus(nextStatus: string): void {
     this.status = nextStatus;
     for (const h of this.statusHandlers) {
@@ -225,6 +218,46 @@ export class BattleP2PAdapter implements BattleTransportPort {
     }
   }
 
+  private handleIncomingBattleMessage(data: BattleP2PMessage): void {
+    if (data && data.senderId !== this.localPeerId) {
+      if (data.type === 'BATTLE_HELLO') {
+        const payload = data.payload as { playerName?: string; isReply?: boolean } | undefined;
+        const existingIdx = this.discoveredOpponents.findIndex((o) => o.peerId === data.senderId);
+        const opponentInfo: BattleDiscoveredOpponent = {
+          endpointId: data.senderId,
+          peerId: data.senderId,
+          playerName: payload?.playerName ?? 'Treinador Próximo',
+          avatarSpeciesId: 'ignisauro',
+          discoveredAtMs: Date.now()
+        };
+        if (existingIdx === -1) {
+          this.discoveredOpponents.push(opponentInfo);
+        } else {
+          this.discoveredOpponents[existingIdx] = opponentInfo;
+        }
+        for (const h of this.peersHandlers) {
+          h([...this.discoveredOpponents]);
+        }
+        if (!payload?.isReply) {
+          this.sendBattleMessage({
+            protocolVersion: BATTLE_PROTOCOL_VERSION,
+            messageId: `hello-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            type: 'BATTLE_HELLO',
+            senderId: this.localPeerId,
+            sessionId: this.activeChannelId,
+            sequence: 0,
+            payload: { playerName: this.playerName, isReply: true },
+            timestampMs: Date.now()
+          });
+        }
+      }
+
+      for (const handler of this.messageHandlers) {
+        handler(data);
+      }
+    }
+  }
+
   private bindUnderlyingTransport(transport: P2PTransportPort): void {
     transport.onMessage((rawMsg) => {
       const payload = rawMsg.payload;
@@ -234,9 +267,7 @@ export class BattleP2PAdapter implements BattleTransportPort {
         'battleEnvelope' in payload
       ) {
         const battleMsg = (payload as { battleEnvelope: BattleP2PMessage }).battleEnvelope;
-        for (const handler of this.messageHandlers) {
-          handler(battleMsg);
-        }
+        this.handleIncomingBattleMessage(battleMsg);
       }
     });
 

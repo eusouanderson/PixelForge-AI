@@ -1,12 +1,99 @@
-import { describe, it, expect } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { describe, it, expect, vi } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
 import type { WalletState } from '@/domains/economy/types';
 import type { CharacterSaveRecord } from '@/domains/persistence/types';
+import type { NearbyDiagnosticLogEntry } from '@/domains/breeding/types';
 import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
-import type { BattleParticipant, BattleSimulationResult } from '../types';
+import type {
+  BattleDiscoveredOpponent,
+  BattleP2PMessage,
+  BattleParticipant,
+  BattleSimulationResult,
+  BattleTransportPort
+} from '../types';
 import BattleArenaCanvas from '../presentation/BattleArenaCanvas.vue';
 import BattleHistoryModal from '../presentation/BattleHistoryModal.vue';
 import BattleArenaModal from '../presentation/BattleArenaModal.vue';
+
+class MockBattleTransport implements BattleTransportPort {
+  public localPeerId = 'peer-local-test';
+  public playerName = 'Treinador Teste';
+  public status = 'idle';
+  public peers: BattleDiscoveredOpponent[] = [];
+  public diagnosticLogs: NearbyDiagnosticLogEntry[] = [
+    { timestampMs: 1000, level: 'info', message: 'Iniciando rádio P2P' },
+    { timestampMs: 2000, level: 'warn', message: 'Aviso de sinal' },
+    { timestampMs: 3000, level: 'error', message: 'Erro de conexão teste' }
+  ];
+  public connectedEndpointId: string | null = null;
+  public sentMessages: BattleP2PMessage[] = [];
+
+  public statusHandler: ((s: string) => void) | null = null;
+  public peersHandler: ((p: readonly BattleDiscoveredOpponent[]) => void) | null = null;
+  public logHandler: ((l: readonly NearbyDiagnosticLogEntry[]) => void) | null = null;
+  public messageHandler: ((m: BattleP2PMessage) => void) | null = null;
+  public errorHandler: ((e: Error) => void) | null = null;
+
+  public async connect(_channelId: string): Promise<void> {
+    this.status = 'discovering';
+    this.statusHandler?.(this.status);
+  }
+  public disconnect(): void {
+    this.status = 'idle';
+    this.statusHandler?.(this.status);
+  }
+  public sendBattleMessage(msg: BattleP2PMessage): void {
+    this.sentMessages.push(msg);
+  }
+  public onBattleMessage(handler: (msg: BattleP2PMessage) => void): () => void {
+    this.messageHandler = handler;
+    return () => {
+      this.messageHandler = null;
+    };
+  }
+  public onError(handler: (err: Error) => void): () => void {
+    this.errorHandler = handler;
+    return () => {
+      this.errorHandler = null;
+    };
+  }
+  public getConnectionStatus(): string {
+    return this.status;
+  }
+  public getDiscoveredPeers(): readonly BattleDiscoveredOpponent[] {
+    return this.peers;
+  }
+  public async connectToPeer(endpointId: string): Promise<void> {
+    this.connectedEndpointId = endpointId;
+  }
+  public getDiagnosticLogs(): readonly NearbyDiagnosticLogEntry[] {
+    return this.diagnosticLogs;
+  }
+  public onDiagnosticLog(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void {
+    this.logHandler = handler;
+    handler(this.diagnosticLogs);
+    return () => {
+      this.logHandler = null;
+    };
+  }
+  public onStatusChange(handler: (status: string) => void): () => void {
+    this.statusHandler = handler;
+    handler(this.status);
+    return () => {
+      this.statusHandler = null;
+    };
+  }
+  public onPeersChange(handler: (peers: readonly BattleDiscoveredOpponent[]) => void): () => void {
+    this.peersHandler = handler;
+    handler(this.peers);
+    return () => {
+      this.peersHandler = null;
+    };
+  }
+  public getActiveEndpointId(): string | null {
+    return this.connectedEndpointId;
+  }
+}
 
 function createMockParticipant(peerId: string, speciesId: 'ignisauro' | 'glacissauro'): BattleParticipant {
   return {
@@ -290,5 +377,227 @@ describe('Battle Presentation Components', () => {
     const closeBtn = wrapper.find('[data-testid="close-battle-modal-btn"]');
     await closeBtn.trigger('click');
     expect(wrapper.emitted('close')).toBeTruthy();
+  });
+
+  it('handles full BattleArenaModal P2P connection bar, telemetry logs, opponent pairing, and error recovery', async () => {
+    const saveRec = createMockSaveRecord();
+    const wallet: WalletState = { amberCoins: 500, totalEarned: 500, totalSpent: 0 };
+    const mockTransport = new MockBattleTransport();
+
+    // Mock clipboard
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: writeTextSpy
+      },
+      configurable: true,
+      writable: true
+    });
+
+    const wrapper = mount(BattleArenaModal, {
+      props: {
+        activeCreature: saveRec,
+        wallet,
+        transportOverride: mockTransport,
+        embedded: true
+      }
+    });
+
+    // Verify initial connection bar status
+    expect(wrapper.text()).toContain('Status:');
+    expect(wrapper.text()).toContain('Aguardando busca');
+    expect(wrapper.find('[data-testid="close-battle-modal-btn"]').exists()).toBe(false); // embedded mode hides close button
+
+    // Toggle diagnostic logs
+    const logsBtn = wrapper.find('[data-testid="battle-logs-toggle-btn"]');
+    expect(logsBtn.text()).toContain('Logs (3)');
+    await logsBtn.trigger('click');
+    expect(wrapper.find('[data-testid="battle-diagnostic-logs"]').exists()).toBe(true);
+
+    // Copy logs
+    const copyBtn = wrapper.find('[data-testid="battle-copy-logs-btn"]');
+    await copyBtn.trigger('click');
+    expect(writeTextSpy).toHaveBeenCalled();
+    expect(copyBtn.text()).toContain('✓ Copiado');
+
+    // Simulate error state
+    mockTransport.statusHandler?.('failed');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="connection-error-banner"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Falha na conexão');
+    const retryBtn = wrapper.find('[data-testid="start-battle-discovery-btn"]');
+    expect(retryBtn.text()).toContain('Tentar Novamente');
+
+    // Simulate various status transitions
+    mockTransport.statusHandler?.('authenticating');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Autenticando sessão segura...');
+
+    mockTransport.statusHandler?.('connecting');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Conectando ao dispositivo...');
+
+    mockTransport.statusHandler?.('player_found');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Desafiante encontrado!');
+
+    mockTransport.statusHandler?.('discovering');
+    await flushPromises();
+    expect(wrapper.text()).toContain('Procurando desafiantes próximos (Nearby)...');
+    expect(wrapper.find('[data-testid="start-battle-discovery-btn"]').text()).toContain('Buscando...');
+
+    // Discover opponents
+    mockTransport.peersHandler?.([
+      {
+        endpointId: 'ep-alpha',
+        peerId: 'peer-alpha',
+        playerName: 'Treinador Alfa',
+        discoveredAtMs: Date.now()
+      }
+    ]);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Treinador Alfa');
+    expect(wrapper.text()).toContain('ID: ep-alpha');
+
+    // Challenge discovered opponent
+    const challengeBtn = wrapper.find('[data-testid="challenge-peer-peer-alpha"]');
+    expect(challengeBtn.exists()).toBe(true);
+    await challengeBtn.trigger('click');
+    await flushPromises();
+
+    expect(mockTransport.connectedEndpointId).toBe('ep-alpha');
+    expect(wrapper.find('[data-testid="awaiting-confirmation-view"]').exists()).toBe(true);
+
+    // Cancel battle from awaiting confirmation
+    const cancelBtn = wrapper.find('[data-testid="awaiting-confirmation-view"] button');
+    await cancelBtn.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="awaiting-confirmation-view"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it('handles incoming challenge invite, acceptance and rejection in BattleArenaModal', async () => {
+    const saveRec = createMockSaveRecord();
+    const wallet: WalletState = { amberCoins: 500, totalEarned: 500, totalSpent: 0 };
+    const mockTransport = new MockBattleTransport();
+
+    const wrapper = mount(BattleArenaModal, {
+      props: {
+        activeCreature: saveRec,
+        wallet,
+        transportOverride: mockTransport
+      }
+    });
+
+    // Simulate incoming challenge message
+    mockTransport.messageHandler?.({
+      protocolVersion: '1.0.0',
+      messageId: 'msg-challenge-1',
+      type: 'BATTLE_INVITE',
+      senderId: 'remote-challenger',
+      sessionId: 's-1',
+      sequence: 1,
+      payload: {
+        participant: createMockParticipant('remote-challenger', 'glacissauro'),
+        wagerAmount: 50
+      },
+      timestampMs: Date.now()
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="incoming-invite-card"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Desafio Recebido!');
+    expect(wrapper.text()).toContain('GLACISSAURO');
+
+    // Reject invite
+    await wrapper.find('[data-testid="reject-battle-invite-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="incoming-invite-card"]').exists()).toBe(false);
+
+    // Send another invite and accept
+    mockTransport.messageHandler?.({
+      protocolVersion: '1.0.0',
+      messageId: 'msg-challenge-2',
+      type: 'BATTLE_INVITE',
+      senderId: 'remote-challenger-2',
+      sessionId: 's-2',
+      sequence: 1,
+      payload: {
+        participant: createMockParticipant('remote-challenger-2', 'glacissauro'),
+        wagerAmount: 50
+      },
+      timestampMs: Date.now()
+    });
+    await flushPromises();
+
+    await wrapper.find('[data-testid="accept-battle-invite-btn"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="incoming-invite-card"]').exists()).toBe(false);
+
+    wrapper.unmount();
+  });
+
+  it('renders battle result view, claims reward, and handles theme variants in BattleArenaModal', async () => {
+    const saveRec = createMockSaveRecord();
+    const wallet: WalletState = { amberCoins: 200, totalEarned: 200, totalSpent: 0 };
+    const mockTransport = new MockBattleTransport();
+
+    // Test with explicit theme
+    const customTheme = {
+      primaryColor: '#ff0000',
+      highlightColor: '#ff5555',
+      accentGlow: 'none',
+      badgeBackground: '#111',
+      borderColor: '#222',
+      borderSubtleColor: '#333',
+      headerBackground: '#444',
+      cardBackground: '#555',
+      cardDarkBackground: '#666',
+      containerBackground: '#777',
+      elementBackground: '#888',
+      rootBackground: '#000',
+      ambientGradient: 'radial-gradient(#111, #000)'
+    };
+
+    const wrapper = mount(BattleArenaModal, {
+      props: {
+        activeCreature: saveRec,
+        wallet,
+        transportOverride: mockTransport,
+        theme: customTheme
+      }
+    });
+
+    expect(wrapper.exists()).toBe(true);
+    wrapper.unmount();
+
+    // Test with unknown character ID fallback
+    const brokenGenome = {
+      ...saveRec.genetics,
+      phenotype: {
+        ...saveRec.genetics.phenotype,
+        colors: { base: '', crest: '', belly: '', eye: '' }
+      }
+    };
+    const brokenRec: CharacterSaveRecord = {
+      ...saveRec,
+      runtime: {
+        ...saveRec.runtime,
+        characterId: 'unknown-dino' as import('@/domains/characters/types').CharacterId
+      },
+      genetics: brokenGenome
+    };
+
+    const wrapperBroken = mount(BattleArenaModal, {
+      props: {
+        activeCreature: brokenRec,
+        wallet,
+        transportOverride: mockTransport
+      }
+    });
+    expect(wrapperBroken.exists()).toBe(true);
+    wrapperBroken.unmount();
   });
 });

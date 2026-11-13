@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { DiscoveredPeer, NearbyConnectionStatus, P2PMessage, P2PTransportPort } from '@/domains/breeding/types';
+import type { DiscoveredPeer, NearbyConnectionStatus, NearbyDiagnosticLogEntry, P2PMessage, P2PTransportPort } from '@/domains/breeding/types';
 import { BattleP2PAdapter } from '../infrastructure/battle-p2p-adapter';
 import type { BattleP2PMessage } from '../types';
 
@@ -13,6 +13,9 @@ class MockUnderlyingTransport implements P2PTransportPort {
   public connectedPeer: string | null = null;
   public acceptedPeer: string | null = null;
   public rejectedPeer: string | null = null;
+  public diagnosticLogs: NearbyDiagnosticLogEntry[] = [];
+  public logHandler: ((logs: readonly NearbyDiagnosticLogEntry[]) => void) | null = null;
+  public activeEndpointId: string | null = null;
 
   public async connect(_channelId: string): Promise<void> {}
   public disconnect(): void {}
@@ -52,6 +55,19 @@ class MockUnderlyingTransport implements P2PTransportPort {
   public async rejectConnection(endpointId: string): Promise<void> {
     this.rejectedPeer = endpointId;
   }
+  public getDiagnosticLogs(): readonly NearbyDiagnosticLogEntry[] {
+    return this.diagnosticLogs;
+  }
+  public onDiagnosticLog(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void {
+    this.logHandler = handler;
+    handler(this.diagnosticLogs);
+    return () => {
+      this.logHandler = null;
+    };
+  }
+  public getActiveEndpointId(): string | null {
+    return this.activeEndpointId;
+  }
 }
 
 describe('Battle P2P Adapter', () => {
@@ -88,8 +104,12 @@ describe('Battle P2P Adapter', () => {
 
     adapter.sendBattleMessage(battleMsg);
 
-    expect(underlying.sentMessages.length).toBe(1);
-    const sent = underlying.sentMessages[0];
+    expect(underlying.sentMessages.length).toBe(2);
+    const helloSent = underlying.sentMessages[0];
+    expect(helloSent.type).toBe('HANDSHAKE');
+    expect((helloSent.payload as { battleEnvelope: BattleP2PMessage }).battleEnvelope.type).toBe('BATTLE_HELLO');
+
+    const sent = underlying.sentMessages[1];
     expect(sent.type).toBe('HANDSHAKE');
     expect(sent.payload).toHaveProperty('battleEnvelope');
     expect((sent.payload as { battleEnvelope: BattleP2PMessage }).battleEnvelope.type).toBe('BATTLE_INVITE');
@@ -324,5 +344,42 @@ describe('Battle P2P Adapter', () => {
     adapter2.disconnect();
     expect(peersSeen.length).toBe(0);
     unbindPeers2();
+  });
+
+  it('delegates diagnostic logs and active endpoint id to underlying transport', () => {
+    const underlying = new MockUnderlyingTransport();
+    underlying.activeEndpointId = 'endpoint-123';
+    underlying.diagnosticLogs = [{ timestampMs: 1234, level: 'info', message: 'test log' }];
+
+    const adapter = new BattleP2PAdapter({
+      localPeerId: 'p1',
+      transportOverride: underlying
+    });
+
+    expect(adapter.getActiveEndpointId()).toBe('endpoint-123');
+    expect(adapter.getDiagnosticLogs()).toEqual([{ timestampMs: 1234, level: 'info', message: 'test log' }]);
+
+    let logsReceived: readonly NearbyDiagnosticLogEntry[] = [];
+    const unsub = adapter.onDiagnosticLog((logs) => {
+      logsReceived = logs;
+    });
+    expect(logsReceived.length).toBe(1);
+    unsub();
+  });
+
+  it('provides safe fallbacks for diagnostic logs when underlying transport lacks them', () => {
+    const adapter = new BattleP2PAdapter({
+      localPeerId: 'p1'
+    });
+
+    expect(adapter.getActiveEndpointId()).toBeNull();
+    expect(adapter.getDiagnosticLogs()).toEqual([]);
+
+    let logsReceived: readonly NearbyDiagnosticLogEntry[] = [];
+    const unsub = adapter.onDiagnosticLog((logs) => {
+      logsReceived = logs;
+    });
+    expect(logsReceived).toEqual([]);
+    unsub();
   });
 });
