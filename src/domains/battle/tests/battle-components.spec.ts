@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import type { WalletState } from '@/domains/economy/types';
 import type { CharacterSaveRecord } from '@/domains/persistence/types';
-import type { NearbyDiagnosticLogEntry } from '@/domains/breeding/types';
 import { createGenesisGenome } from '@/domains/genetics/domain/dna-engine';
 import type {
+  BattleDiagnosticLogEntry,
   BattleDiscoveredOpponent,
   BattleP2PMessage,
   BattleParticipant,
@@ -20,7 +20,7 @@ class MockBattleTransport implements BattleTransportPort {
   public playerName = 'Treinador Teste';
   public status = 'idle';
   public peers: BattleDiscoveredOpponent[] = [];
-  public diagnosticLogs: NearbyDiagnosticLogEntry[] = [
+  public diagnosticLogs: BattleDiagnosticLogEntry[] = [
     { timestampMs: 1000, level: 'info', message: 'Iniciando rádio P2P' },
     { timestampMs: 2000, level: 'warn', message: 'Aviso de sinal' },
     { timestampMs: 3000, level: 'error', message: 'Erro de conexão teste' }
@@ -30,7 +30,7 @@ class MockBattleTransport implements BattleTransportPort {
 
   public statusHandler: ((s: string) => void) | null = null;
   public peersHandler: ((p: readonly BattleDiscoveredOpponent[]) => void) | null = null;
-  public logHandler: ((l: readonly NearbyDiagnosticLogEntry[]) => void) | null = null;
+  public logHandler: ((l: readonly BattleDiagnosticLogEntry[]) => void) | null = null;
   public messageHandler: ((m: BattleP2PMessage) => void) | null = null;
   public errorHandler: ((e: Error) => void) | null = null;
 
@@ -66,10 +66,10 @@ class MockBattleTransport implements BattleTransportPort {
   public async connectToPeer(endpointId: string): Promise<void> {
     this.connectedEndpointId = endpointId;
   }
-  public getDiagnosticLogs(): readonly NearbyDiagnosticLogEntry[] {
+  public getDiagnosticLogs(): readonly BattleDiagnosticLogEntry[] {
     return this.diagnosticLogs;
   }
-  public onDiagnosticLog(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void {
+  public onDiagnosticLog(handler: (logs: readonly BattleDiagnosticLogEntry[]) => void): () => void {
     this.logHandler = handler;
     handler(this.diagnosticLogs);
     return () => {

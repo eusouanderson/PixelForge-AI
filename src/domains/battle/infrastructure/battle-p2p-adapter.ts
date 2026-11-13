@@ -1,10 +1,10 @@
 import type {
   DiscoveredPeer,
-  NearbyDiagnosticLogEntry,
   P2PMessage,
   P2PTransportPort
 } from '@/domains/breeding/types';
 import type {
+  BattleDiagnosticLogEntry,
   BattleDiscoveredOpponent,
   BattleP2PMessage,
   BattleTransportPort
@@ -188,11 +188,11 @@ export class BattleP2PAdapter implements BattleTransportPort {
     }
   }
 
-  public getDiagnosticLogs(): readonly NearbyDiagnosticLogEntry[] {
+  public getDiagnosticLogs(): readonly BattleDiagnosticLogEntry[] {
     return this.underlyingTransport?.getDiagnosticLogs?.() ?? [];
   }
 
-  public onDiagnosticLog(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void {
+  public onDiagnosticLog(handler: (logs: readonly BattleDiagnosticLogEntry[]) => void): () => void {
     if (this.underlyingTransport?.onDiagnosticLog) {
       return this.underlyingTransport.onDiagnosticLog(handler);
     }

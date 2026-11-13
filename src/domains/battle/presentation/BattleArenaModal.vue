@@ -497,11 +497,11 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import type { WalletState } from '@/domains/economy/types';
 import type { CharacterSaveRecord } from '@/domains/persistence/types';
 import type { CreatureTheme } from '@/domains/characters/types';
-import type { NearbyDiagnosticLogEntry } from '@/domains/breeding/types';
 import { NearbyConnectionsP2PAdapter } from '@/domains/breeding/infrastructure/nearby-connections-adapter';
 import { getCharacterSpeciesById } from '@/domains/characters/domain/character-registry';
 import { generateCreatureTheme } from '@/domains/characters/domain/creature-theme-engine';
 import type {
+  BattleDiagnosticLogEntry,
   BattleDiscoveredOpponent,
   BattleHistoryRecord,
   BattleParticipant,
@@ -585,7 +585,7 @@ const battleService = new BattleService(transport);
 const sessionState = ref<BattleSessionState>(battleService.getState());
 const nearbyStatus = ref<string>(transport.getConnectionStatus?.() ?? 'idle');
 const discoveredOpponents = ref<readonly BattleDiscoveredOpponent[]>([]);
-const diagnosticLogs = ref<readonly NearbyDiagnosticLogEntry[]>(transport.getDiagnosticLogs?.() ?? []);
+const diagnosticLogs = ref<readonly BattleDiagnosticLogEntry[]>(transport.getDiagnosticLogs?.() ?? []);
 const showDiagnosticLogs = ref(false);
 const copiedLogs = ref(false);
 const pendingPeerEndpointId = ref<string | null>(null);

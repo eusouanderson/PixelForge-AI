@@ -1,5 +1,4 @@
 import type { AttributeKind, CharacterAttributes } from '@/domains/attributes/types';
-import type { NearbyDiagnosticLogEntry } from '@/domains/breeding/types';
 import type {
   CharacterId,
   CharacterLifeStage,
@@ -7,6 +6,14 @@ import type {
   ElementAffinity
 } from '@/domains/characters/types';
 import type { PetNeedsState } from '@/domains/pet-needs/types';
+
+export type BattleLogLevel = 'info' | 'warn' | 'error';
+
+export interface BattleDiagnosticLogEntry {
+  readonly timestampMs: number;
+  readonly level: BattleLogLevel;
+  readonly message: string;
+}
 
 export type BattleP2PMessageType =
   | 'BATTLE_HELLO'
@@ -260,7 +267,7 @@ export interface BattleTransportPort {
   rejectConnection?(endpointId: string): Promise<void>;
   onStatusChange?(handler: (status: string) => void): () => void;
   onPeersChange?(handler: (peers: readonly BattleDiscoveredOpponent[]) => void): () => void;
-  getDiagnosticLogs?(): readonly NearbyDiagnosticLogEntry[];
-  onDiagnosticLog?(handler: (logs: readonly NearbyDiagnosticLogEntry[]) => void): () => void;
+  getDiagnosticLogs?(): readonly BattleDiagnosticLogEntry[];
+  onDiagnosticLog?(handler: (logs: readonly BattleDiagnosticLogEntry[]) => void): () => void;
   getActiveEndpointId?(): string | null;
 }
