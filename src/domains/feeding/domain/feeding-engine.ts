@@ -357,7 +357,7 @@ const RAW_FOOD_CATALOG: Readonly<Record<string, Omit<FoodItemDefinition, 'pixelA
     category: 'medicine',
     rarity: 'uncommon',
     curesDiseaseId: 'chronic_exhaustion',
-    priceCoins: 50,
+    priceCoins: 200,
     nutrition: {
       hungerRestore: 5,
       thirstRestore: 10,
