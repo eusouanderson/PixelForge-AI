@@ -33,6 +33,10 @@ describe('Sound Effects Service', () => {
     expect(createdSrc).toBe('/sounds/eat.mp3');
     expect(setVolume).toBe(0.7);
     expect(playMock).toHaveBeenCalled();
+
+    playSoundEffect('glugglug', 0.8);
+    expect(createdSrc).toBe('/sounds/glugglug.mp3');
+    expect(setVolume).toBe(0.8);
   });
 
   it('clamps volume between 0 and 1', () => {

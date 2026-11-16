@@ -76,7 +76,7 @@ import GenealogyTreeModal from '@/domains/breeding/presentation/GenealogyTreeMod
 import BattleArenaModal from '@/domains/battle/presentation/BattleArenaModal.vue';
 import FoodPixelArt from '@/domains/feeding/presentation/FoodPixelArt.vue';
 import type { FoodItemDefinition } from '@/domains/feeding/types';
-import { playSoundEffect } from '@/shared/audio/sound-effects';
+import { playSoundEffect, type SoundEffectName } from '@/shared/audio/sound-effects';
 import { formatBiologicalSexLabel, formatBiologicalSexSymbol } from '@/domains/genetics/domain/sex-determination-engine';
 
 const spriteRepo = new CharacterSpriteRepository();
@@ -369,12 +369,14 @@ async function handleFeedCharacter(foodId: string): Promise<void> {
     };
 
     if (isAccepted) {
-      playSoundEffect('eat');
+      const isHydration = foodDef?.category === 'hydration';
+      const feedSoundEffect: SoundEffectName = isHydration ? 'glugglug' : 'eat';
+      playSoundEffect(feedSoundEffect);
       feedingBiteTimer1 = setTimeout(() => {
         if (activeFeeding.value) {
           activeFeeding.value.biteStage = 1;
           activeFeeding.value.crumbActive = true;
-          playSoundEffect('eat', 0.6);
+          playSoundEffect(feedSoundEffect, 0.6);
         }
       }, 650);
 
@@ -382,7 +384,7 @@ async function handleFeedCharacter(foodId: string): Promise<void> {
         if (activeFeeding.value) {
           activeFeeding.value.biteStage = 2;
           activeFeeding.value.crumbActive = true;
-          playSoundEffect('eat', 0.4);
+          playSoundEffect(feedSoundEffect, 0.4);
         }
       }, 1350);
 
@@ -1045,6 +1047,7 @@ onUnmounted(() => {
               :class="activeFeeding.isAccepted ? 'bg-slate-900/90 border-emerald-500/60 text-emerald-300 scale-100' : 'bg-rose-950/95 border-rose-600 text-rose-200'"
             >
               <span v-if="activeFeeding.food.category === 'medicine'">✚</span>
+              <span v-else-if="activeFeeding.food.category === 'hydration'">💧</span>
               <span v-else>🍖</span>
               <span data-testid="feeding-food-name">{{ activeFeeding.food.name }}</span>
               <span
@@ -1478,6 +1481,7 @@ onUnmounted(() => {
                       {{ getItemQuantity(saveState.inventory, food.id) }}
                     </strong>
                     <span v-if="food.id === 'awakening-fruit'"> · Desperta o Dinossauro (Status baixos)</span>
+                    <span v-else-if="food.category === 'hydration'"> · Sede +{{ food.nutrition.thirstRestore }} · Saúde +{{ food.nutrition.healthDelta }}</span>
                     <span v-else> · Fome +{{ food.nutrition.hungerRestore }} · Saúde +{{ food.nutrition.healthDelta }}</span>
                   </p>
                 </div>

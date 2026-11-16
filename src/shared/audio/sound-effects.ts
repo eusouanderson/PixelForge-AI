@@ -5,7 +5,8 @@ export type SoundEffectName =
   | 'happy'
   | 'sneezing'
   | 'snoring'
-  | 'shower';
+  | 'shower'
+  | 'glugglug';
 
 export function playSoundEffect(name: SoundEffectName, volume: number = 0.8): void {
   try {
