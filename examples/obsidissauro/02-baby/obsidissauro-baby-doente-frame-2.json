@@ -1,0 +1,399 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Obsidissauro — Baby: Doente (Quadro 2)",
+  "description": "Terópode predador voraz de vidro vulcânico negro com mandíbula serrilhada, garras em foice e espinhos de obsidiana",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "specular": "#ffffff",
+    "outline": "#030712",
+    "nest_dark": "#030712",
+    "nest_base": "#09090b",
+    "nest_light": "#18181b",
+    "shell_shadow": "#09090b",
+    "shell_base": "#18181b",
+    "shell_mid": "#27272a",
+    "shell_light": "#3f3f46",
+    "shell_highlight": "#71717a",
+    "shell_inner": "#f8fafc",
+    "spot_dark": "#0f172a",
+    "spot_mid": "#334155",
+    "cavity_dark": "#020617",
+    "crack_glow": "#ef4444",
+    "crack_glow_core": "#fca5a5",
+    "heart_dark": "#9f1239",
+    "heart_base": "#e11d48",
+    "heart_light": "#fb7185",
+    "heart_highlight": "#ffe4e6",
+    "food_dark": "#713f12",
+    "food_base": "#ca8a04",
+    "food_light": "#facc15",
+    "food_crumb": "#fef08a",
+    "food_meat": "#dc2626",
+    "food_meat_dark": "#991b1b",
+    "food_bone": "#f1f5f9",
+    "food_berry": "#9333ea",
+    "food_berry_dark": "#581c87",
+    "food_shroom": "#16a34a",
+    "food_shroom_dark": "#14532d",
+    "food_shroom_spot": "#fef08a",
+    "sick_cloud": "#65a30d",
+    "sick_pale": "#bef264",
+    "sweat_blue": "#0284c7",
+    "sweat_light": "#7dd3fc",
+    "thermo_glass": "#94a3b8",
+    "thermo_red": "#ef4444",
+    "thermo_body": "#e2e8f0",
+    "thermo_shadow": "#64748b",
+    "earth_dark": "#1c1917",
+    "earth_base": "#292524",
+    "earth_light": "#44403c",
+    "stone_dark": "#334155",
+    "stone_base": "#475569",
+    "stone_light": "#64748b",
+    "stone_highlight": "#94a3b8",
+    "stone_shadow": "#1e293b",
+    "grave_stone": "#475569",
+    "grave_shadow": "#1e293b",
+    "grave_highlight": "#94a3b8",
+    "flower_red": "#f43f5e",
+    "flower_pink": "#fb7185",
+    "candle_wax": "#fef08a",
+    "flame_core": "#ffffff",
+    "flame_outer": "#f97316",
+    "spirit_deep": "#030712",
+    "spirit_mid": "#581c87",
+    "spirit_glow": "#a855f7",
+    "spirit_core": "#ffffff",
+    "dino_shadow_dark": "#030712",
+    "dino_shadow": "#09090b",
+    "dino_base": "#18181b",
+    "dino_light": "#27272a",
+    "dino_highlight": "#3f3f46",
+    "dino_belly_shadow": "#1e1b4b",
+    "dino_belly": "#2e1065",
+    "dino_belly_light": "#4c1d95",
+    "dino_crest_deep": "#4c1d95",
+    "dino_crest_shadow": "#6d28d9",
+    "dino_crest": "#7c3aed",
+    "dino_crest_light": "#a855f7",
+    "dino_crest_glow": "#c084fc",
+    "dino_eye": "#ef4444",
+    "dino_pupil": "#030712",
+    "dino_claw_shadow": "#09090b",
+    "dino_claw": "#27272a",
+    "dino_claw_light": "#52525b",
+    "dino_mouth_dark": "#030712",
+    "dino_mouth": "#1e1b4b",
+    "dino_blush": "#7c3aed",
+    "aura_deep": "#4c1d95",
+    "aura_mid": "#7c3aed",
+    "aura_light": "#ef4444"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Fissura de Sombra no Solo",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 29,
+          "width": 18,
+          "height": 2,
+          "color": "outline"
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda Predatória com Lâminas de Obsidiana",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 23,
+          "width": 4,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 7,
+          "y": 22,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pernas Digitígradas de Predador e Garras Negras",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 24,
+          "width": 3,
+          "height": 5,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 16,
+          "y": 24,
+          "width": 3,
+          "height": 5,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 25,
+          "width": 3,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 15,
+          "y": 25,
+          "width": 3,
+          "height": 4,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 28,
+          "width": 2,
+          "height": 1,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 28,
+          "width": 2,
+          "height": 1,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Tórax Couraçado com Fendas de Fogo Sombrio",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 16,
+          "width": 9,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 18,
+          "width": 5,
+          "height": 5,
+          "color": "dino_belly"
+        },
+        {
+          "type": "pixel",
+          "x": 14,
+          "y": 20,
+          "color": "crack_glow"
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Braços com Garras em Foice de Vidro Vulcânico",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 16,
+          "y": 19,
+          "width": 3,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 20,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Crânio Anguloso de Terópode e Chifres de Obsidiana",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 8,
+          "width": 8,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 7,
+          "width": 2,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 7,
+          "width": 2,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 16,
+          "y": 13,
+          "width": 3,
+          "height": 2,
+          "color": "dino_mouth_dark"
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Rubro-Vulcânicos Binoculares e Mandíbula Serrilhada",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 10,
+          "width": 2,
+          "height": 2,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 10,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 13,
+          "y": 10,
+          "color": "specular"
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": 10,
+          "width": 2,
+          "height": 2,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 17,
+          "y": 10,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 10,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 12,
+          "color": "dino_blush"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 12,
+          "color": "dino_blush"
+        }
+      ]
+    },
+    {
+      "id": "layer_sick_fx",
+      "name": "Gotas de Suor e Febre",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 7,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 7,
+          "width": 2,
+          "height": 3,
+          "color": "sweat_blue"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 9,
+          "width": 6,
+          "height": 1,
+          "color": "thermo_glass"
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": 9,
+          "width": 2,
+          "height": 1,
+          "color": "thermo_red"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Obsidissauro",
+    "lifeStage": "baby",
+    "animation": "doente",
+    "frame": 2,
+    "author": "PixelForge AI",
+    "tags": [
+      "obsidissauro",
+      "dinosaur",
+      "baby",
+      "doente",
+      "32x32"
+    ]
+  }
+}

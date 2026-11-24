@@ -6,7 +6,7 @@ import {
 import { listAllCharacterSpecies } from '@/domains/characters/domain/character-registry';
 
 describe('environments domain registry', () => {
-  it('provides a distinct 3D environment configuration with lighting, backdrops, and layered props for all 8 characters', () => {
+  it('provides a distinct 3D environment configuration with lighting, backdrops, and layered props for all 14 characters', () => {
     const speciesList = listAllCharacterSpecies();
     const envIds = new Set<string>();
 
@@ -48,8 +48,8 @@ describe('environments domain registry', () => {
       envIds.add(env.id);
     }
 
-    expect(envIds.size).toBe(11);
-    expect(Object.keys(ENVIRONMENT_REGISTRY).length).toBe(11);
+    expect(envIds.size).toBe(14);
+    expect(Object.keys(ENVIRONMENT_REGISTRY).length).toBe(14);
   });
 });
 

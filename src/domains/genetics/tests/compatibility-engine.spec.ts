@@ -29,6 +29,20 @@ describe('Genetics: Compatibility Engine', () => {
     const fallbackPair = getSpeciesAffinity('ignisauro', 'rosassauro');
     expect(fallbackPair.canBreed).toBe(true);
     expect(fallbackPair.synergy).toBe(0.75);
+
+    // New species affinity pairings
+    const auroraGlaci = getSpeciesAffinity('aurorassauro', 'glacissauro');
+    expect(auroraGlaci.canBreed).toBe(true);
+    expect(auroraGlaci.synergy).toBe(0.95);
+    expect(auroraGlaci.possibleOffspring).toEqual(['aurorassauro', 'glacissauro']);
+
+    const obsidiUmbra = getSpeciesAffinity('obsidissauro', 'umbrassauro');
+    expect(obsidiUmbra.canBreed).toBe(true);
+    expect(obsidiUmbra.synergy).toBe(0.95);
+
+    const fossilTerra = getSpeciesAffinity('fossilissauro', 'terrassauro');
+    expect(fossilTerra.canBreed).toBe(true);
+    expect(fossilTerra.synergy).toBe(0.95);
   });
 
   it('blocks same-sex breeding', () => {

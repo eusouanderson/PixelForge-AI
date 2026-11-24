@@ -1,0 +1,583 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Fossilissauro — Adolescente: Amando (Quadro 1)",
+  "description": "Ceratopsiano blindado em arenito milenar com gola óssea triangular colossal, 3 chifres de âmbar e couraça osteodérmica",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "specular": "#ffffff",
+    "outline": "#1c1917",
+    "nest_dark": "#1c1917",
+    "nest_base": "#292524",
+    "nest_light": "#44403c",
+    "shell_shadow": "#451a03",
+    "shell_base": "#78350f",
+    "shell_mid": "#92400e",
+    "shell_light": "#b45309",
+    "shell_highlight": "#f59e0b",
+    "shell_inner": "#f8fafc",
+    "spot_dark": "#0f172a",
+    "spot_mid": "#334155",
+    "cavity_dark": "#020617",
+    "crack_glow": "#f59e0b",
+    "crack_glow_core": "#fef08a",
+    "heart_dark": "#9f1239",
+    "heart_base": "#e11d48",
+    "heart_light": "#fb7185",
+    "heart_highlight": "#ffe4e6",
+    "food_dark": "#713f12",
+    "food_base": "#ca8a04",
+    "food_light": "#facc15",
+    "food_crumb": "#fef08a",
+    "food_meat": "#dc2626",
+    "food_meat_dark": "#991b1b",
+    "food_bone": "#f1f5f9",
+    "food_berry": "#9333ea",
+    "food_berry_dark": "#581c87",
+    "food_shroom": "#16a34a",
+    "food_shroom_dark": "#14532d",
+    "food_shroom_spot": "#fef08a",
+    "sick_cloud": "#65a30d",
+    "sick_pale": "#bef264",
+    "sweat_blue": "#0284c7",
+    "sweat_light": "#7dd3fc",
+    "thermo_glass": "#94a3b8",
+    "thermo_red": "#ef4444",
+    "thermo_body": "#e2e8f0",
+    "thermo_shadow": "#64748b",
+    "earth_dark": "#1c1917",
+    "earth_base": "#292524",
+    "earth_light": "#44403c",
+    "stone_dark": "#334155",
+    "stone_base": "#475569",
+    "stone_light": "#64748b",
+    "stone_highlight": "#94a3b8",
+    "stone_shadow": "#1e293b",
+    "grave_stone": "#475569",
+    "grave_shadow": "#1e293b",
+    "grave_highlight": "#94a3b8",
+    "flower_red": "#f43f5e",
+    "flower_pink": "#fb7185",
+    "candle_wax": "#fef08a",
+    "flame_core": "#ffffff",
+    "flame_outer": "#f97316",
+    "spirit_deep": "#291002",
+    "spirit_mid": "#92400e",
+    "spirit_glow": "#f59e0b",
+    "spirit_core": "#ffffff",
+    "dino_shadow_dark": "#291002",
+    "dino_shadow": "#451a03",
+    "dino_base": "#78350f",
+    "dino_light": "#92400e",
+    "dino_highlight": "#b45309",
+    "dino_belly_shadow": "#d97706",
+    "dino_belly": "#fef3c7",
+    "dino_belly_light": "#fffbeb",
+    "dino_crest_deep": "#78350f",
+    "dino_crest_shadow": "#b45309",
+    "dino_crest": "#d97706",
+    "dino_crest_light": "#f59e0b",
+    "dino_crest_glow": "#fbbf24",
+    "dino_eye": "#ea580c",
+    "dino_pupil": "#291002",
+    "dino_claw_shadow": "#78350f",
+    "dino_claw": "#d97706",
+    "dino_claw_light": "#fbbf24",
+    "dino_mouth_dark": "#291002",
+    "dino_mouth": "#451a03",
+    "dino_blush": "#d97706",
+    "aura_deep": "#78350f",
+    "aura_mid": "#d97706",
+    "aura_light": "#fbbf24"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Solo de Arenito Rachado e Pegadas Ancestrais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 2,
+          "y": 28,
+          "width": 28,
+          "height": 3,
+          "color": "outline"
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda Curta e Pesada com Nódulos Petrificados",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 19,
+          "width": 6,
+          "height": 5,
+          "color": "dino_base"
+        },
+        {
+          "type": "points",
+          "color": "dino_crest",
+          "coordinates": [
+            [
+              26,
+              17
+            ],
+            [
+              28,
+              19
+            ],
+            [
+              27,
+              22
+            ],
+            [
+              28,
+              23
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Quatro Patas Colunares Apoiadas com Cascos Rochosos",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 21,
+          "width": 4,
+          "height": 8,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 21,
+          "width": 4,
+          "height": 8,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 22,
+          "width": 5,
+          "height": 7,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 22,
+          "width": 5,
+          "height": 7,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 28,
+          "width": 5,
+          "height": 1,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 28,
+          "width": 5,
+          "height": 1,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Carapaça Osteodérmica de Arenito e Veios de Âmbar",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 15,
+          "width": 22,
+          "height": 10,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 14,
+          "width": 20,
+          "height": 2,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 17,
+          "width": 18,
+          "height": 7,
+          "color": "dino_belly"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 16,
+          "width": 20,
+          "height": 1,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 19,
+          "width": 20,
+          "height": 1,
+          "color": "dino_crest"
+        },
+        {
+          "type": "points",
+          "color": "crack_glow",
+          "coordinates": [
+            [
+              7,
+              16
+            ],
+            [
+              11,
+              16
+            ],
+            [
+              15,
+              16
+            ],
+            [
+              19,
+              16
+            ],
+            [
+              9,
+              19
+            ],
+            [
+              13,
+              19
+            ],
+            [
+              17,
+              19
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_frill_crest",
+      "name": "Escudo Cranial Triangular com Bordas de Fóssil",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 2,
+          "width": 22,
+          "height": 9,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 1,
+          "width": 18,
+          "height": 2,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 0,
+          "width": 14,
+          "height": 1,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "points",
+          "color": "crack_glow",
+          "coordinates": [
+            [
+              3,
+              3
+            ],
+            [
+              5,
+              1
+            ],
+            [
+              9,
+              0
+            ],
+            [
+              13,
+              0
+            ],
+            [
+              17,
+              0
+            ],
+            [
+              21,
+              1
+            ],
+            [
+              23,
+              3
+            ]
+          ]
+        },
+        {
+          "type": "points",
+          "color": "dino_crest_deep",
+          "coordinates": [
+            [
+              5,
+              4
+            ],
+            [
+              8,
+              3
+            ],
+            [
+              12,
+              3
+            ],
+            [
+              16,
+              3
+            ],
+            [
+              20,
+              3
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_snout_horns",
+      "name": "Focinho de Ceratopsiano, Bico Córneo e 3 Chifres de Âmbar",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 8,
+          "width": 12,
+          "height": 8,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 7,
+          "width": 10,
+          "height": 2,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 4,
+          "width": 3,
+          "height": 6,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 2,
+          "width": 2,
+          "height": 3,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "pixel",
+          "x": 14,
+          "y": 1,
+          "color": "specular"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 4,
+          "width": 2,
+          "height": 5,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "pixel",
+          "x": 8,
+          "y": 3,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "rect",
+          "x": 20,
+          "y": 4,
+          "width": 2,
+          "height": 5,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "pixel",
+          "x": 20,
+          "y": 3,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 14,
+          "width": 6,
+          "height": 3,
+          "color": "dino_mouth_dark"
+        },
+        {
+          "type": "pixel",
+          "x": 14,
+          "y": 16,
+          "color": "dino_shadow_dark"
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Âmbar-Ancestrais Binoculares e Placas Oculares",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 9,
+          "width": 2,
+          "height": 2,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 10,
+          "y": 10,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 10,
+          "y": 9,
+          "color": "specular"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 9,
+          "width": 2,
+          "height": 2,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 10,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 9,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 9,
+          "y": 11,
+          "color": "dino_blush"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 11,
+          "color": "dino_blush"
+        }
+      ]
+    },
+    {
+      "id": "layer_heart_fx",
+      "name": "Corações Flutuantes de Afeto",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 7,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 4,
+          "y": 5,
+          "width": 4,
+          "height": 3,
+          "color": "heart_base"
+        },
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 8,
+          "width": 2,
+          "height": 1,
+          "color": "heart_dark"
+        },
+        {
+          "type": "pixel",
+          "x": 4,
+          "y": 5,
+          "color": "heart_light"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Fossilissauro",
+    "lifeStage": "adolescente",
+    "animation": "amando",
+    "frame": 1,
+    "author": "PixelForge AI",
+    "tags": [
+      "fossilissauro",
+      "dinosaur",
+      "adolescente",
+      "amando",
+      "32x32"
+    ]
+  }
+}

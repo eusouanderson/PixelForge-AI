@@ -40,7 +40,15 @@ export const SPECIES_COMPATIBILITY_MATRIX: Readonly<Record<string, SpeciesAffini
 
   // Cosmic / Crystal pairings
   'astrassauro:cristalissauro': { canBreed: true, synergy: 0.95, possibleOffspring: ['astrassauro', 'cristalissauro'] },
-  'astrassauro:umbrassauro': { canBreed: true, synergy: 0.88, possibleOffspring: ['astrassauro', 'umbrassauro'] }
+  'astrassauro:umbrassauro': { canBreed: true, synergy: 0.88, possibleOffspring: ['astrassauro', 'umbrassauro'] },
+
+  // Aurora / Obsidian / Fossil pairings
+  'aurorassauro:glacissauro': { canBreed: true, synergy: 0.95, possibleOffspring: ['aurorassauro', 'glacissauro'] },
+  'aurorassauro:astrassauro': { canBreed: true, synergy: 0.92, possibleOffspring: ['aurorassauro', 'astrassauro'] },
+  'obsidissauro:umbrassauro': { canBreed: true, synergy: 0.95, possibleOffspring: ['obsidissauro', 'umbrassauro'] },
+  'obsidissauro:ignisauro': { canBreed: true, synergy: 0.90, possibleOffspring: ['obsidissauro', 'ignisauro'] },
+  'fossilissauro:terrassauro': { canBreed: true, synergy: 0.95, possibleOffspring: ['fossilissauro', 'terrassauro'] },
+  'fossilissauro:cristalissauro': { canBreed: true, synergy: 0.88, possibleOffspring: ['fossilissauro', 'cristalissauro'] }
 };
 
 export function getSpeciesAffinity(speciesA: CharacterId, speciesB: CharacterId): SpeciesAffinityRule {

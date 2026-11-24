@@ -21,8 +21,8 @@ describe('particles domain registry and reactive bursts', () => {
       behaviors.add(config.behavior);
     }
 
-    expect(behaviors.size).toBe(11);
-    expect(Object.keys(PARTICLE_PRESET_REGISTRY).length).toBe(11);
+    expect(behaviors.size).toBe(14);
+    expect(Object.keys(PARTICLE_PRESET_REGISTRY).length).toBe(14);
   });
 
   it('scales particle counts and emit rates according to Android graphics quality presets', () => {

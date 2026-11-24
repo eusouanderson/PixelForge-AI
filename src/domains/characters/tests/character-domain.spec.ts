@@ -24,9 +24,9 @@ import {
 } from '../infrastructure/character-sprite-repository';
 
 describe('characters domain registry, state engine, and sprite repository', () => {
-  it('registers all 11 real canonical dinosaur species with distinct traits, diets, particles, and environments', () => {
+  it('registers all 14 real canonical dinosaur species with distinct traits, diets, particles, and environments', () => {
     const all = listAllCharacterSpecies();
-    expect(all.length).toBe(11);
+    expect(all.length).toBe(14);
 
     const ids = all.map((c) => c.id);
     expect(ids).toEqual([
@@ -40,13 +40,16 @@ describe('characters domain registry, state engine, and sprite repository', () =
       'solassauro',
       'rosassauro',
       'cristalissauro',
-      'astrassauro'
+      'astrassauro',
+      'aurorassauro',
+      'obsidissauro',
+      'fossilissauro'
     ]);
 
     const environments = new Set(all.map((c) => c.environmentId));
     const particles = new Set(all.map((c) => c.particlePresetId));
-    expect(environments.size).toBe(11);
-    expect(particles.size).toBe(11);
+    expect(environments.size).toBe(14);
+    expect(particles.size).toBe(14);
 
     for (const species of all) {
       expect(getCharacterSpeciesById(species.id)).toEqual(species);
@@ -61,9 +64,12 @@ describe('characters domain registry, state engine, and sprite repository', () =
     expect(CHARACTER_SPECIES_REGISTRY.rosassauro.element).toBe('fairy');
     expect(CHARACTER_SPECIES_REGISTRY.cristalissauro.element).toBe('crystal');
     expect(CHARACTER_SPECIES_REGISTRY.astrassauro.element).toBe('cosmic');
+    expect(CHARACTER_SPECIES_REGISTRY.aurorassauro.element).toBe('cosmic');
+    expect(CHARACTER_SPECIES_REGISTRY.obsidissauro.element).toBe('shadow');
+    expect(CHARACTER_SPECIES_REGISTRY.fossilissauro.element).toBe('earth');
 
     expect(pickRandomCharacterId(0)).toBe('ignisauro');
-    expect(pickRandomCharacterId(0.99)).toBe('astrassauro');
+    expect(pickRandomCharacterId(0.99)).toBe('fossilissauro');
     expect(ids).toContain(pickRandomCharacterId());
   });
 
@@ -281,6 +287,19 @@ describe('characters domain registry, state engine, and sprite repository', () =
     const frame1 = repo.getSpriteFrame('solassauro', 'adulto', 'comendo', 1);
     expect(frame1.metadata?.creatureName).toBe('Solassauro');
     expect(frame1.metadata?.animation).toBe('comendo');
+
+    // New species sprite frame validations
+    const auroraFrame = repo.getSpriteFrame('aurorassauro', 'adulto', 'idle', 1);
+    expect(auroraFrame.metadata?.creatureName).toBe('Aurorassauro');
+    expect(auroraFrame.metadata?.lifeStage).toBe('adulto');
+
+    const obsidiFrame = repo.getSpriteFrame('obsidissauro', 'baby', 'comendo', 1);
+    expect(obsidiFrame.metadata?.creatureName).toBe('Obsidissauro');
+    expect(obsidiFrame.metadata?.lifeStage).toBe('baby');
+
+    const fossilFrame = repo.getSpriteFrame('fossilissauro', 'ovo', 'eclosao', 1);
+    expect(fossilFrame.metadata?.creatureName).toBe('Fossilissauro');
+    expect(fossilFrame.metadata?.lifeStage).toBe('ovo');
 
     // Dormindo animation synthesized from idle frames with closed eyelids
     const sleepingFrames = repo.getAnimationFrames('ignisauro', 'baby', 'dormindo');

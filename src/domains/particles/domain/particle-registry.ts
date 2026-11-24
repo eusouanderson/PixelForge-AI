@@ -62,6 +62,21 @@ const PIXEL_PARTICLE_PATTERNS: Readonly<Record<string, PixelParticleTexturePatte
     id: 'cosmicStar',
     size: 4,
     pixels: ['..X.', '.XX.', 'XXXX', '..X.']
+  },
+  auroraCurtain: {
+    id: 'auroraCurtain',
+    size: 4,
+    pixels: ['.XX.', 'XXXX', '..XX', '.XX.']
+  },
+  obsidianShard: {
+    id: 'obsidianShard',
+    size: 4,
+    pixels: ['X.X.', '.XX.', 'XXXX', '.X..']
+  },
+  amberDust: {
+    id: 'amberDust',
+    size: 4,
+    pixels: ['.XX.', 'XXXX', 'XXXX', '..X.']
   }
 };
 
@@ -307,6 +322,72 @@ export const PARTICLE_PRESET_REGISTRY: Readonly<Record<CharacterId, CharacterPar
     direction2: { x: 0.4, y: 1.3, z: 0.3 },
     emitBoxMin: { x: -1.35, y: -0.6, z: -0.5 },
     emitBoxMax: { x: 1.35, y: 1.2, z: 0.5 }
+  },
+  aurorassauro: {
+    id: 'aurorassauro-aurora-glow',
+    characterId: 'aurorassauro',
+    behavior: 'aurora-curtain',
+    texturePattern: PIXEL_PARTICLE_PATTERNS.auroraCurtain,
+    primaryColorHex: '#2dd4bf',
+    secondaryColorHex: '#99f6e4',
+    accentColorHex: '#0d9488',
+    maxParticles: 46,
+    emitRate: 14,
+    minLifeTimeSec: 1.2,
+    maxLifeTimeSec: 2.4,
+    minSize: 0.08,
+    maxSize: 0.16,
+    minEmitPower: 0.35,
+    maxEmitPower: 1.0,
+    gravity: { x: 0, y: 0.5, z: 0 },
+    direction1: { x: -0.4, y: 0.6, z: -0.3 },
+    direction2: { x: 0.4, y: 1.2, z: 0.3 },
+    emitBoxMin: { x: -1.35, y: -0.6, z: -0.5 },
+    emitBoxMax: { x: 1.35, y: 1.2, z: 0.5 }
+  },
+  obsidissauro: {
+    id: 'obsidissauro-shadow-sparks',
+    characterId: 'obsidissauro',
+    behavior: 'obsidian-sparks',
+    texturePattern: PIXEL_PARTICLE_PATTERNS.obsidianShard,
+    primaryColorHex: '#a855f7',
+    secondaryColorHex: '#c084fc',
+    accentColorHex: '#7e22ce',
+    maxParticles: 48,
+    emitRate: 15,
+    minLifeTimeSec: 0.8,
+    maxLifeTimeSec: 1.8,
+    minSize: 0.07,
+    maxSize: 0.15,
+    minEmitPower: 0.5,
+    maxEmitPower: 1.3,
+    gravity: { x: 0, y: 0.2, z: 0 },
+    direction1: { x: -0.8, y: 0.4, z: -0.4 },
+    direction2: { x: 0.8, y: 1.3, z: 0.4 },
+    emitBoxMin: { x: -1.3, y: -0.7, z: -0.5 },
+    emitBoxMax: { x: 1.3, y: 1.0, z: 0.5 }
+  },
+  fossilissauro: {
+    id: 'fossilissauro-amber-dust',
+    characterId: 'fossilissauro',
+    behavior: 'amber-dust',
+    texturePattern: PIXEL_PARTICLE_PATTERNS.amberDust,
+    primaryColorHex: '#f59e0b',
+    secondaryColorHex: '#fde68a',
+    accentColorHex: '#d97706',
+    maxParticles: 42,
+    emitRate: 12,
+    minLifeTimeSec: 1.3,
+    maxLifeTimeSec: 2.6,
+    minSize: 0.08,
+    maxSize: 0.16,
+    minEmitPower: 0.3,
+    maxEmitPower: 0.8,
+    gravity: { x: 0, y: 0.35, z: 0 },
+    direction1: { x: -0.3, y: 0.5, z: -0.3 },
+    direction2: { x: 0.3, y: 1.0, z: 0.3 },
+    emitBoxMin: { x: -1.3, y: -0.8, z: -0.6 },
+    emitBoxMax: { x: 1.3, y: 0.7, z: 0.6 }
   }
 };
 

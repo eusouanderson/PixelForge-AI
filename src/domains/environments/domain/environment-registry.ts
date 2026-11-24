@@ -876,6 +876,249 @@ export const ENVIRONMENT_REGISTRY: Readonly<Record<CharacterId, CharacterEnviron
         depthLayer: 'foreground'
       }
     ]
+  },
+  aurorassauro: {
+    id: 'boreal-glacier',
+    characterId: 'aurorassauro',
+    name: 'Geleira Boreal e Véu das Luzes',
+    description:
+      'Campos glaciais polares sob auroras boreais estelares, agulhas de gelo prismático e monólitos rúnicos.',
+    element: 'cosmic',
+    lighting: {
+      clearColorHex: '#020b14',
+      ambientColorHex: '#0c4a6e',
+      groundColorHex: '#042f2e',
+      mainLightColorHex: '#5eead4',
+      mainLightIntensity: 1.15,
+      rimLightColorHex: '#a7f3d0',
+      rimLightIntensity: 0.85,
+      pointLightColorHex: '#2dd4bf',
+      pointLightIntensity: 0.9,
+      pointLightRange: 6.5,
+      pointLightPosition: { x: 0, y: 0.6, z: 1.2 },
+      fogColorHex: '#020b14',
+      fogDensity: 0.025
+    },
+    pedestalColorHex: '#0f172a',
+    pedestalAccentHex: '#2dd4bf',
+    groundColorHex: '#042f2e',
+    backdrop: {
+      skyTopColorHex: '#020b14',
+      skyBottomColorHex: '#0f766e',
+      horizonColorHex: '#2dd4bf',
+      mountainColorHex: '#0f172a',
+      mountainHighlightHex: '#5eead4',
+      celestialKind: 'aurora',
+      celestialColorHex: '#2dd4bf'
+    },
+    props: [
+      {
+        id: 'aurora-crystal-left',
+        shape: 'crystal-pillar',
+        position: { x: -1.75, y: 0.45, z: 1.5 },
+        scale: { x: 0.45, y: 1.7, z: 0.45 },
+        primaryColorHex: '#0f766e',
+        emissiveColorHex: '#2dd4bf',
+        floatAmplitude: 0.05,
+        rotationSpeed: 0.003,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'aurora-ring-right',
+        shape: 'floating-ring',
+        position: { x: 1.75, y: 0.4, z: 1.5 },
+        scale: { x: 0.6, y: 0.6, z: 0.2 },
+        primaryColorHex: '#14b8a6',
+        emissiveColorHex: '#5eead4',
+        floatAmplitude: 0.06,
+        rotationSpeed: -0.005,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'aurora-shard-fore-left',
+        shape: 'crystal-pillar',
+        position: { x: -2.1, y: -0.7, z: -0.3 },
+        scale: { x: 0.35, y: 0.55, z: 0.35 },
+        primaryColorHex: '#0d9488',
+        emissiveColorHex: '#99f6e4',
+        floatAmplitude: 0.02,
+        rotationSpeed: 0.002,
+        depthLayer: 'foreground'
+      },
+      {
+        id: 'aurora-monolith-fore-right',
+        shape: 'monolith',
+        position: { x: 2.1, y: -0.72, z: -0.3 },
+        scale: { x: 0.35, y: 0.5, z: 0.35 },
+        primaryColorHex: '#0f172a',
+        emissiveColorHex: '#2dd4bf',
+        floatAmplitude: 0.02,
+        rotationSpeed: -0.002,
+        depthLayer: 'foreground'
+      }
+    ]
+  },
+  obsidissauro: {
+    id: 'obsidian-chasm',
+    characterId: 'obsidissauro',
+    name: 'Abismo de Vidro Vulcânico',
+    description:
+      'Fenda abissal de obsidiana vítrea negra, espinhos fumegantes e arcos de sombra tectônica.',
+    element: 'shadow',
+    lighting: {
+      clearColorHex: '#050508',
+      ambientColorHex: '#18181b',
+      groundColorHex: '#09090b',
+      mainLightColorHex: '#a855f7',
+      mainLightIntensity: 0.95,
+      rimLightColorHex: '#c084fc',
+      rimLightIntensity: 0.8,
+      pointLightColorHex: '#9333ea',
+      pointLightIntensity: 0.85,
+      pointLightRange: 6.0,
+      pointLightPosition: { x: -1.5, y: 0.3, z: 1.3 },
+      fogColorHex: '#050508',
+      fogDensity: 0.035
+    },
+    pedestalColorHex: '#18181b',
+    pedestalAccentHex: '#a855f7',
+    groundColorHex: '#09090b',
+    backdrop: {
+      skyTopColorHex: '#050508',
+      skyBottomColorHex: '#2e1065',
+      horizonColorHex: '#9333ea',
+      mountainColorHex: '#09090b',
+      mountainHighlightHex: '#c084fc',
+      celestialKind: 'eclipse',
+      celestialColorHex: '#7e22ce'
+    },
+    props: [
+      {
+        id: 'obsidian-arch-left',
+        shape: 'obsidian-arch',
+        position: { x: -1.8, y: 0.5, z: 1.6 },
+        scale: { x: 0.5, y: 1.8, z: 0.5 },
+        primaryColorHex: '#18181b',
+        emissiveColorHex: '#a855f7',
+        floatAmplitude: 0.03,
+        rotationSpeed: 0.002,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'obsidian-monolith-right',
+        shape: 'monolith',
+        position: { x: 1.75, y: 0.45, z: 1.5 },
+        scale: { x: 0.45, y: 1.5, z: 0.45 },
+        primaryColorHex: '#09090b',
+        emissiveColorHex: '#9333ea',
+        floatAmplitude: 0.04,
+        rotationSpeed: -0.003,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'obsidian-spike-fore-left',
+        shape: 'crystal-pillar',
+        position: { x: -2.1, y: -0.72, z: -0.3 },
+        scale: { x: 0.35, y: 0.55, z: 0.35 },
+        primaryColorHex: '#18181b',
+        emissiveColorHex: '#c084fc',
+        floatAmplitude: 0.015,
+        rotationSpeed: 0.002,
+        depthLayer: 'foreground'
+      },
+      {
+        id: 'obsidian-shard-fore-right',
+        shape: 'crystal-pillar',
+        position: { x: 2.1, y: -0.7, z: -0.3 },
+        scale: { x: 0.3, y: 0.5, z: 0.3 },
+        primaryColorHex: '#27272a',
+        emissiveColorHex: '#a855f7',
+        floatAmplitude: 0.02,
+        rotationSpeed: -0.002,
+        depthLayer: 'foreground'
+      }
+    ]
+  },
+  fossilissauro: {
+    id: 'fossil-canyon',
+    characterId: 'fossilissauro',
+    name: 'Cânion dos Fósseis Dourados',
+    description:
+      'Desfiladeiro estratificado de arenito milenar com veios de âmbar incrustado e ossadas gigantes.',
+    element: 'earth',
+    lighting: {
+      clearColorHex: '#1c1007',
+      ambientColorHex: '#451a03',
+      groundColorHex: '#29180b',
+      mainLightColorHex: '#f59e0b',
+      mainLightIntensity: 1.2,
+      rimLightColorHex: '#fde68a',
+      rimLightIntensity: 0.75,
+      pointLightColorHex: '#d97706',
+      pointLightIntensity: 0.85,
+      pointLightRange: 6.5,
+      pointLightPosition: { x: 1.6, y: 0.2, z: 1.3 },
+      fogColorHex: '#1c1007',
+      fogDensity: 0.028
+    },
+    pedestalColorHex: '#292524',
+    pedestalAccentHex: '#d97706',
+    groundColorHex: '#1c1917',
+    backdrop: {
+      skyTopColorHex: '#1c1007',
+      skyBottomColorHex: '#78350f',
+      horizonColorHex: '#f59e0b',
+      mountainColorHex: '#292524',
+      mountainHighlightHex: '#fbbf24',
+      celestialKind: 'sun',
+      celestialColorHex: '#f59e0b'
+    },
+    props: [
+      {
+        id: 'fossil-monolith-left',
+        shape: 'monolith',
+        position: { x: -1.8, y: 0.45, z: 1.6 },
+        scale: { x: 0.55, y: 1.6, z: 0.55 },
+        primaryColorHex: '#44403c',
+        emissiveColorHex: '#d97706',
+        floatAmplitude: 0.02,
+        rotationSpeed: 0.002,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'fossil-obelisk-right',
+        shape: 'solar-obelisk',
+        position: { x: 1.75, y: 0.5, z: 1.5 },
+        scale: { x: 0.45, y: 1.7, z: 0.45 },
+        primaryColorHex: '#292524',
+        emissiveColorHex: '#f59e0b',
+        floatAmplitude: 0.03,
+        rotationSpeed: -0.003,
+        depthLayer: 'midground'
+      },
+      {
+        id: 'fossil-amber-fore-left',
+        shape: 'crystal-pillar',
+        position: { x: -2.1, y: -0.72, z: -0.3 },
+        scale: { x: 0.35, y: 0.55, z: 0.35 },
+        primaryColorHex: '#b45309',
+        emissiveColorHex: '#fbbf24',
+        floatAmplitude: 0.02,
+        rotationSpeed: 0.002,
+        depthLayer: 'foreground'
+      },
+      {
+        id: 'fossil-crag-fore-right',
+        shape: 'monolith',
+        position: { x: 2.1, y: -0.7, z: -0.3 },
+        scale: { x: 0.35, y: 0.5, z: 0.35 },
+        primaryColorHex: '#292524',
+        emissiveColorHex: '#d97706',
+        floatAmplitude: 0.015,
+        rotationSpeed: -0.002,
+        depthLayer: 'foreground'
+      }
+    ]
   }
 };
 
