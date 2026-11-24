@@ -11,7 +11,10 @@ export type ParticleBehaviorKind =
   | 'solar-corona'
   | 'fairy-petals'
   | 'crystal-prisms'
-  | 'cosmic-starlight';
+  | 'cosmic-starlight'
+  | 'aurora-curtain'
+  | 'obsidian-sparks'
+  | 'amber-dust';
 
 export type ReactiveParticleTrigger =
   | 'ambient'

@@ -600,6 +600,156 @@ export const CHARACTER_SPECIES_REGISTRY: Readonly<Record<CharacterId, CharacterS
       elementalAffinity: 22
     },
     evolutionRules: STANDARD_EVOLUTION_RULES
+  },
+  aurorassauro: {
+    id: 'aurorassauro',
+    name: 'Aurorassauro',
+    displayName: 'Aurorassauro',
+    scientificName: 'Aurorasaurus Borealis',
+    species: 'Saurópode da Aurora Polar',
+    description:
+      'Saurópode majestoso de escamas cerúleas e ventre ártico, coroado por uma crista bioluminescente ondulante que canaliza os ventos cósmicos da aurora boreal.',
+    lore: 'Habita os cumes mais altos das cordilheiras polares, onde seu canto ressoa com os fluxos eletromagnéticos que pintam os céus de turquesa e violeta.',
+    element: 'cosmic',
+    elementLabel: 'Aurora Boreal e Luz Cósmica',
+    personality: {
+      archetype: 'Guardião Sereno dos Ventos Polares',
+      traits: ['Sereno', 'Observador', 'Majestoso'],
+      favoriteActivityId: 'cryo-meditation',
+      dislikedActivityId: 'lava-sprint',
+      temper: 'curious'
+    },
+    visualTraits: {
+      silhouetteDescription:
+        'Longo pescoço elegante, crista dorsal em leque de luz esmeralda ondulante, cauda com ponta luminosa e placas dérmicas boreais.',
+      orientation: 'frontal_binocular',
+      logicalDimensions: { width: 32, height: 32 },
+      ocularGenetics: {
+        eyeColor: '#22d3ee',
+        pupilColor: '#082f49',
+        specularColor: '#ffffff'
+      },
+      primaryColors: {
+        base: '#0284c7',
+        belly: '#ccfbf1',
+        crest: '#10b981',
+        highlight: '#7dd3fc'
+      }
+    },
+    environmentId: 'boreal-glacier',
+    particlePresetId: 'aurorassauro-aurora-glow',
+    favoriteFoodIds: ['sky-winged-cloudberry', 'frosted-crystal-berry'],
+    acceptedFoodIds: ['thermal-spring-water', 'golden-starburst-sunpeach', 'vitality-herbal-elixir', 'awakening-fruit'],
+    forbiddenFoodIds: ['volcanic-roast-meat', 'glowing-swamp-mushroom'],
+    baseAttributes: {
+      strength: 14,
+      defense: 16,
+      agility: 12,
+      intelligence: 18,
+      endurance: 17,
+      elementalAffinity: 20
+    },
+    evolutionRules: STANDARD_EVOLUTION_RULES
+  },
+  obsidissauro: {
+    id: 'obsidissauro',
+    name: 'Obsidissauro',
+    displayName: 'Obsidissauro',
+    scientificName: 'Obsidianus Rex',
+    species: 'Terópode de Vidro Vulcânico e Fogo Sombrio',
+    description:
+      'Predador imponente couraçado com placas chanfradas de obsidiana negra vítrea, espinhos dorsais púrpura e fendas que pulsam com fogo sombrio abissal.',
+    lore: 'Forjado nas profundezas do Abismo de Obsidiana, este predador absorve a luz ambiente em suas garras e placas de vidro vulcânico, movendo-se como uma sombra viva.',
+    element: 'shadow',
+    elementLabel: 'Sombra Abissal e Vidro Vulcânico',
+    personality: {
+      archetype: 'Predador Furtivo do Abismo',
+      traits: ['Implacável', 'Focado', 'Intimidador'],
+      favoriteActivityId: 'umbral-meditation',
+      dislikedActivityId: 'solar-bask',
+      temper: 'ferocious'
+    },
+    visualTraits: {
+      silhouetteDescription:
+        'Mandíbula potente de terópode, garras curvadas de vidro negro chanfrado, chifres dorsais de obsidiana e peitoral com fendas violeta.',
+      orientation: 'frontal_binocular',
+      logicalDimensions: { width: 32, height: 32 },
+      ocularGenetics: {
+        eyeColor: '#ef4444',
+        pupilColor: '#030712',
+        specularColor: '#ffffff'
+      },
+      primaryColors: {
+        base: '#18181b',
+        belly: '#27272a',
+        crest: '#7c3aed',
+        highlight: '#a855f7'
+      }
+    },
+    environmentId: 'obsidian-chasm',
+    particlePresetId: 'obsidissauro-shadow-sparks',
+    favoriteFoodIds: ['crimson-shadow-soulfruit', 'volcanic-roast-meat'],
+    acceptedFoodIds: ['thermal-spring-water', 'glowing-swamp-mushroom', 'vitality-herbal-elixir', 'awakening-fruit'],
+    forbiddenFoodIds: ['golden-starburst-sunpeach', 'sky-winged-cloudberry'],
+    baseAttributes: {
+      strength: 20,
+      defense: 17,
+      agility: 14,
+      intelligence: 12,
+      endurance: 15,
+      elementalAffinity: 18
+    },
+    evolutionRules: STANDARD_EVOLUTION_RULES
+  },
+  fossilissauro: {
+    id: 'fossilissauro',
+    name: 'Fossilissauro',
+    displayName: 'Fossilissauro',
+    scientificName: 'Archaeosaurus Fossilis',
+    species: 'Ceratopsiano de Rocha Petrificada e Âmbar Místico',
+    description:
+      'Couraçado ancestral com gola óssea petrificada reforçada por placas de calcário milenar, três chifres esculpidos em rocha fóssil e incrustações de âmbar dourado radiante.',
+    lore: 'Remanescente das primeiras eras do mundo, o Fossilissauro absorve os minerais da terra há milênios, tornando sua carapaça praticamente impenetrável a qualquer ataque físico.',
+    element: 'earth',
+    elementLabel: 'Terra Ancestral e Âmbar Petrificado',
+    personality: {
+      archetype: 'Sentinela Inabalável dos Estratos Geológicos',
+      traits: ['Resiliente', 'Paciente', 'Protetor'],
+      favoriteActivityId: 'monolith-guard',
+      dislikedActivityId: 'thunder-dash',
+      temper: 'stoic'
+    },
+    visualTraits: {
+      silhouetteDescription:
+        'Grande escudo craniano triangular com rebordo fóssil, três chifres frontais maciços de âmbar, couraça osteodérmica dorsal e membros colunares.',
+      orientation: 'frontal_binocular',
+      logicalDimensions: { width: 32, height: 32 },
+      ocularGenetics: {
+        eyeColor: '#ea580c',
+        pupilColor: '#291002',
+        specularColor: '#ffffff'
+      },
+      primaryColors: {
+        base: '#78350f',
+        belly: '#fef3c7',
+        crest: '#d97706',
+        highlight: '#f59e0b'
+      }
+    },
+    environmentId: 'fossil-canyon',
+    particlePresetId: 'fossilissauro-amber-dust',
+    favoriteFoodIds: ['emerald-crystal-geode', 'glowing-swamp-mushroom'],
+    acceptedFoodIds: ['thermal-spring-water', 'volcanic-roast-meat', 'vitality-herbal-elixir', 'awakening-fruit'],
+    forbiddenFoodIds: ['sky-winged-cloudberry', 'frosted-crystal-berry'],
+    baseAttributes: {
+      strength: 17,
+      defense: 22,
+      agility: 9,
+      intelligence: 11,
+      endurance: 21,
+      elementalAffinity: 16
+    },
+    evolutionRules: STANDARD_EVOLUTION_RULES
   }
 };
 

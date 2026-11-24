@@ -11,7 +11,10 @@ export type CharacterId =
   | 'solassauro'
   | 'rosassauro'
   | 'cristalissauro'
-  | 'astrassauro';
+  | 'astrassauro'
+  | 'aurorassauro'
+  | 'obsidissauro'
+  | 'fossilissauro';
 
 export type ElementAffinity =
   | 'fire'

@@ -1,0 +1,308 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Aurorassauro — Ovo: Eclosão (Quadro 3)",
+  "description": "Ovo ancestral de Aurorassauro na fase de incubação e eclosão no ninho",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "specular": "#ffffff",
+    "outline": "#042f2e",
+    "nest_dark": "#082f49",
+    "nest_base": "#0c4a6e",
+    "nest_light": "#0284c7",
+    "shell_shadow": "#0369a1",
+    "shell_base": "#0284c7",
+    "shell_mid": "#38bdf8",
+    "shell_light": "#7dd3fc",
+    "shell_highlight": "#ccfbf1",
+    "shell_inner": "#f8fafc",
+    "spot_dark": "#0f172a",
+    "spot_mid": "#334155",
+    "cavity_dark": "#020617",
+    "crack_glow": "#22d3ee",
+    "crack_glow_core": "#ffffff",
+    "heart_dark": "#9f1239",
+    "heart_base": "#e11d48",
+    "heart_light": "#fb7185",
+    "heart_highlight": "#ffe4e6",
+    "food_dark": "#713f12",
+    "food_base": "#ca8a04",
+    "food_light": "#facc15",
+    "food_crumb": "#fef08a",
+    "food_meat": "#dc2626",
+    "food_meat_dark": "#991b1b",
+    "food_bone": "#f1f5f9",
+    "food_berry": "#9333ea",
+    "food_berry_dark": "#581c87",
+    "food_shroom": "#16a34a",
+    "food_shroom_dark": "#14532d",
+    "food_shroom_spot": "#fef08a",
+    "sick_cloud": "#65a30d",
+    "sick_pale": "#bef264",
+    "sweat_blue": "#0284c7",
+    "sweat_light": "#7dd3fc",
+    "thermo_glass": "#94a3b8",
+    "thermo_red": "#ef4444",
+    "thermo_body": "#e2e8f0",
+    "thermo_shadow": "#64748b",
+    "earth_dark": "#1c1917",
+    "earth_base": "#292524",
+    "earth_light": "#44403c",
+    "stone_dark": "#334155",
+    "stone_base": "#475569",
+    "stone_light": "#64748b",
+    "stone_highlight": "#94a3b8",
+    "stone_shadow": "#1e293b",
+    "grave_stone": "#475569",
+    "grave_shadow": "#1e293b",
+    "grave_highlight": "#94a3b8",
+    "flower_red": "#f43f5e",
+    "flower_pink": "#fb7185",
+    "candle_wax": "#fef08a",
+    "flame_core": "#ffffff",
+    "flame_outer": "#f97316",
+    "spirit_deep": "#042f2e",
+    "spirit_mid": "#0d9488",
+    "spirit_glow": "#2dd4bf",
+    "spirit_core": "#ffffff",
+    "dino_shadow_dark": "#075985",
+    "dino_shadow": "#0369a1",
+    "dino_base": "#0284c7",
+    "dino_light": "#38bdf8",
+    "dino_highlight": "#7dd3fc",
+    "dino_belly_shadow": "#99f6e4",
+    "dino_belly": "#ccfbf1",
+    "dino_belly_light": "#f0fdfa",
+    "dino_crest_deep": "#047857",
+    "dino_crest_shadow": "#059669",
+    "dino_crest": "#10b981",
+    "dino_crest_light": "#34d399",
+    "dino_crest_glow": "#6ee7b7",
+    "dino_eye": "#22d3ee",
+    "dino_pupil": "#082f49",
+    "dino_claw_shadow": "#0284c7",
+    "dino_claw": "#7dd3fc",
+    "dino_claw_light": "#e0f2fe",
+    "dino_mouth_dark": "#0c4a6e",
+    "dino_mouth": "#0369a1",
+    "dino_blush": "#38bdf8",
+    "aura_deep": "#0284c7",
+    "aura_mid": "#10b981",
+    "aura_light": "#5eead4"
+  },
+  "layers": [
+    {
+      "id": "layer_nest",
+      "name": "Ninho Polar de Cristais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 26,
+          "width": 20,
+          "height": 4,
+          "color": "nest_dark"
+        },
+        {
+          "type": "rect",
+          "x": 7,
+          "y": 25,
+          "width": 18,
+          "height": 2,
+          "color": "nest_base"
+        },
+        {
+          "type": "points",
+          "color": "nest_light",
+          "coordinates": [
+            [
+              8,
+              24
+            ],
+            [
+              13,
+              24
+            ],
+            [
+              18,
+              24
+            ],
+            [
+              23,
+              24
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_egg_shell",
+      "name": "Casca Cerúlea de Saurópode",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 8,
+          "width": 12,
+          "height": 18,
+          "color": "shell_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 6,
+          "width": 10,
+          "height": 2,
+          "color": "shell_base"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 5,
+          "width": 8,
+          "height": 1,
+          "color": "shell_mid"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 12,
+          "width": 1,
+          "height": 10,
+          "color": "shell_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 12,
+          "width": 1,
+          "height": 10,
+          "color": "shell_mid"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 8,
+          "width": 2,
+          "height": 16,
+          "color": "shell_light"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 7,
+          "width": 3,
+          "height": 10,
+          "color": "shell_highlight"
+        },
+        {
+          "type": "line",
+          "x0": 11,
+          "y0": 11,
+          "x1": 15,
+          "y1": 14,
+          "color": "dino_crest"
+        },
+        {
+          "type": "line",
+          "x0": 16,
+          "y0": 14,
+          "x1": 21,
+          "y1": 12,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "line",
+          "x0": 10,
+          "y0": 17,
+          "x1": 16,
+          "y1": 20,
+          "color": "dino_crest"
+        },
+        {
+          "type": "line",
+          "x0": 16,
+          "y0": 20,
+          "x1": 22,
+          "y1": 18,
+          "color": "dino_crest_glow"
+        }
+      ]
+    },
+    {
+      "id": "layer_cracks",
+      "name": "Fraturas Cósmicas Intensas",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "line",
+          "x0": 13,
+          "y0": 9,
+          "x1": 17,
+          "y1": 14,
+          "color": "crack_glow"
+        },
+        {
+          "type": "line",
+          "x0": 17,
+          "y0": 14,
+          "x1": 14,
+          "y1": 18,
+          "color": "crack_glow"
+        },
+        {
+          "type": "line",
+          "x0": 14,
+          "y0": 18,
+          "x1": 19,
+          "y1": 21,
+          "color": "crack_glow"
+        },
+        {
+          "type": "points",
+          "color": "crack_glow_core",
+          "coordinates": [
+            [
+              15,
+              12
+            ],
+            [
+              16,
+              16
+            ],
+            [
+              17,
+              19
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Aurorassauro",
+    "lifeStage": "ovo",
+    "animation": "eclosao",
+    "frame": 3,
+    "author": "PixelForge AI",
+    "tags": [
+      "aurorassauro",
+      "dinosaur",
+      "ovo",
+      "eclosao",
+      "32x32"
+    ]
+  }
+}

@@ -45,8 +45,9 @@ function createMockParticipant(overrides: Partial<BattleParticipant> = {}): Batt
 }
 
 describe('Attacks Catalog Domain', () => {
-  it('contains bespoke attacks for all 11 dinosaur species', () => {
-    expect(ATTACKS_CATALOG.length).toBeGreaterThan(15);
+  it('contains bespoke attacks for all 14 dinosaur species', () => {
+    expect(ATTACKS_CATALOG.length).toBeGreaterThan(20);
+    const speciesWithBespoke = new Set<string>();
     for (const atk of ATTACKS_CATALOG) {
       expect(atk.id).toBeDefined();
       expect(atk.name).toBeDefined();
@@ -55,7 +56,11 @@ describe('Attacks Catalog Domain', () => {
       expect(atk.speedTicks).toBeGreaterThan(0);
       expect(atk.recoveryTicks).toBeGreaterThan(0);
       expect(atk.compatibleSpecies.length).toBeGreaterThan(0);
+      if (atk.compatibleSpecies.length === 1) {
+        speciesWithBespoke.add(atk.compatibleSpecies[0]);
+      }
     }
+    expect(speciesWithBespoke.size).toBe(14);
   });
 
   it('retrieves an attack by its ID or returns undefined when missing', () => {

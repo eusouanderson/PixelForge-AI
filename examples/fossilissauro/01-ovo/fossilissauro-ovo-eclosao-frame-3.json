@@ -1,0 +1,298 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Fossilissauro — Ovo: Eclosão (Quadro 3)",
+  "description": "Ovo ancestral de Fossilissauro na fase de incubação e eclosão no ninho",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "specular": "#ffffff",
+    "outline": "#1c1917",
+    "nest_dark": "#1c1917",
+    "nest_base": "#292524",
+    "nest_light": "#44403c",
+    "shell_shadow": "#451a03",
+    "shell_base": "#78350f",
+    "shell_mid": "#92400e",
+    "shell_light": "#b45309",
+    "shell_highlight": "#f59e0b",
+    "shell_inner": "#f8fafc",
+    "spot_dark": "#0f172a",
+    "spot_mid": "#334155",
+    "cavity_dark": "#020617",
+    "crack_glow": "#f59e0b",
+    "crack_glow_core": "#fef08a",
+    "heart_dark": "#9f1239",
+    "heart_base": "#e11d48",
+    "heart_light": "#fb7185",
+    "heart_highlight": "#ffe4e6",
+    "food_dark": "#713f12",
+    "food_base": "#ca8a04",
+    "food_light": "#facc15",
+    "food_crumb": "#fef08a",
+    "food_meat": "#dc2626",
+    "food_meat_dark": "#991b1b",
+    "food_bone": "#f1f5f9",
+    "food_berry": "#9333ea",
+    "food_berry_dark": "#581c87",
+    "food_shroom": "#16a34a",
+    "food_shroom_dark": "#14532d",
+    "food_shroom_spot": "#fef08a",
+    "sick_cloud": "#65a30d",
+    "sick_pale": "#bef264",
+    "sweat_blue": "#0284c7",
+    "sweat_light": "#7dd3fc",
+    "thermo_glass": "#94a3b8",
+    "thermo_red": "#ef4444",
+    "thermo_body": "#e2e8f0",
+    "thermo_shadow": "#64748b",
+    "earth_dark": "#1c1917",
+    "earth_base": "#292524",
+    "earth_light": "#44403c",
+    "stone_dark": "#334155",
+    "stone_base": "#475569",
+    "stone_light": "#64748b",
+    "stone_highlight": "#94a3b8",
+    "stone_shadow": "#1e293b",
+    "grave_stone": "#475569",
+    "grave_shadow": "#1e293b",
+    "grave_highlight": "#94a3b8",
+    "flower_red": "#f43f5e",
+    "flower_pink": "#fb7185",
+    "candle_wax": "#fef08a",
+    "flame_core": "#ffffff",
+    "flame_outer": "#f97316",
+    "spirit_deep": "#291002",
+    "spirit_mid": "#92400e",
+    "spirit_glow": "#f59e0b",
+    "spirit_core": "#ffffff",
+    "dino_shadow_dark": "#291002",
+    "dino_shadow": "#451a03",
+    "dino_base": "#78350f",
+    "dino_light": "#92400e",
+    "dino_highlight": "#b45309",
+    "dino_belly_shadow": "#d97706",
+    "dino_belly": "#fef3c7",
+    "dino_belly_light": "#fffbeb",
+    "dino_crest_deep": "#78350f",
+    "dino_crest_shadow": "#b45309",
+    "dino_crest": "#d97706",
+    "dino_crest_light": "#f59e0b",
+    "dino_crest_glow": "#fbbf24",
+    "dino_eye": "#ea580c",
+    "dino_pupil": "#291002",
+    "dino_claw_shadow": "#78350f",
+    "dino_claw": "#d97706",
+    "dino_claw_light": "#fbbf24",
+    "dino_mouth_dark": "#291002",
+    "dino_mouth": "#451a03",
+    "dino_blush": "#d97706",
+    "aura_deep": "#78350f",
+    "aura_mid": "#d97706",
+    "aura_light": "#fbbf24"
+  },
+  "layers": [
+    {
+      "id": "layer_nest",
+      "name": "Estrato de Arenito Ancestral e Nódulos de Âmbar",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 5,
+          "y": 26,
+          "width": 22,
+          "height": 4,
+          "color": "nest_dark"
+        },
+        {
+          "type": "rect",
+          "x": 6,
+          "y": 25,
+          "width": 20,
+          "height": 2,
+          "color": "nest_base"
+        },
+        {
+          "type": "points",
+          "color": "nest_light",
+          "coordinates": [
+            [
+              8,
+              24
+            ],
+            [
+              14,
+              24
+            ],
+            [
+              19,
+              24
+            ],
+            [
+              24,
+              24
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_egg_shell",
+      "name": "Casca Petrificada Incrustada de Âmbar",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 8,
+          "width": 16,
+          "height": 18,
+          "color": "shell_base"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 6,
+          "width": 12,
+          "height": 2,
+          "color": "shell_base"
+        },
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 12,
+          "width": 2,
+          "height": 14,
+          "color": "shell_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 12,
+          "width": 2,
+          "height": 14,
+          "color": "shell_mid"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 8,
+          "width": 3,
+          "height": 14,
+          "color": "shell_light"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 7,
+          "width": 2,
+          "height": 10,
+          "color": "shell_highlight"
+        },
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 13,
+          "width": 12,
+          "height": 2,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 18,
+          "width": 14,
+          "height": 2,
+          "color": "dino_crest_light"
+        },
+        {
+          "type": "points",
+          "color": "crack_glow",
+          "coordinates": [
+            [
+              12,
+              14
+            ],
+            [
+              17,
+              14
+            ],
+            [
+              14,
+              19
+            ],
+            [
+              19,
+              19
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "layer_cracks",
+      "name": "Fraturas Geológicas Profundas",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "line",
+          "x0": 11,
+          "y0": 9,
+          "x1": 16,
+          "y1": 14,
+          "color": "crack_glow"
+        },
+        {
+          "type": "line",
+          "x0": 16,
+          "y0": 14,
+          "x1": 13,
+          "y1": 20,
+          "color": "crack_glow"
+        },
+        {
+          "type": "points",
+          "color": "crack_glow_core",
+          "coordinates": [
+            [
+              13,
+              11
+            ],
+            [
+              16,
+              15
+            ],
+            [
+              14,
+              18
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Fossilissauro",
+    "lifeStage": "ovo",
+    "animation": "eclosao",
+    "frame": 3,
+    "author": "PixelForge AI",
+    "tags": [
+      "fossilissauro",
+      "dinosaur",
+      "ovo",
+      "eclosao",
+      "32x32"
+    ]
+  }
+}
