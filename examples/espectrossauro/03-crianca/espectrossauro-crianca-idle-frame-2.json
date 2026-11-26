@@ -1,0 +1,396 @@
+{
+  "$schema": "https://pixelforge.ai/schemas/v1/pixel-art.json",
+  "version": "1.0.0",
+  "name": "Espectrossauro — Criança: Idle (Quadro 2)",
+  "description": "Fase criança de Espectrossauro (Spectrosaurus Mysticus) bípede e ágil com cauda brincalhona e cristas em desenvolvimento em postura frontal",
+  "logicalDimensions": {
+    "width": 32,
+    "height": 32
+  },
+  "palette": {
+    "transparent": "#00000000",
+    "dino_shadow_dark": "#2e1065",
+    "dino_shadow": "#4c1d95",
+    "dino_base": "#7c3aed",
+    "dino_light": "#a78bfa",
+    "dino_highlight": "#c4b5fd",
+    "dino_belly_shadow": "#c026d3",
+    "dino_belly": "#e879f9",
+    "dino_belly_light": "#f5d0fe",
+    "dino_crest_deep": "#9d174d",
+    "dino_crest_shadow": "#be185d",
+    "dino_crest": "#ec4899",
+    "dino_crest_light": "#f472b6",
+    "dino_crest_glow": "#fbcfe8",
+    "dino_eye": "#d946ef",
+    "dino_pupil": "#4a044e",
+    "dino_claw_shadow": "#4c1d95",
+    "dino_claw": "#f5d0fe",
+    "dino_claw_light": "#ffffff",
+    "dino_mouth_dark": "#2e1065",
+    "dino_mouth": "#3b0764",
+    "dino_blush": "#ec4899",
+    "aura_deep": "#be185d",
+    "aura_mid": "#ec4899",
+    "aura_light": "#fbcfe8",
+    "outline": "#2e1065",
+    "specular": "#ffffff"
+  },
+  "layers": [
+    {
+      "id": "layer_shadow_ground",
+      "name": "Sombra de Chão",
+      "visible": true,
+      "opacity": 0.6,
+      "zIndex": 0,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 27,
+          "width": 14,
+          "height": 2,
+          "color": "dino_shadow_dark"
+        }
+      ]
+    },
+    {
+      "id": "layer_tail_back",
+      "name": "Cauda Brincalhona (Fundo)",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 1,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 22,
+          "y": 22,
+          "width": 3,
+          "height": 3,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 23,
+          "y": 20,
+          "width": 2,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 24,
+          "y": 19,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_legs",
+      "name": "Pernas Frontais",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 2,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 22,
+          "width": 3,
+          "height": 4,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 9,
+          "y": 25,
+          "width": 4,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 9,
+          "y": 26,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 26,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 22,
+          "width": 3,
+          "height": 4,
+          "color": "dino_shadow"
+        },
+        {
+          "type": "rect",
+          "x": 19,
+          "y": 25,
+          "width": 4,
+          "height": 2,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 20,
+          "y": 26,
+          "color": "dino_claw"
+        },
+        {
+          "type": "pixel",
+          "x": 22,
+          "y": 26,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_body_front",
+      "name": "Tronco e Barriga Frontal",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 3,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 17,
+          "width": 10,
+          "height": 7,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 17,
+          "width": 8,
+          "height": 6,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 13,
+          "y": 18,
+          "width": 6,
+          "height": 5,
+          "color": "dino_belly"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 18,
+          "width": 4,
+          "height": 4,
+          "color": "dino_belly_light"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 19,
+          "color": "dino_crest"
+        },
+        {
+          "type": "pixel",
+          "x": 20,
+          "y": 19,
+          "color": "dino_crest"
+        }
+      ]
+    },
+    {
+      "id": "layer_arms",
+      "name": "Braços Frontais Animados",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 4,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 8,
+          "y": 18,
+          "width": 3,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 8,
+          "y": 20,
+          "color": "dino_claw"
+        },
+        {
+          "type": "rect",
+          "x": 21,
+          "y": 18,
+          "width": 3,
+          "height": 3,
+          "color": "dino_base"
+        },
+        {
+          "type": "pixel",
+          "x": 23,
+          "y": 20,
+          "color": "dino_claw"
+        }
+      ]
+    },
+    {
+      "id": "layer_head_front",
+      "name": "Cabeça Frontal e Crista Dupla",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 5,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 10,
+          "y": 10,
+          "width": 12,
+          "height": 7,
+          "color": "dino_base"
+        },
+        {
+          "type": "rect",
+          "x": 11,
+          "y": 9,
+          "width": 10,
+          "height": 7,
+          "color": "dino_light"
+        },
+        {
+          "type": "rect",
+          "x": 14,
+          "y": 14,
+          "width": 4,
+          "height": 2,
+          "color": "dino_highlight"
+        },
+        {
+          "type": "pixel",
+          "x": 15,
+          "y": 15,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "pixel",
+          "x": 16,
+          "y": 15,
+          "color": "dino_mouth"
+        },
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 7,
+          "width": 2,
+          "height": 3,
+          "color": "dino_crest"
+        },
+        {
+          "type": "rect",
+          "x": 18,
+          "y": 7,
+          "width": 2,
+          "height": 3,
+          "color": "dino_crest"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 7,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "pixel",
+          "x": 19,
+          "y": 7,
+          "color": "dino_crest_glow"
+        },
+        {
+          "type": "pixel",
+          "x": 11,
+          "y": 14,
+          "color": "dino_blush"
+        },
+        {
+          "type": "pixel",
+          "x": 20,
+          "y": 14,
+          "color": "dino_blush"
+        }
+      ]
+    },
+    {
+      "id": "layer_eyes_front",
+      "name": "Olhos Binoculares Dourados / Elementares",
+      "visible": true,
+      "opacity": 1,
+      "zIndex": 6,
+      "operations": [
+        {
+          "type": "rect",
+          "x": 12,
+          "y": 11,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "rect",
+          "x": 17,
+          "y": 11,
+          "width": 3,
+          "height": 3,
+          "color": "dino_eye"
+        },
+        {
+          "type": "pixel",
+          "x": 13,
+          "y": 12,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 18,
+          "y": 12,
+          "color": "dino_pupil"
+        },
+        {
+          "type": "pixel",
+          "x": 12,
+          "y": 11,
+          "color": "specular"
+        },
+        {
+          "type": "pixel",
+          "x": 17,
+          "y": 11,
+          "color": "specular"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "creatureName": "Espectrossauro",
+    "lifeStage": "crianca",
+    "animation": "idle",
+    "frame": 2,
+    "author": "PixelForge AI",
+    "createdAt": "2026-11-26T12:50:11.490Z",
+    "tags": [
+      "espectrossauro",
+      "dinosaur",
+      "éter",
+      "crianca",
+      "child",
+      "idle",
+      "frontal",
+      "32x32"
+    ]
+  }
+}

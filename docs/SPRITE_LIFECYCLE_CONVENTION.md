@@ -36,6 +36,24 @@ Cada espécie de criatura possui um identificador canônico em *kebab-case*, nom
 8. **Solassauro** (`solassauro` — *Heliosaurus Imperator*):
    - Arquétipo: Imperador solar com juba radiante de 360 graus em forma de coroa de raios solares, armadura branco-platina e ouro imperial com brasão do sol, cauda maça-solar e olhos safira-celestial (`#38bdf8`).
    - Casca do ovo: Marfim-platina com raios de ouro solar em ninho de fios dourados.
+9. **Rosassauro** (`rosassauro` — *Rosadominus amabilis*):
+   - Arquétipo: Dinossauro dracônico fada-amoroso ancestral com pétalas bioluminescentes, escamas rosa e olhos ametista encantados (`#a855f7`).
+   - Casca do ovo: Rosa floral encantado com espinhos protetores em ninho de musgo silvestre.
+10. **Cristalissauro** (`cristalissauro` — *Crystallodraco nobilis*):
+    - Arquétipo: Dinossauro cristalino prismático com pontas de geodo reluzente, armadura mineral azul-turquesa e olhos ciano-gelo penetrantes (`#38bdf8`).
+    - Casca do ovo: Quartzo cerúleo facetado em ninho de drusas minerais.
+11. **Astrassauro** (`astrassauro` — *Astrasaurus celestialis*):
+    - Arquétipo: Dinossauro cósmico ancestral com halo gravitacional estelar, anéis planetários dérmicos e olhos dourados celestes (`#fbbf24`).
+    - Casca do ovo: Nebulosa cósmica violeta e estelar em ninho de poeira de meteorito.
+12. **Hidrossauro** (`hidrossauro` — *Hydrosaurus Pelagius*):
+    - Arquétipo: Dinossauro marinho ancestral com escamas cerúleas hidrodinâmicas, crista de coral bioluminescente, cauda de leme oceânico e olhos safira-marinho (`#3b82f6`).
+    - Casca do ovo: Casca azul-oceânica com reflexos de maré alta em ninho de corais abissais.
+13. **Metalissauro** (`metalissauro` — *Ferrosaurus Titanus*):
+    - Arquétipo: Dinossauro titânico blindado com couraça de aço temperado, rebites de bronze ancestral, chifres pontiagudos de liga metálica e olhos âmbar-dourados (`#facc15`).
+    - Casca do ovo: Placas de aço escovado e rebites dourados em ninho de lingotes de ferro forjado.
+14. **Espectrossauro** (`espectrossauro` — *Spectrosaurus Mysticus*):
+    - Arquétipo: Dinossauro etéreo psíquico primordial envolto em brumas astrais violetas, chifres ectoplásmicos ressonantes e olhos magenta psíquicos (`#d946ef`).
+    - Casca do ovo: Casca translúcida etérea com runas psíquicas luminescentes em ninho de matéria estelar condensada.
 
 ---
 
