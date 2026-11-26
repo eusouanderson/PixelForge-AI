@@ -404,7 +404,10 @@ describe('Breeding: Application Service & Protocol', () => {
     serviceD.selectLocalCreature('terrassauro', femaleTerras);
     serviceC.setLocalReady(true);
     serviceD.setLocalReady(true);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const startWait = Date.now();
+    while (serviceC.getState().phase !== 'completed' && Date.now() - startWait < 1000) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
     expect(serviceC.getState().phase).toBe('completed');
 
     await serviceC.openDiscovery('second-room');

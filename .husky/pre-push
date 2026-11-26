@@ -1,4 +1,4 @@
-export PATH="/home/bob/.local/bin:/home/bob/.local/share/pnpm:$PATH"
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" && nvm use 22 >/dev/null 2>&1
 pnpm typecheck
 pnpm lint
 pnpm test:architecture
